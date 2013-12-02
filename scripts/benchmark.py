@@ -69,8 +69,8 @@ oss = ['windows', 'unix']
 compilers_win = ['V100']
 #compilers_win = ['ICC']
 #compilers_win  = ['V100', 'ICC']
-#compilers_unix = ['ICC']
-compilers_unix = ['GCC', 'ICC']
+compilers_unix = ['ICC']
+#compilers_unix = ['GCC', 'ICC']
 #compilers_unix = ['GCC', 'CLANG', 'ICC']
 compilers      = []
 
@@ -85,8 +85,8 @@ platforms_unix = ['x64']
 platforms      = []
 
 devices = [ 'singleray', 'ispc' ]
-#scenes = ['conference']
-scenes = ['conference', 'crown', 'headlight', 'nightgown', 'powerplant']
+scenes = ['conference']
+#scenes = ['conference', 'crown', 'headlight', 'nightgown', 'powerplant']
 #scenes = ['conference', 'courtyard', 'crown', 'e87', 'e89', 'e89_engine', 'headlight', 'loftcube', 'nightgown', 'powerplant', 'stanford', 'xyz_dragon']
 
 #isas_win  = ['sse41']
@@ -211,7 +211,7 @@ def render(OS, scene, compiler, platform, build, device, isa):
     command = executable
     command += ' -rtcore benchmark=1' + ',isa=' + isa + ' -device ' + device
     command += ' -c ' + modelDir + dash + scene + dash + scene + '_test.ecs'
-    command += ' -spp 16 '
+    command += ' -spp 16 -frames 2'
     command += ' -o ' + imageFile + ' > ' + logFile
     os.system(command)
 

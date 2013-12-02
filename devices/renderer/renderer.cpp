@@ -63,6 +63,7 @@ namespace embree
   std::string g_format = "RGBA8";
   std::string g_rtcore_cfg = "";
   std::string g_outFileName = "";
+  size_t g_num_frames = 1; // number of frames to render in output mode
   size_t g_numThreads = 0;
   size_t g_verbose_output = 0;
 
@@ -219,7 +220,8 @@ namespace embree
     Handle<Device::RTScene> scene = createScene();
     g_device->rtSetInt1(g_renderer, "showprogress", 1);
     g_device->rtCommit(g_renderer);
-    g_device->rtRenderFrame(g_renderer, camera, scene, g_tonemapper, g_frameBuffer, 0);
+    for (size_t i=0; i<g_num_frames; i++)
+      g_device->rtRenderFrame(g_renderer, camera, scene, g_tonemapper, g_frameBuffer, 0);
     for (int i=0; i<g_numBuffers; i++)
       g_device->rtSwapBuffers(g_frameBuffer);
     
@@ -563,6 +565,10 @@ namespace embree
         g_device->rtSetImage(g_renderer, "backplate", g_backplate = rtLoadImage(path + cin->getFileName()));
         g_device->rtCommit(g_renderer);
       }
+
+      /* number of frames to render in output mode (used for benchmarking) */
+      else if (tag == "-frames") 
+        g_num_frames = cin->getInt();
 
       /* render frame */
       else if (tag == "-o") {
