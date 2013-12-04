@@ -113,13 +113,18 @@ make. The executables will be generated in the build folder.
 
 --- Compiling Embree on Windows ---
 
-For compilation under Windows use the Visual Studio
-2008 solution files. Inside Visual Studio you 
-can switch between the Microsoft Compiler and the Intel 
-Compiler by right clicking on the solution and then 
-selecting the compiler. The project compiles with both 
-compilers in 32 bit and 64 bit mode. We recommend using 
-64 bit mode and the Intel Compiler for best performance. 
+For compilation under Windows you first have to install the Embree ray
+tracing kernels from embree.github.git. Follow the install
+instructions in the README.txt to install Embree. After installation
+you have to set the EMBREE_INSTALL_DIR environment variable to the
+main folder of Embree.
+
+Use the Visual Studio 2008 solution file to compile the Embree Example
+Renderer. Inside Visual Studio you can switch between the Microsoft
+Compiler and the Intel Compiler by right clicking on the solution and
+then selecting the compiler. The project compiles with both compilers
+in 32 bit and 64 bit mode. We recommend using 64 bit mode and the
+Intel Compiler for best performance.
 
 By default, the solution file requires ISPC to be installed properly
 (see below). For compiling the solution without ISPC, simply delete
