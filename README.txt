@@ -136,16 +136,10 @@ For the ISPC projects of Embree to work you have to install ISPC from
 ispc.github.com. Best use ISPC v1.5.0 as we used that version for
 testing. You can download precompiled ISPC binaries or compile ISPC
 from sources. We recommend using the precompiled binaries. After
-installing ISPC you have to put the ispc executable into your path:
+installing ISPC you have to put the ispc executable permanently into
+your path:
 
   export PATH=path-to-ispc:$PATH
-
-For compiling the Xeon Phi device, you also have to set the ISPC_DIR
-environment variable:
-
-  export ISPC_DIR=path-to-ispc
-
-Best set the ISPC_DIR variable and PATH permanently.
 
 --- Running the Embree Example Renderer ---
 
