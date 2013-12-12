@@ -410,7 +410,7 @@ namespace embree
       int numVertices = ispc::Shape__getNumVertices(shape.ptr);
       int numTriangles = ispc::Shape__getNumTriangles(shape.ptr);
 
-      unsigned mesh = rtcNewTriangleMesh (scene, RTC_STATIC, numTriangles, numVertices);
+      unsigned mesh = rtcNewTriangleMesh (scene, RTC_GEOMETRY_STATIC, numTriangles, numVertices);
       if (mesh != id) throw std::runtime_error("ID does not match");
       Vec3fa* vertices_o = (Vec3fa*) rtcMapBuffer(scene,mesh,RTC_VERTEX_BUFFER); 
       RTCTriangle* triangles_o = (RTCTriangle*) rtcMapBuffer(scene,mesh,RTC_INDEX_BUFFER);
@@ -446,7 +446,7 @@ namespace embree
         int numVertices = ispc::Shape__getNumVertices(shape.ptr);
         int numTriangles = ispc::Shape__getNumTriangles(shape.ptr);
         
-        unsigned mesh = rtcNewTriangleMesh (scene, RTC_STATIC, numTriangles, numVertices);
+        unsigned mesh = rtcNewTriangleMesh (scene, RTC_GEOMETRY_STATIC, numTriangles, numVertices);
         if (mesh != id) throw std::runtime_error("ID does not match");
         Vec3fa* vertices_o = (Vec3fa*) rtcMapBuffer(scene,mesh,RTC_VERTEX_BUFFER); 
         RTCTriangle* triangles_o = (RTCTriangle*) rtcMapBuffer(scene,mesh,RTC_INDEX_BUFFER);
@@ -517,7 +517,7 @@ namespace embree
     void create()
     {
       RTCAlgorithmFlags aflags = (RTCAlgorithmFlags) (RTC_INTERSECT1 | RTC_INTERSECT4 | RTC_INTERSECT8 | RTC_INTERSECT16);
-      RTCScene scene = rtcNewScene(RTC_STATIC,aflags);
+      RTCScene scene = rtcNewScene(RTC_SCENE_STATIC,aflags);
 
       /* count number of vertices and triangles */
       size_t numAllocatedTriangles = 0;

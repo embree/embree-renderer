@@ -73,7 +73,7 @@ namespace embree
       
       void create() 
       {
-        RTCScene scene = rtcNewScene(RTC_STATIC,RTC_INTERSECT1);
+        RTCScene scene = rtcNewScene(RTC_SCENE_STATIC,RTC_INTERSECT1);
         for (size_t i=0; i<prims.size(); i++) {
           if (prims[i] && prims[i]->shape)
             prims[i]->shape->extract(scene,i);
