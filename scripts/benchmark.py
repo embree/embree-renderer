@@ -174,11 +174,11 @@ def compile(OS,compiler,platform,isas,build):
       command += ' -D TARGET_AVX2=OFF'
 
     if ('knc' in isas):
-      command += ' -D BUILD_ISPC_DEVICE_KNC=ON';
-      command += ' -D BUILD_SINGLERAY_DEVICE_KNC=ON';
+      command += ' -D BUILD_ISPC_DEVICE_XEON_PHI=ON';
+      command += ' -D BUILD_SINGLERAY_DEVICE_XEON_PHI=ON';
     else:
-      command += ' -D BUILD_ISPC_DEVICE_KNC=OFF';
-      command += ' -D BUILD_SINGLERAY_DEVICE_KNC=OFF';
+      command += ' -D BUILD_ISPC_DEVICE_XEON_PHI=OFF';
+      command += ' -D BUILD_SINGLERAY_DEVICE_XEON_PHI=OFF';
 
     command += ' -D BUILD_SINGLERAY_DEVICE=ON';
     command += ' -D BUILD_ISPC_DEVICE=ON';
