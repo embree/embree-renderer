@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="Windows-1252"?>
 <VisualStudioProject
 	ProjectType="Intel C++ Project"
-	Version="12.1"
+	Version="14.0"
 	Name="device"
 	ProjectGUID="{1128EA1D-0270-4361-A051-A10E29B67EF1}"
 	VCNestedProjectGUID="{ED848C9A-C161-4036-9DF7-EB169BCB81BC}"
@@ -34,6 +34,38 @@
 		</Configuration>
 		<Configuration
 			Name="Release|x64"
+			>
+			<Tool
+				Name="CppCmplrTool"
+				InterproceduralOptimization="0"
+			/>
+		</Configuration>
+		<Configuration
+			Name="ReleaseAVX|Win32"
+			>
+			<Tool
+				Name="CppCmplrTool"
+				InterproceduralOptimization="0"
+			/>
+		</Configuration>
+		<Configuration
+			Name="ReleaseAVX|x64"
+			>
+			<Tool
+				Name="CppCmplrTool"
+				InterproceduralOptimization="0"
+			/>
+		</Configuration>
+		<Configuration
+			Name="ReleaseAVX2|Win32"
+			>
+			<Tool
+				Name="CppCmplrTool"
+				InterproceduralOptimization="0"
+			/>
+		</Configuration>
+		<Configuration
+			Name="ReleaseAVX2|x64"
 			>
 			<Tool
 				Name="CppCmplrTool"

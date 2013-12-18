@@ -79,8 +79,8 @@ builds = ['Release']
 #builds = ['Release', 'Debug']
 
 #platforms_win  = ['win32']
-#platforms_win  = ['x64']
-platforms_win  = ['win32', 'x64']
+platforms_win  = ['x64']
+#platforms_win  = ['win32', 'x64']
 platforms_unix = ['x64']
 platforms      = []
 
@@ -97,12 +97,14 @@ isas      = []
 
 modelDir  = ''
 testDir = ''
-embreeDir = '~/projects/embree.intel.git'
+embreeDirLinux = '~/projects/embree.intel.git'
+embreeDirWindows = 'd:\projects\embree.git'
 
 ########################## compiling ##########################
 
 def compile(OS,compiler,platform,isas,build):
   if OS == 'windows':
+  
     cfg = '/p:Configuration=' + build + ';'
     cfg += 'Platform=' + platform + ';'
     cfg += 'PlatformToolset=';
@@ -112,11 +114,21 @@ def compile(OS,compiler,platform,isas,build):
     else: 
       sys.stderr.write('unknown compiler: ' + compiler + '\n')
       sys.exit(1)
-      
-    command =  'msbuild embree_ispc.sln' + ' ' + cfg + ' /t:Clean'
-    os.system(command)
 
-    command =  'msbuild embree_ispc.sln' + ' ' + cfg
+    # first compile Embree
+    command =  'msbuild ' + embreeDirWindows + '\\embree_vs2008.sln' + ' ' + cfg + ' /t:Clean'
+    os.system(command)
+    command =  'msbuild ' + embreeDirWindows + '\\embree_vs2008.sln' + ' ' + cfg
+    os.system(command)
+    
+    # now compile the Embree renderer      
+    command =  'msbuild embree-renderer.sln' + ' ' + cfg + ' /t:Clean'
+    os.system(command)
+    command =  'msbuild embree-renderer.sln' + ' ' + cfg
+    os.system(command)
+    
+    # now copy embree.dll
+    command = 'cp ' + embreeDirWindows + '\\' + platform + '\\' + build + '\\embree.dll ' + platform + '\\' + build 
     os.system(command)
     
     #command += '/t:rebuild /verbosity:n'
@@ -134,7 +146,7 @@ def compile(OS,compiler,platform,isas,build):
       sys.exit(1)
 
     # first compile Embree
-    command = 'pushd ' + embreeDir + '; mkdir build; cd build; cmake'
+    command = 'pushd ' + embreeDirLinux + '; mkdir build; cd build; cmake'
     command += compilerOption
     command += ' -D RTCORE_BACKFACE_CULLING=OFF'
     command += ' -D RTCORE_ENABLE_RAY_MASK=OFF'
