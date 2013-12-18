@@ -361,7 +361,7 @@
 			<Tool
 				Name="VCPostBuildEventTool"
 				Description="Copying Embree DLL"
-				CommandLine="copy &quot;$(EMBREE_INSTALL_DIR)\$(PlatformName)\Release\embree.dll&quot; &quot;$(OutDir)&quot;"
+				CommandLine="copy &quot;$(EMBREE_INSTALL_DIR)\$(PlatformName)\$(ConfigurationName)\embree.dll&quot; &quot;$(OutDir)&quot;"
 			/>
 		</Configuration>
 		<Configuration
@@ -431,7 +431,7 @@
 			<Tool
 				Name="VCPostBuildEventTool"
 				Description="Copying Embree DLL"
-				CommandLine="copy &quot;$(EMBREE_INSTALL_DIR)\$(PlatformName)\Release\embree.dll&quot; &quot;$(OutDir)&quot;"
+				CommandLine="copy &quot;$(EMBREE_INSTALL_DIR)\$(PlatformName)\$(ConfigurationName)\embree.dll&quot; &quot;$(OutDir)&quot;"
 			/>
 		</Configuration>
 		<Configuration
@@ -500,7 +500,7 @@
 			<Tool
 				Name="VCPostBuildEventTool"
 				Description="Copying Embree DLL"
-				CommandLine="copy &quot;$(EMBREE_INSTALL_DIR)\$(PlatformName)\Release\embree.dll&quot; &quot;$(OutDir)&quot;"
+				CommandLine="copy &quot;$(EMBREE_INSTALL_DIR)\$(PlatformName)\$(ConfigurationName)\embree.dll&quot; &quot;$(OutDir)&quot;"
 			/>
 		</Configuration>
 		<Configuration
@@ -570,7 +570,7 @@
 			<Tool
 				Name="VCPostBuildEventTool"
 				Description="Copying Embree DLL"
-				CommandLine="copy &quot;$(EMBREE_INSTALL_DIR)\$(PlatformName)\Release\embree.dll&quot; &quot;$(OutDir)&quot;"
+				CommandLine="copy &quot;$(EMBREE_INSTALL_DIR)\$(PlatformName)\$(ConfigurationName)\embree.dll&quot; &quot;$(OutDir)&quot;"
 			/>
 		</Configuration>
 	</Configurations>

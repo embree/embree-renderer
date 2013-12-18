@@ -367,7 +367,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="$(EMBREE_INSTALL_DIR)\$(PlatformName)\Release\embree.lib"
+				AdditionalDependencies="$(EMBREE_INSTALL_DIR)\$(PlatformName)\$(ConfigurationName)\embree.lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -442,7 +442,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="$(EMBREE_INSTALL_DIR)\$(PlatformName)\Release\embree.lib"
+				AdditionalDependencies="$(EMBREE_INSTALL_DIR)\$(PlatformName)\$(ConfigurationName)\embree.lib"
 				TargetMachine="17"
 			/>
 			<Tool
@@ -517,7 +517,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="$(EMBREE_INSTALL_DIR)\$(PlatformName)\Release\embree.lib"
+				AdditionalDependencies="$(EMBREE_INSTALL_DIR)\$(PlatformName)\$(ConfigurationName)\embree.lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -592,7 +592,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="$(EMBREE_INSTALL_DIR)\$(PlatformName)\Release\embree.lib"
+				AdditionalDependencies="$(EMBREE_INSTALL_DIR)\$(PlatformName)\$(ConfigurationName)\embree.lib"
 				TargetMachine="17"
 			/>
 			<Tool
