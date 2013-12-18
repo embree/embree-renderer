@@ -38,10 +38,7 @@ namespace embree
   {
     if      (!strcmp(type,"default"      )) return rtCreateDeviceHelper("device_singleray","",numThreads,rtcore_cfg);
     else if (!strcmp(type,"singleray"    )) return rtCreateDeviceHelper("device_singleray","",numThreads,rtcore_cfg);
-    else if (!strcmp(type,"singleray_knc")) return rtCreateDeviceHelper("device_coi","device_singleray_knc",numThreads,rtcore_cfg);
-    else if (!strcmp(type,"ivl_sse"      )) return rtCreateDeviceHelper("device_ivl_sse","",numThreads,rtcore_cfg);
-    else if (!strcmp(type,"ivl_avx"      )) return rtCreateDeviceHelper("device_ivl_avx","",numThreads,rtcore_cfg);
-    else if (!strcmp(type,"ivl_knc"      )) return rtCreateDeviceHelper("device_ivl_knc","",numThreads,rtcore_cfg);
+    else if (!strcmp(type,"singleray_knc") || !strcmp(type,"singleray_xeonphi")) return rtCreateDeviceHelper("device_coi","device_singleray_knc",numThreads,rtcore_cfg);
     else if (!strcmp(type,"ispc"         )) return rtCreateDeviceHelper("device_ispc","",numThreads,rtcore_cfg);
     else if (!strcmp(type,"ispc_sse"     )) return rtCreateDeviceHelper("device_ispc_sse","",numThreads,rtcore_cfg);
     else if (!strcmp(type,"ispc_avx"     )) return rtCreateDeviceHelper("device_ispc_avx","",numThreads,rtcore_cfg);
