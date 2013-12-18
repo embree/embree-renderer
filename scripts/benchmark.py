@@ -66,8 +66,8 @@ dash = '/'
 
 oss = ['windows', 'unix']
 
-compilers_win = ['V100']
-#compilers_win = ['ICC']
+#compilers_win = ['V100']
+compilers_win = ['ICC']
 #compilers_win  = ['V100', 'ICC']
 compilers_unix = ['ICC']
 #compilers_unix = ['GCC', 'ICC']
@@ -77,6 +77,8 @@ compilers      = []
 #builds = ['Debug']
 builds = ['Release']
 #builds = ['Release', 'Debug']
+builds = ['ReleaseAVX2', 'ReleaseAVX', 'Release']
+#builds = ['ReleaseAVX2', 'ReleaseAVX', 'Release', 'Debug']
 
 #platforms_win  = ['win32']
 platforms_win  = ['x64']
@@ -109,7 +111,8 @@ def compile(OS,compiler,platform,isas,build):
     cfg += 'Platform=' + platform + ';'
     cfg += 'PlatformToolset=';
 #   if (compiler == 'ICC'): cfg += '"Intel C++ Compiler 12.1" '
-    if (compiler == 'ICC'): cfg += '"Intel C++ Compiler XE 12.1" '
+#   if (compiler == 'ICC'): cfg += '"Intel C++ Compiler XE 12.1" '
+    if (compiler == 'ICC'): cfg += '"Intel C++ Compiler XE 14.0" '
     elif (compiler == 'V100'): cfg += 'v100 '
     else: 
       sys.stderr.write('unknown compiler: ' + compiler + '\n')
