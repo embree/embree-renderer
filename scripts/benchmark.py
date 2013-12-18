@@ -98,7 +98,7 @@ isas      = []
 modelDir  = ''
 testDir = ''
 embreeDirLinux = '~/projects/embree.intel.git'
-embreeDirWindows = 'd:\projects\embree.git'
+embreeDirWindows = os.environ['EMBREE_INSTALL_DIR']
 
 ########################## compiling ##########################
 
@@ -126,11 +126,7 @@ def compile(OS,compiler,platform,isas,build):
     os.system(command)
     command =  'msbuild embree-renderer.sln' + ' ' + cfg
     os.system(command)
-    
-    # now copy embree.dll
-    command = 'cp ' + embreeDirWindows + '\\' + platform + '\\' + build + '\\embree.dll ' + platform + '\\' + build 
-    os.system(command)
-    
+   
     #command += '/t:rebuild /verbosity:n'
   else:
 
