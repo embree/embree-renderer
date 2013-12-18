@@ -119,15 +119,17 @@ def compile(OS,compiler,platform,isas,build):
       sys.exit(1)
 
     # first compile Embree
-    command =  'msbuild ' + embreeDirWindows + '\\embree_vs2008.sln' + ' ' + cfg + ' /t:Clean'
+    command =  'msbuild ' + embreeDirWindows + '\\embree_vs2010.sln' + ' ' + cfg + ' /t:Clean'
     os.system(command)
-    command =  'msbuild ' + embreeDirWindows + '\\embree_vs2008.sln' + ' ' + cfg
+    command =  'msbuild ' + embreeDirWindows + '\\embree_vs2010.sln' + ' ' + cfg
     os.system(command)
-    
+    command =  'msbuild ' + embreeDirWindows + '\\embree_vs2010.sln' + ' ' + cfg
+    os.system(command)
+
     # now compile the Embree renderer      
-    command =  'msbuild embree-renderer.sln' + ' ' + cfg + ' /t:Clean'
+    command =  'msbuild embree-renderer_vs2010.sln' + ' ' + cfg + ' /t:Clean'
     os.system(command)
-    command =  'msbuild embree-renderer.sln' + ' ' + cfg
+    command =  'msbuild embree-renderer_vs2010.sln' + ' ' + cfg
     os.system(command)
    
     #command += '/t:rebuild /verbosity:n'
