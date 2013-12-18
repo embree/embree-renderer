@@ -72,11 +72,11 @@ configure which parts of the Embree Example Renderer to build:
 
    BUILD_SINGLE_RAY_DEVICE     : Single ray device for CPU operating
                                  on single rays.
-   BUILD_SINGLE_RAY_DEVICE_KNC : Single ray device for Xeon Phi 
+   BUILD_SINGLE_RAY_DEVICE_XEON_PHI : Single ray device for Xeon Phi 
                                  operating on single rays.
    BUILD_ISPC_DEVICE           : ISPC CPU device operating on ray
                                  packets of size 4 (SSE) or 8 (AVX).
-   BUILD_ISPC_DEVICE_KNC       : ISPC device for Xeon Phi accelerator
+   BUILD_ISPC_DEVICE_XEON_PHI  : ISPC device for Xeon Phi accelerator
                                  operating on ray packets of size 16
    BUILD_NETWORK_DEVICE        : Network device to render on render server
 
