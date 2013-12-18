@@ -67,25 +67,25 @@ dash = '/'
 oss = ['windows', 'unix']
 
 #compilers_win = ['V100']
-compilers_win = ['ICC']
-#compilers_win  = ['V100', 'ICC']
+#compilers_win = ['ICC']
+compilers_win  = ['V100', 'ICC']
 compilers_unix = ['ICC']
 #compilers_unix = ['GCC', 'ICC']
 #compilers_unix = ['GCC', 'CLANG', 'ICC']
 compilers      = []
 
 #builds = ['Debug']
-builds = ['Release']
+#builds = ['Release']
 #builds = ['Release', 'Debug']
 #builds = ['Release']
 #builds = ['ReleaseAVX']
-builds = ['ReleaseAVX2']
-#builds = ['ReleaseAVX2', 'ReleaseAVX', 'Release']
+#builds = ['ReleaseAVX2']
+builds = ['ReleaseAVX2', 'ReleaseAVX', 'Release']
 #builds = ['ReleaseAVX2', 'ReleaseAVX', 'Release', 'Debug']
 
 #platforms_win  = ['win32']
-platforms_win  = ['x64']
-#platforms_win  = ['win32', 'x64']
+#platforms_win  = ['x64']
+platforms_win  = ['win32', 'x64']
 platforms_unix = ['x64']
 platforms      = []
 
@@ -103,11 +103,11 @@ isas_unix = ['sse3', 'sse41', 'avx']
 #isas_unix = ['sse3', 'sse41', 'avx', 'avx2']
 isas      = []
 
-isas_allowed = {}
-isas_allowed['Debug'] = ['sse2', 'sse3', 'sse41']
-isas_allowed['Release'] = ['sse2', 'sse3', 'sse41']
-isas_allowed['ReleaseAVX'] = ['sse2', 'sse3', 'sse41', 'avx']
-isas_allowed['ReleaseAVX2'] = ['sse2', 'sse3', 'sse41', 'avx', 'avx2']
+isas_allowed_ispc = {}
+isas_allowed_ispc['Debug'] = ['sse2', 'sse3', 'sse41']
+isas_allowed_ispc['Release'] = ['sse2', 'sse3', 'sse41']
+isas_allowed_ispc['ReleaseAVX'] = ['avx']
+isas_allowed_ispc['ReleaseAVX2'] = ['avx', 'avx2']
 
 modelDir  = ''
 testDir = ''
@@ -250,7 +250,7 @@ def renderLoop(OS):
           for scene in scenes:
             for device in devices:
               for isa in isas:
-                 if isa in isas_allowed[build]:
+                 if device <> 'ispc' or (isa in isas_allowed_ispc[build]):
                    print(compiler + ' ' + platform + ' ' + build + ' ' + scene + ' ' + device + ' ' + isa)
                    render(OS, scene, compiler, platform, build, device, isa)
 
