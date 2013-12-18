@@ -77,7 +77,10 @@ compilers      = []
 #builds = ['Debug']
 builds = ['Release']
 #builds = ['Release', 'Debug']
-builds = ['ReleaseAVX2', 'ReleaseAVX', 'Release']
+#builds = ['Release']
+#builds = ['ReleaseAVX']
+builds = ['ReleaseAVX2']
+#builds = ['ReleaseAVX2', 'ReleaseAVX', 'Release']
 #builds = ['ReleaseAVX2', 'ReleaseAVX', 'Release', 'Debug']
 
 #platforms_win  = ['win32']
@@ -92,10 +95,19 @@ scenes = ['conference']
 #scenes = ['conference', 'courtyard', 'crown', 'e87', 'e89', 'e89_engine', 'headlight', 'loftcube', 'nightgown', 'powerplant', 'stanford', 'xyz_dragon']
 
 #isas_win  = ['sse41']
-isas_win  = ['sse3', 'sse41', 'avx']
+#isas_win = ['sse3', 'sse41']
+isas_win = ['sse3', 'sse41', 'avx']
+#isas_win = ['sse3', 'sse41', 'avx', 'avx2']
+
 isas_unix = ['sse3', 'sse41', 'avx']
 #isas_unix = ['sse3', 'sse41', 'avx', 'avx2']
 isas      = []
+
+isas_allowed = {}
+isas_allowed['Debug'] = ['sse2', 'sse3', 'sse41']
+isas_allowed['Release'] = ['sse2', 'sse3', 'sse41']
+isas_allowed['ReleaseAVX'] = ['sse2', 'sse3', 'sse41', 'avx']
+isas_allowed['ReleaseAVX2'] = ['sse2', 'sse3', 'sse41', 'avx', 'avx2']
 
 modelDir  = ''
 testDir = ''
@@ -131,7 +143,9 @@ def compile(OS,compiler,platform,isas,build):
     os.system(command)
     command =  'msbuild embree-renderer_vs2010.sln' + ' ' + cfg
     os.system(command)
-   
+    command =  'msbuild embree-renderer_vs2010.sln' + ' ' + cfg
+    os.system(command)
+  
     #command += '/t:rebuild /verbosity:n'
   else:
 
@@ -236,8 +250,9 @@ def renderLoop(OS):
           for scene in scenes:
             for device in devices:
               for isa in isas:
-                 print(compiler + ' ' + platform + ' ' + build + ' ' + scene + ' ' + device + ' ' + isa)
-                 render(OS, scene, compiler, platform, build, device, isa)
+                 if isa in isas_allowed[build]:
+                   print(compiler + ' ' + platform + ' ' + build + ' ' + scene + ' ' + device + ' ' + isa)
+                   render(OS, scene, compiler, platform, build, device, isa)
 
 
 ########################## data extraction ##########################
