@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="Windows-1252"?>
 <VisualStudioProject
 	ProjectType="Intel C++ Project"
-	Version="12.1"
+	Version="14.0"
 	Name="device_singleray"
 	ProjectGUID="{80B6E6B5-91F2-4705-9B6B-AF3A6DCD5489}"
 	VCNestedProjectGUID="{ED848C9A-C161-4036-8DF7-EB169BCB81BC}"
@@ -54,6 +54,38 @@
 			<Tool
 				Name="LinkerTool"
 				InterproceduralOptimization="true"
+			/>
+		</Configuration>
+		<Configuration
+			Name="ReleaseAVX|Win32"
+			>
+			<Tool
+				Name="CppCmplrTool"
+				InterproceduralOptimization="0"
+			/>
+		</Configuration>
+		<Configuration
+			Name="ReleaseAVX|x64"
+			>
+			<Tool
+				Name="CppCmplrTool"
+				InterproceduralOptimization="0"
+			/>
+		</Configuration>
+		<Configuration
+			Name="ReleaseAVX2|Win32"
+			>
+			<Tool
+				Name="CppCmplrTool"
+				InterproceduralOptimization="0"
+			/>
+		</Configuration>
+		<Configuration
+			Name="ReleaseAVX2|x64"
+			>
+			<Tool
+				Name="CppCmplrTool"
+				InterproceduralOptimization="0"
 			/>
 		</Configuration>
 	</Configurations>

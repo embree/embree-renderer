@@ -66,8 +66,8 @@ dash = '/'
 
 oss = ['windows', 'unix']
 
-compilers_win = ['V100']
-#compilers_win = ['ICC']
+#compilers_win = ['V100']
+compilers_win = ['ICC']
 #compilers_win  = ['V100', 'ICC']
 compilers_unix = ['ICC']
 #compilers_unix = ['GCC', 'ICC']
@@ -77,10 +77,12 @@ compilers      = []
 #builds = ['Debug']
 builds = ['Release']
 #builds = ['Release', 'Debug']
+builds = ['ReleaseAVX2', 'ReleaseAVX', 'Release']
+#builds = ['ReleaseAVX2', 'ReleaseAVX', 'Release', 'Debug']
 
 #platforms_win  = ['win32']
-#platforms_win  = ['x64']
-platforms_win  = ['win32', 'x64']
+platforms_win  = ['x64']
+#platforms_win  = ['win32', 'x64']
 platforms_unix = ['x64']
 platforms      = []
 
@@ -97,28 +99,39 @@ isas      = []
 
 modelDir  = ''
 testDir = ''
-embreeDir = '~/projects/embree.intel.git'
+embreeDirLinux = '~/projects/embree.intel.git'
+embreeDirWindows = os.environ['EMBREE_INSTALL_DIR']
 
 ########################## compiling ##########################
 
 def compile(OS,compiler,platform,isas,build):
   if OS == 'windows':
+  
     cfg = '/p:Configuration=' + build + ';'
     cfg += 'Platform=' + platform + ';'
     cfg += 'PlatformToolset=';
 #   if (compiler == 'ICC'): cfg += '"Intel C++ Compiler 12.1" '
-    if (compiler == 'ICC'): cfg += '"Intel C++ Compiler XE 12.1" '
+#   if (compiler == 'ICC'): cfg += '"Intel C++ Compiler XE 12.1" '
+    if (compiler == 'ICC'): cfg += '"Intel C++ Compiler XE 14.0" '
     elif (compiler == 'V100'): cfg += 'v100 '
     else: 
       sys.stderr.write('unknown compiler: ' + compiler + '\n')
       sys.exit(1)
-      
-    command =  'msbuild embree_ispc.sln' + ' ' + cfg + ' /t:Clean'
+
+    # first compile Embree
+    command =  'msbuild ' + embreeDirWindows + '\\embree_vs2010.sln' + ' ' + cfg + ' /t:Clean'
+    os.system(command)
+    command =  'msbuild ' + embreeDirWindows + '\\embree_vs2010.sln' + ' ' + cfg
+    os.system(command)
+    command =  'msbuild ' + embreeDirWindows + '\\embree_vs2010.sln' + ' ' + cfg
     os.system(command)
 
-    command =  'msbuild embree_ispc.sln' + ' ' + cfg
+    # now compile the Embree renderer      
+    command =  'msbuild embree-renderer_vs2010.sln' + ' ' + cfg + ' /t:Clean'
     os.system(command)
-    
+    command =  'msbuild embree-renderer_vs2010.sln' + ' ' + cfg
+    os.system(command)
+   
     #command += '/t:rebuild /verbosity:n'
   else:
 
@@ -134,7 +147,7 @@ def compile(OS,compiler,platform,isas,build):
       sys.exit(1)
 
     # first compile Embree
-    command = 'pushd ' + embreeDir + '; mkdir build; cd build; cmake'
+    command = 'pushd ' + embreeDirLinux + '; mkdir build; cd build; cmake'
     command += compilerOption
     command += ' -D RTCORE_BACKFACE_CULLING=OFF'
     command += ' -D RTCORE_ENABLE_RAY_MASK=OFF'
@@ -174,11 +187,11 @@ def compile(OS,compiler,platform,isas,build):
       command += ' -D TARGET_AVX2=OFF'
 
     if ('knc' in isas):
-      command += ' -D BUILD_ISPC_DEVICE_KNC=ON';
-      command += ' -D BUILD_SINGLERAY_DEVICE_KNC=ON';
+      command += ' -D BUILD_ISPC_DEVICE_XEON_PHI=ON';
+      command += ' -D BUILD_SINGLERAY_DEVICE_XEON_PHI=ON';
     else:
-      command += ' -D BUILD_ISPC_DEVICE_KNC=OFF';
-      command += ' -D BUILD_SINGLERAY_DEVICE_KNC=OFF';
+      command += ' -D BUILD_ISPC_DEVICE_XEON_PHI=OFF';
+      command += ' -D BUILD_SINGLERAY_DEVICE_XEON_PHI=OFF';
 
     command += ' -D BUILD_SINGLERAY_DEVICE=ON';
     command += ' -D BUILD_ISPC_DEVICE=ON';
