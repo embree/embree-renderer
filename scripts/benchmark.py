@@ -106,8 +106,9 @@ isas_win  = isas4_win + isas8_win
 #isas4_unix = []
 isas4_unix = ['sse3', 'sse41']
 isas8_unix = ['avx']
+isas16_unix = ['knc']
 #isas8_unix = ['avx', 'avx2']
-isas_unix  = isas4_unix + isas8_unix
+isas_unix  = isas4_unix + isas8_unix + isas16_unix
 #isas_unix = ['sse3', 'sse41', 'avx', 'avx2']
 isas4 = []
 isas8 = []
@@ -115,7 +116,7 @@ isas  = []
 
 modelDir  = ''
 testDir = ''
-embreeDirLinux = '~/projects/embree.git'
+embreeDirLinux = '~/Projects/embree_v21'
 try:
   embreeDirWindows = os.environ['EMBREE_INSTALL_DIR']
 except KeyError:
