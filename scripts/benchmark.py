@@ -77,7 +77,10 @@ compilers      = []
 #builds = ['Debug']
 builds = ['Release']
 #builds = ['Release', 'Debug']
-builds = ['ReleaseAVX2', 'ReleaseAVX', 'Release']
+#builds = ['Release']
+#builds = ['ReleaseAVX']
+#builds = ['ReleaseAVX2']
+#builds = ['ReleaseAVX2', 'ReleaseAVX', 'Release']
 #builds = ['ReleaseAVX2', 'ReleaseAVX', 'Release', 'Debug']
 
 #platforms_win  = ['win32']
@@ -92,21 +95,41 @@ scenes = ['conference']
 #scenes = ['conference', 'courtyard', 'crown', 'e87', 'e89', 'e89_engine', 'headlight', 'loftcube', 'nightgown', 'powerplant', 'stanford', 'xyz_dragon']
 
 #isas_win  = ['sse41']
-isas_win  = ['sse3', 'sse41', 'avx']
-isas_unix = ['sse3', 'sse41', 'avx']
+#isas_win = ['sse3', 'sse41']
+#isas_win = ['sse3', 'sse41', 'avx']
+#isas_win = ['sse3', 'sse41', 'avx', 'avx2']
+isas4_win = ['sse3', 'sse41']
+isas8_win = ['avx']
+#isas8_win = ['avx', 'avx2']
+isas_win  = isas4_win + isas8_win
+
+#isas4_unix = []
+isas4_unix = ['sse3', 'sse41']
+isas8_unix = ['avx']
+isas16_unix = ['knc']
+#isas8_unix = ['avx', 'avx2']
+isas_unix  = isas4_unix + isas8_unix + isas16_unix
 #isas_unix = ['sse3', 'sse41', 'avx', 'avx2']
-isas      = []
+isas4 = []
+isas8 = []
+isas  = []
 
 modelDir  = ''
 testDir = ''
-embreeDirLinux = '~/projects/embree.intel.git'
-embreeDirWindows = os.environ['EMBREE_INSTALL_DIR']
+embreeDirLinux = '~/Projects/embree_v21'
+try:
+  embreeDirWindows = os.environ['EMBREE_INSTALL_DIR']
+except KeyError:
+  embreeDirWindows = ""
 
 ########################## compiling ##########################
 
-def compile(OS,compiler,platform,isas,build):
+def compile(OS,compiler,platform,isas,build,simd):
   if OS == 'windows':
   
+#   if simd == 8: build += AVX2'
+    if simd == 8: build += 'AVX'
+
     cfg = '/p:Configuration=' + build + ';'
     cfg += 'Platform=' + platform + ';'
     cfg += 'PlatformToolset=';
@@ -131,7 +154,9 @@ def compile(OS,compiler,platform,isas,build):
     os.system(command)
     command =  'msbuild embree-renderer_vs2010.sln' + ' ' + cfg
     os.system(command)
-   
+    command =  'msbuild embree-renderer_vs2010.sln' + ' ' + cfg
+    os.system(command)
+  
     #command += '/t:rebuild /verbosity:n'
   else:
 
@@ -158,7 +183,7 @@ def compile(OS,compiler,platform,isas,build):
     command += ' -D RTCORE_FIX_RAYS=OFF'
 
     if (compiler == 'ICC'):
-      command += ' -D TARGET_SSE41=ON'
+      command += ' -D TARGET_SSE41=ON';
       command += ' -D TARGET_AVX=ON'
       command += ' -D TARGET_AVX2=ON'
     else:
@@ -179,8 +204,12 @@ def compile(OS,compiler,platform,isas,build):
     command += ' -D TARGET_SSE2=ON'
     if (compiler == 'ICC'):
       command += ' -D TARGET_SSE41=ON'
-      command += ' -D TARGET_AVX=ON'
-      command += ' -D TARGET_AVX2=ON'
+      if (simd == 8):
+        command += ' -D TARGET_AVX=ON'
+        command += ' -D TARGET_AVX2=ON'
+      else:
+        command += ' -D TARGET_AVX=OFF'
+        command += ' -D TARGET_AVX2=OFF'
     else:
       command += ' -D TARGET_SSE41=OFF'
       command += ' -D TARGET_AVX=OFF'
@@ -204,8 +233,8 @@ def compileLoop(OS):
       for platform in platforms:
         for build in builds:
           print(OS + ' ' + compiler + ' ' + platform + ' ' + build)
-          compile(OS,compiler,platform,isas,build)
-
+          compile(OS,compiler,platform,isas,build,4)
+          compile(OS,compiler,platform,isas,build,8)
 
 ########################## rendering ##########################
 
@@ -232,13 +261,20 @@ def renderLoop(OS):
     for compiler in compilers:
       for platform in platforms:
         for build in builds:
-          compile(OS,compiler,platform,isas,build)
-          for scene in scenes:
-            for device in devices:
-              for isa in isas:
-                 print(compiler + ' ' + platform + ' ' + build + ' ' + scene + ' ' + device + ' ' + isa)
-                 render(OS, scene, compiler, platform, build, device, isa)
-
+          if isas4 <> []:
+            compile(OS,compiler,platform,isas,build,4)
+            for scene in scenes:
+              for device in devices:
+                for isa in isas4:
+                  print(compiler + ' ' + platform + ' ' + build + ' ' + scene + ' ' + device + ' ' + isa)
+                  render(OS, scene, compiler, platform, build, device, isa)
+          if isas8 <> []:
+            compile(OS,compiler,platform,isas,build,8)
+            for scene in scenes:
+              for device in devices:
+                for isa in isas8:
+                  print(compiler + ' ' + platform + ' ' + build + ' ' + scene + ' ' + device + ' ' + isa)
+                  render(OS, scene, compiler, platform, build, device, isa)
 
 ########################## data extraction ##########################
 
@@ -446,11 +482,16 @@ if OS == 'windows':
   compilers = compilers_win
   platforms = platforms_win
   isas = isas_win
+  isas4 = isas4_win
+  isas8 = isas8_win
+
 else:
   dash = '/'
   compilers = compilers_unix
   platforms = platforms_unix
   isas = isas_unix
+  isas4 = isas4_unix
+  isas8 = isas8_unix
 
 if mode == 'compile':
   compileLoop(OS)
