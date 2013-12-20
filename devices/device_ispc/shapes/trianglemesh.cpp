@@ -31,34 +31,34 @@ namespace embree
     
     if (Variant v = parms.getData("positions")) {
       if (!v.data || v.type != Variant::FLOAT3) throw std::runtime_error("wrong position format");
-      position = new Vec3fa[v.data->size()];
+      position = (Vec3fa*) alignedMalloc(sizeof(Vec3fa)*v.data->size(),64);
       for (size_t i=0; i<v.data->size(); i++) position[i] = v.data->getVector3f(i);
       numVertices = v.data->size();
     }
     if (Variant v = parms.getData("motions")) {
       if (!v.data || v.type != Variant::FLOAT3) throw std::runtime_error("wrong motion vector format");
-      motion = new Vec3fa[v.data->size()];
+      motion = (Vec3fa*) alignedMalloc(sizeof(Vec3fa)*v.data->size(),64);
       for (size_t i=0; i<v.data->size(); i++) motion[i] = v.data->getVector3f(i);
     }
     if (Variant v = parms.getData("normals")) {
       if (!v.data || v.type != Variant::FLOAT3) throw std::runtime_error("wrong normal format");
-      normal = new Vec3fa[v.data->size()];
+      normal = (Vec3fa*) alignedMalloc(sizeof(Vec3fa)*v.data->size(),64);
       for (size_t i=0; i<v.data->size(); i++) normal[i] = v.data->getVector3f(i);
     }
     if (Variant v = parms.getData("texcoords")) {
       if (!v.data || v.type != Variant::FLOAT2) throw std::runtime_error("wrong texcoords0 format");
-      texcoord = new Vec2f[v.data->size()];
+      texcoord = (Vec2f*) alignedMalloc(sizeof(Vec2f)*v.data->size(),64);
       for (size_t i=0; i<v.data->size(); i++) texcoord[i] = v.data->getVec2f(i);
     }
     if (Variant v = parms.getData("texcoords0")) {
       if (!v.data || v.type != Variant::FLOAT2) throw std::runtime_error("wrong texcoords0 format");
-      if (texcoord) delete[] texcoord;
-      texcoord = new Vec2f[v.data->size()];
+      if (texcoord) alignedFree(texcoord);
+      texcoord = (Vec2f*) alignedMalloc(sizeof(Vec2f)*v.data->size(),64);
       for (size_t i=0; i<v.data->size(); i++) texcoord[i] = v.data->getVec2f(i);
     }
     if (Variant v = parms.getData("indices")) {
       if (!v.data || v.type != Variant::INT3) throw std::runtime_error("wrong triangle format");
-      triangles = new Vec4i[v.data->size()];
+      triangles = (Vec4i*) alignedMalloc(sizeof(Vec4i)*v.data->size(),64);
       for (size_t i=0; i<v.data->size(); i++) {
         Vector3i t = v.data->getVector3i(i);
         triangles[i] = Vec4i(t.x,t.y,t.z,0);
@@ -74,11 +74,11 @@ namespace embree
                                     (ispc::vec4i*)triangles,
                                     numTriangles);
 
-    delete position;
-    delete motion;
-    delete normal;
-    delete texcoord;
-    delete triangles;
-	return mesh;
+    alignedFree(position);
+    alignedFree(motion);
+    alignedFree(normal);
+    alignedFree(texcoord);
+    alignedFree(triangles);
+    return mesh;
   }
 }

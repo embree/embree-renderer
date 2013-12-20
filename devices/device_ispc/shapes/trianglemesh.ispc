@@ -158,6 +158,18 @@ void* uniform TriangleMesh__transform(const uniform Shape* uniform _this,  const
   mesh->texcoord = NULL;
   mesh->triangle = NULL;
 
+  /*print("0\n"); // FIXME: triggers ISPC but when aligned loads are enforced
+  {
+    uniform vec3fa* uniform a = uniform new uniform vec3fa[32];
+    uniform vec3fa* uniform b = uniform new uniform vec3fa[32];
+    foreach(i=0 ... 32) {
+      vec3fa p = a[i];
+      vec3fa pp = make_vec3fa(make_vec3f(p));
+      b[i] = pp;
+    }
+  }
+  print("1\n");*/
+
   if (this->position) {
     mesh->position = uniform new uniform vec3fa[numVertices];
     foreach(i=0 ... numVertices)

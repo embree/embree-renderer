@@ -169,6 +169,7 @@ namespace embree
 {
   void* alignedMalloc(size_t size, size_t align)
   {
+    if (size == 0) return NULL;
     char* base = (char*)malloc(size+align+sizeof(int));
     if (base == NULL) throw std::runtime_error("memory allocation failed");
 
@@ -178,7 +179,9 @@ namespace embree
     return aligned;
   }
   
-  void alignedFree(const void* ptr) {
+  void alignedFree(const void* ptr) 
+  {
+    if (ptr == NULL) return;
     int ofs = ((int*)ptr)[-1];
     free((char*)ptr-ofs);
   }
