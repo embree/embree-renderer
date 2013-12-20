@@ -67,8 +67,8 @@ dash = '/'
 oss = ['windows', 'unix']
 
 #compilers_win = ['V100']
-#compilers_win = ['ICC']
-compilers_win  = ['V100', 'ICC']
+compilers_win = ['ICC']
+#compilers_win  = ['V100', 'ICC']
 compilers_unix = ['ICC']
 #compilers_unix = ['GCC', 'ICC']
 #compilers_unix = ['GCC', 'CLANG', 'ICC']
@@ -84,14 +84,14 @@ builds = ['Release']
 #builds = ['ReleaseAVX2', 'ReleaseAVX', 'Release', 'Debug']
 
 #platforms_win  = ['win32']
-#platforms_win  = ['x64']
-platforms_win  = ['win32', 'x64']
+platforms_win  = ['x64']
+#platforms_win  = ['win32', 'x64']
 platforms_unix = ['x64']
 platforms      = []
 
 devices = [ 'singleray', 'ispc' ]
-#scenes = ['conference']
-scenes = ['conference', 'crown', 'headlight', 'nightgown', 'powerplant']
+scenes = ['conference']
+#scenes = ['conference', 'crown', 'headlight', 'nightgown', 'powerplant']
 #scenes = ['conference', 'courtyard', 'crown', 'e87', 'e89', 'e89_engine', 'headlight', 'loftcube', 'nightgown', 'powerplant', 'stanford', 'xyz_dragon']
 
 #isas_win  = ['sse41']
@@ -106,8 +106,9 @@ isas_win  = isas4_win + isas8_win
 #isas4_unix = []
 isas4_unix = ['sse3', 'sse41']
 isas8_unix = ['avx']
+isas16_unix = ['knc']
 #isas8_unix = ['avx', 'avx2']
-isas_unix  = isas4_unix + isas8_unix
+isas_unix  = isas4_unix + isas8_unix + isas16_unix
 #isas_unix = ['sse3', 'sse41', 'avx', 'avx2']
 isas4 = []
 isas8 = []
@@ -115,7 +116,7 @@ isas  = []
 
 modelDir  = ''
 testDir = ''
-embreeDirLinux = '~/projects/embree.git'
+embreeDirLinux = '~/Projects/embree_v21'
 try:
   embreeDirWindows = os.environ['EMBREE_INSTALL_DIR']
 except KeyError:
@@ -126,8 +127,8 @@ except KeyError:
 def compile(OS,compiler,platform,isas,build,simd):
   if OS == 'windows':
   
-#    if simd == 8: cfg = cfg + 'AVX2'
-    if simd == 8: cfg = cfg + 'AVX'
+#   if simd == 8: build += AVX2'
+    if simd == 8: build += 'AVX'
 
     cfg = '/p:Configuration=' + build + ';'
     cfg += 'Platform=' + platform + ';'
