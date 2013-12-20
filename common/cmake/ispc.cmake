@@ -94,7 +94,7 @@ MACRO (ispc_compile targets)
       --target=${TARGETS}
       --wno-perf
       --opt=fast-math
-      --opt=force-aligned-memory
+#      --opt=force-aligned-memory
       -h ${outdirh}/${fname}_ispc.h
       -MMM  ${outdir}/${fname}.dev.idep 
       -o ${outdir}/${fname}.dev.${ISPC_TARGET_EXT}
