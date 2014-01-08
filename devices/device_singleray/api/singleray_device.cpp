@@ -82,7 +82,7 @@
 #pragma warning(disable:4297) // function assumed not to throw an exception but does
 #endif
 
-#define RT_COMMAND_HEADER Lock<MutexSys> lock(mutex); g_time++
+#define RT_COMMAND_HEADER Lock<MutexSys> lock(mutex); g_time++;
 
 namespace embree
 {

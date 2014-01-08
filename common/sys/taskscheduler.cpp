@@ -44,6 +44,8 @@ namespace embree
 #if 1
     /* enable fast spinning tasking system */
     instance = new TaskSchedulerMIC;
+    std::cout << "DONE: TaskSchedulerMIC" << std::endl << std::flush;
+    sleep(1);
 #else
     /* enable slower pthreads tasking system */
     printf("WARNING: taskscheduler.cpp: Using pthreads tasking system active on MIC! Expect reduced rendering performance.\n");
