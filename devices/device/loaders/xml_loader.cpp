@@ -137,7 +137,7 @@ namespace embree
     return Vector3f(xml->body[0].Float(),xml->body[1].Float(),xml->body[2].Float());
   }
 
-#if defined(__X86_64__)
+#if defined(__X86_64__) && defined(EMBREE_FAST_VEC3)
   template<> Vector3f XMLLoader::load<Vector3f>(const Ref<XML>& xml) {
     if (xml->body.size() != 3) throw std::runtime_error(xml->loc.str()+": wrong float3 body");
     return Vector3f(xml->body[0].Float(),xml->body[1].Float(),xml->body[2].Float());
