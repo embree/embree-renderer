@@ -21,9 +21,6 @@ namespace embree
   TaskSchedulerMIC::TaskSchedulerMIC() 
     : nextScheduleIndex(0)
   {
-    PING;
-    sleep(1);
-
     for (size_t i=0; i<NUM_TASKS; i++) tasks[i] = NULL;
     for (size_t i=0; i<NUM_TASKS; i++) locks[i] = 0;
   }
