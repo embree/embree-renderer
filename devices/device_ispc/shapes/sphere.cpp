@@ -26,6 +26,7 @@ namespace embree
   void* Sphere::create (const Parms& parms)
   {
     Vector3f P    = parms.getVector3f("P");
+    Vector3f dPdt    = parms.getVector3f("dPdt");
     float r       = parms.getFloat("r");
     size_t numTheta = parms.getInt("numTheta");
     size_t numPhi   = parms.getInt("numPhi");
@@ -36,6 +37,7 @@ namespace embree
     size_t numVertices = 0;
     Vec3fa* position = new Vec3fa[allocatedVertices];
     Vec3fa* motion = NULL;        //!< Motion array.
+    if (dPdt != Vector3f(zero)) motion = new Vec3fa[allocatedVertices];
     Vec3fa* normal = new Vec3fa[allocatedVertices];
     Vec2f* texcoord = new Vec2f[allocatedVertices];
     size_t numTriangles = 0;
@@ -55,7 +57,7 @@ namespace embree
         Vector3f p = r*d+P;
         
         position[numVertices] = p;
-        //if (dPdt != Vector3f(zero)) motion.push_back(dPdt);
+        if (dPdt != Vector3f(zero)) motion[numVertices] = dPdt;
         normal[numVertices] = normalize(d);//cross(dpdv,dpdu));
         texcoord[numVertices] = Vec2f(phi*rcpNumPhi,theta*rcpNumTheta);
         numVertices++;

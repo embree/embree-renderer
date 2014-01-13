@@ -77,8 +77,6 @@ inline void extend_fast(LightPath& lp,
 {
   lp.unbent = lp.unbent & eq(nextRay_dir,lp.ray.dir);
   init_Ray(lp.ray,nextRay_org,nextRay_dir,nextRay_near,nextRay_far);
-
-
   lp.depth = lp.depth+1;
   lp.throughput = mul(lp.throughput,weight);
   lp.ignoreVisibleLights = ignoreVL;
@@ -214,6 +212,7 @@ vec3f PathTraceIntegrator_Li(const uniform PathTracer* uniform this,
         numRays++;
         Ray shadow_ray; 
         init_Ray(shadow_ray,dg.P,ls.wi.v,dg.error*this->epsilon,ls.tMax-dg.error*this->epsilon);
+        shadow_ray.time = lightPath.ray.time;
         rtcOccluded(scene->accel,shadow_ray);
         if (hadHit(shadow_ray)) continue; 
 
@@ -284,6 +283,7 @@ inline vec3f PathTracer__renderPixel(const uniform PathTracer* uniform this,
     
     Ray ray;
     camera->initRay(camera,ray,screenSample,lensSample);
+    ray.time = lensSample.x; // FIXME: introduced correlation
     LightPath lightPath; init_LightPath(lightPath,ray);
     L = add(L, PathTraceIntegrator_Li(this,screenSample,lightPath,scene,sample,numRays));
   }

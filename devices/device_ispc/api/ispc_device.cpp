@@ -407,6 +407,11 @@ namespace embree
                                            (ispc::vec3f&)prim->transform.l.vz,
                                            (ispc::vec3f&)prim->transform.p);
 
+      Vec3fa lower,upper; 
+      int mesh = ispc::Shape__add(scene,shape.ptr,(ispc::vec3f&)lower,(ispc::vec3f&)upper);
+      if (mesh != id) throw std::runtime_error("ID does not match");
+
+#if 0
       int numVertices = ispc::Shape__getNumVertices(shape.ptr);
       int numTriangles = ispc::Shape__getNumTriangles(shape.ptr);
 
@@ -422,10 +427,12 @@ namespace embree
                            (ispc::RTCVertex  *)vertices_o ,(int&)numVertices,
                            (ispc::vec3f&)lower,(ispc::vec3f&)upper);
 
-      instances[numInstances++] = ispc::Instance__new(shape.ptr,prim->material.ptr,NULL);
-      bounds.grow(BBox3f(lower,upper));
       rtcUnmapBuffer(scene,mesh,RTC_VERTEX_BUFFER); 
       rtcUnmapBuffer(scene,mesh,RTC_INDEX_BUFFER);
+#endif
+
+      instances[numInstances++] = ispc::Instance__new(shape.ptr,prim->material.ptr,NULL);
+      bounds.grow(BBox3f(lower,upper));
     }
     
     /* extract lights */
@@ -443,6 +450,11 @@ namespace embree
 
       if (ISPCRef shape = ispc::Light__shape(light.ptr)) 
       {
+        Vec3fa lower,upper; 
+        int mesh = ispc::Shape__add(scene,shape.ptr,(ispc::vec3f&)lower,(ispc::vec3f&)upper);
+        if (mesh != id) throw std::runtime_error("ID does not match");
+
+#if 0
         int numVertices = ispc::Shape__getNumVertices(shape.ptr);
         int numTriangles = ispc::Shape__getNumTriangles(shape.ptr);
         
@@ -457,11 +469,12 @@ namespace embree
                              (ispc::RTCTriangle*)triangles_o,(int&)numTriangles,
                              (ispc::RTCVertex  *)vertices_o ,(int&)numVertices,
                              (ispc::vec3f&)lower,(ispc::vec3f&)upper);
+        rtcUnmapBuffer(scene,mesh,RTC_VERTEX_BUFFER); 
+        rtcUnmapBuffer(scene,mesh,RTC_INDEX_BUFFER);
+#endif
         
         instances[numInstances++] = ispc::Instance__new(shape.ptr,prim->material.ptr,light.ptr);
         bounds.grow(BBox3f(lower,upper));
-        rtcUnmapBuffer(scene,mesh,RTC_VERTEX_BUFFER); 
-        rtcUnmapBuffer(scene,mesh,RTC_INDEX_BUFFER);
       }
     }
     else throw std::runtime_error("invalid primitive");

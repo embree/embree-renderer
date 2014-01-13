@@ -28,7 +28,7 @@ void Shape__Constructor(uniform Shape* uniform this,
                         uniform GetNumTrianglesFunc getNumTriangles,
                         uniform PostIntersectFunc postIntersect,
                         uniform ShapeTransformFunc transform,
-                        uniform ExtractFunc extract_)
+                        uniform AddFunc add_)
 {
   LOG(print("Shape__Constructor\n"));
   RefCount__Constructor(&this->base,destructor);
@@ -36,7 +36,7 @@ void Shape__Constructor(uniform Shape* uniform this,
   this->getNumTriangles = getNumTriangles;
   this->postIntersect = postIntersect;
   this->transform = transform;
-  this->extract = extract_;
+  this->add = add_;
 }
 
 export uniform int Shape__getNumVertices(void *uniform _this) {
@@ -60,6 +60,7 @@ export void* uniform Shape__transform(void* uniform _this,
   return this->transform(this,xfm);
 }
 
+#if 0
 export void Shape__extract(void* uniform _this,
                            const uniform int& id0,
                            uniform RTCTriangle* uniform triangles,
@@ -71,4 +72,14 @@ export void Shape__extract(void* uniform _this,
 {
   const uniform Shape* uniform this = (const uniform Shape* uniform) _this;
   this->extract(this,id0,triangles,numTriangles,vertices,numVertices,lower_o,upper_o);
+}
+#endif
+
+export uniform int Shape__add(void* uniform scene,
+                              void* uniform _shape,
+                              uniform vec3f& lower_o,
+                              uniform vec3f& upper_o)
+{
+  const uniform Shape* uniform shape = (const uniform Shape* uniform) _shape;
+  shape->add((RTCScene)scene,shape,lower_o,upper_o);
 }

@@ -31,6 +31,7 @@ typedef void (*PostIntersectFunc)(uniform const Shape *uniform this,
 
 typedef void* uniform (*ShapeTransformFunc)(const uniform Shape* uniform this, const uniform AffineSpace3f& xfm);
 
+#if 0
 typedef void (*ExtractFunc)(const uniform Shape* uniform this,
                             const uniform int& id0,
                             uniform RTCTriangle* uniform triangles,
@@ -39,6 +40,12 @@ typedef void (*ExtractFunc)(const uniform Shape* uniform this,
                             uniform int& numVertices,
                             uniform vec3f& lower,
                             uniform vec3f& upper);
+#endif
+
+typedef uniform int (*AddFunc)(RTCScene scene,
+                               const uniform Shape* uniform this,
+                               uniform vec3f& lower,
+                               uniform vec3f& upper);
 
 struct Shape 
 {
@@ -47,7 +54,8 @@ struct Shape
   GetNumTrianglesFunc getNumTriangles;
   PostIntersectFunc postIntersect;
   ShapeTransformFunc transform;
-  ExtractFunc extract;
+  //ExtractFunc extract;
+  AddFunc add;
 };
 
 void Shape__Destructor(uniform RefCount* uniform this);
@@ -58,5 +66,5 @@ void Shape__Constructor(uniform Shape* uniform this,
                         uniform GetNumTrianglesFunc getNumTriangles,
                         uniform PostIntersectFunc postIntersect,
                         uniform ShapeTransformFunc transform,
-                        uniform ExtractFunc extract_);
+                        uniform AddFunc add_);
                         
