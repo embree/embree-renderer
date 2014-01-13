@@ -409,7 +409,13 @@ namespace embree
 
       Vec3fa lower,upper; 
       int mesh = ispc::Shape__add(scene,shape.ptr,(ispc::vec3f&)lower,(ispc::vec3f&)upper);
-      if (mesh != id) throw std::runtime_error("ID does not match");
+      if (mesh != id) 
+	{
+	  PING;
+	  PRINT(mesh);
+	  PRINT(id);
+	  throw std::runtime_error("ID does not match");
+	}
 
 #if 0
       int numVertices = ispc::Shape__getNumVertices(shape.ptr);
@@ -452,7 +458,11 @@ namespace embree
       {
         Vec3fa lower,upper; 
         int mesh = ispc::Shape__add(scene,shape.ptr,(ispc::vec3f&)lower,(ispc::vec3f&)upper);
-        if (mesh != id) throw std::runtime_error("ID does not match");
+        if (mesh != id) {
+	  PRINT(mesh);
+	  PRINT(id);
+	  throw std::runtime_error("ID does not match");
+	}
 
 #if 0
         int numVertices = ispc::Shape__getNumVertices(shape.ptr);
