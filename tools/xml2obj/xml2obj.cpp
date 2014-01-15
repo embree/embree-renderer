@@ -342,6 +342,19 @@ namespace embree
       reflectance = reflectance * k;
       fprintf(mtlFile,"newmtl material%i\n",material);
       fprintf(mtlFile,"Kd %f %f %f\n",reflectance.x,reflectance.y,reflectance.z);
+    } else if (code == "Plastic") {
+      Vec3f pigmentColor = loadMaterialParmVec3f(parms,"pigmentColor",1.0f);
+      float eta = loadMaterialParmFloat(parms,"eta",1.4f);
+      float roughness = loadMaterialParmFloat(parms,"roughness",0.01f);
+      fprintf(mtlFile,"newmtl material%i\n",material);
+      fprintf(mtlFile,"Kd %f %f %f\n",pigmentColor.x,pigmentColor.y,pigmentColor.z);
+    } else if (code == "Matte") {
+      Vec3f reflectance = loadMaterialParmVec3f(parms,"reflectance",1.0f);
+      fprintf(mtlFile,"newmtl material%i\n",material);
+      fprintf(mtlFile,"Kd %f %f %f\n",reflectance.x,reflectance.y,reflectance.z);
+    } else if (code == "ThinGlass") {
+      fprintf(mtlFile,"newmtl material%i\n",material);
+      fprintf(mtlFile,"Kd 0 0 0\n");
     } else {
       std::cout << "unknown material \"" << code << "\""<< std::endl;
       fprintf(mtlFile,"newmtl material%i\n",material);
