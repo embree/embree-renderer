@@ -15,10 +15,8 @@
 ## ======================================================================== ##
 
 ADD_EXECUTABLE(obj2xml
-  obj2xml.cpp
-  objLoader.cpp
-  xmlWriter.cpp
+  xml2obj.cpp
 )
 
-TARGET_LINK_LIBRARIES(obj2xml sys image)
+TARGET_LINK_LIBRARIES(obj2xml sys loaders)
 
