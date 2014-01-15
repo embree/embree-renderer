@@ -14,9 +14,9 @@
 ## limitations under the License.                                           ##
 ## ======================================================================== ##
 
-ADD_EXECUTABLE(obj2xml
+ADD_EXECUTABLE(xml2obj
   xml2obj.cpp
 )
 
-TARGET_LINK_LIBRARIES(obj2xml sys loaders)
+TARGET_LINK_LIBRARIES(xml2obj sys loaders)
 

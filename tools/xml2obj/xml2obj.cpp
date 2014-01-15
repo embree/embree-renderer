@@ -43,7 +43,8 @@ namespace embree
     void loadAmbientLight(const Ref<XML>& xml);
     void loadTriangleLight(const Ref<XML>& xml);
     void loadHDRILight(const Ref<XML>& xml);
-    Vec3f loadMaterialParmVec3f(const Ref<XML>& parms, std::string tag);
+    float loadMaterialParmFloat(const Ref<XML>& parms, std::string tag, float def);
+    Vec3f loadMaterialParmVec3f(const Ref<XML>& parms, std::string tag, Vec3f def);
     int loadMaterial(const Ref<XML>& xml);
     void loadTriangleMesh(const Ref<XML>& xml);
     void loadSphere(const Ref<XML>& xml);
@@ -284,7 +285,19 @@ namespace embree
   {
   }
 
-  Vec3f XML2OBJ::loadMaterialParmVec3f(const Ref<XML>& parms, const std::string tag)
+  float XML2OBJ::loadMaterialParmFloat(const Ref<XML>& parms, const std::string tag, float def)
+  {
+    for (size_t i=0; i<parms->children.size(); i++) 
+    {
+      Ref<XML> entry = parms->children[i];
+      if (entry->parm("name") == tag && entry->name == "float1" ) { 
+        return load<float>(entry);
+      }
+    }
+    return def;
+  }
+
+  Vec3f XML2OBJ::loadMaterialParmVec3f(const Ref<XML>& parms, const std::string tag, Vec3f def)
   {
     for (size_t i=0; i<parms->children.size(); i++) 
     {
@@ -293,7 +306,7 @@ namespace embree
         return load<Vec3f>(entry);
       }
     }
-    return zero;
+    return def;
   }
 
   int XML2OBJ::loadMaterial(const Ref<XML>& xml) 
@@ -308,11 +321,29 @@ namespace embree
 
     std::string code = load<std::string>(xml->child("code"));
     int material = nextMaterialID++;
-    if (code == "Lambertian") {
-      Vec3f diffuse = loadMaterialParmVec3f(parms,"reflection");
+    if (code == "Velvet") {
+      Vec3f diffuse = loadMaterialParmVec3f(parms,"reflectance",1.0f);
       fprintf(mtlFile,"newmtl material%i\n",material);
       fprintf(mtlFile,"Kd %f %f %f\n",diffuse.x,diffuse.y,diffuse.z);
+    } else if (code == "Dielectric") {
+      fprintf(mtlFile,"newmtl material%i\n",material);
+      fprintf(mtlFile,"Kd 1 1 1\n");
+    } else if (code == "MetallicPaint") {
+      Vec3f diffuse = loadMaterialParmVec3f(parms,"shadeColor",1.0f);
+      fprintf(mtlFile,"newmtl material%i\n",material);
+      fprintf(mtlFile,"Kd %f %f %f\n",diffuse.x,diffuse.y,diffuse.z);
+    } else if (code == "Metal") {
+      Vec3f reflectance = loadMaterialParmVec3f(parms,"reflectance",one);
+      Vec3f eta = loadMaterialParmVec3f(parms,"eta",1.4f);
+      Vec3f k = loadMaterialParmVec3f(parms,"k",0.0f);
+      float roughness = loadMaterialParmFloat(parms,"roughness",0.01f);
+      float kmax = max(k.x,k.y,k.z);
+      if (kmax != 0.0f) k /= kmax;
+      reflectance = reflectance * k;
+      fprintf(mtlFile,"newmtl material%i\n",material);
+      fprintf(mtlFile,"Kd %f %f %f\n",reflectance.x,reflectance.y,reflectance.z);
     } else {
+      std::cout << "unknown material \"" << code << "\""<< std::endl;
       fprintf(mtlFile,"newmtl material%i\n",material);
     }
     materialCache[parms] = material;
@@ -465,6 +496,7 @@ namespace embree
     /* create obj and mtl files */
     objFile = fopen(objFileName.c_str(),"w");
     mtlFile = fopen(mtlFileName.c_str(),"w");
+    fprintf(objFile,"mtllib %s\n",mtlFileName.c_str());
 
     /* open bin file */
     path = fileName.path();
