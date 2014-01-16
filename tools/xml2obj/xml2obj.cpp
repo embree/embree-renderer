@@ -355,6 +355,16 @@ namespace embree
     } else if (code == "ThinGlass") {
       fprintf(mtlFile,"newmtl material%i\n",material);
       fprintf(mtlFile,"Kd 0 0 0\n");
+    } else if (code == "OBJ") {
+      float d = loadMaterialParmFloat(parms,"d",1.0f);
+      Vec3f Kd = loadMaterialParmVec3f(parms,"Kd",one);
+      Vec3f Ks = loadMaterialParmVec3f(parms,"Ks",zero);
+      float Ns = loadMaterialParmFloat(parms,"Ns",10.0f);
+      fprintf(mtlFile,"newmtl material%i\n",material);
+      fprintf(mtlFile,"d %f\n",d);
+      fprintf(mtlFile,"Kd %f %f %f\n",Kd.x,Kd.y,Kd.z);
+      fprintf(mtlFile,"Ks %f %f %f\n",Ks.x,Ks.y,Ks.z);
+      fprintf(mtlFile,"Ns %f\n",Ns);
     } else {
       std::cout << "unknown material \"" << code << "\""<< std::endl;
       fprintf(mtlFile,"newmtl material%i\n",material);
