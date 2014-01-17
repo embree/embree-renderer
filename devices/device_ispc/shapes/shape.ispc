@@ -81,5 +81,5 @@ export uniform int Shape__add(void* uniform scene,
                               uniform vec3f& upper_o)
 {
   const uniform Shape* uniform shape = (const uniform Shape* uniform) _shape;
-  shape->add((RTCScene)scene,shape,lower_o,upper_o);
+  return shape->add((RTCScene)scene,shape,lower_o,upper_o);
 }
