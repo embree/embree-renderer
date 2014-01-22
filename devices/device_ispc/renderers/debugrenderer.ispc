@@ -61,7 +61,7 @@ task void DebugRenderer__renderTile(uniform DebugRenderer* uniform this,
       for (uniform int s=0; s<this->spp; s++) 
       {
       vec3f col;
-#if 0
+#if 1
       // -------------------------------------------------------
       // ray cast, display eyelight(gnormal)
       // -------------------------------------------------------
@@ -71,12 +71,12 @@ task void DebugRenderer__renderTile(uniform DebugRenderer* uniform this,
       camera->initRay(camera,ray,
                             make_vec2f(fx,fy),
                             make_vec2f(0.f,0.f));
-      scene->intersector->intersect(scene->intersector,ray,hit);
+      rtcIntersect(scene->accel,ray);
       vec3f Ng = make_vec3f(0,0,0);
       if (hadHit(ray)) Ng = normalize(ray.Ng);
-      col = make_vec3f(minf(1.f,.3f+.8f*absf(dot(Ng,normalize(ray.dir)))));
+      col = make_vec3f(min(1.f,.3f+.8f*abs(dot(Ng,normalize(ray.dir)))));
       // col = randomID(ray.meshID+ray.triID);
-#elif 1
+#elif 0
       // -------------------------------------------------------
       // ray cast, but only display triangle ID
       // -------------------------------------------------------
@@ -119,13 +119,71 @@ task void DebugRenderer__renderTile(uniform DebugRenderer* uniform this,
                             make_vec2f(fx,fy),
                             make_vec2f(0.f,0.f));
       col = abs(normalize(ray.dir));
-#else
+#elif 0
        // -------------------------------------------------------
       // simplest: just a simple pattern
       // -------------------------------------------------------
       col.x = ((x+DebugRenderer__frameID)&255)/255.f;
       col.y = ((y+DebugRenderer__frameID)&255)/255.f;
       col.z = ((x+y+DebugRenderer__frameID)&255)/255.f;
+#elif 0
+      const float fx = (x+.5f)*fb->invSize.x;
+      const float fy = (y+.5f)*fb->invSize.y;
+      Ray ray; 
+      camera->initRay(camera,ray,
+                            make_vec2f(fx,fy),
+                            make_vec2f(0.f,0.f));
+      ray.u = ray.v = 0.0f;
+      rtcIntersect(scene->accel,ray);
+
+      /* return black if nothing hit */
+      col = make_vec3f(0,0,0);
+      
+
+      if (hadHit(ray))  {
+      vec3f Ng = normalize(ray.Ng);
+      col = make_vec3f(min(1.f,.3f+.8f*abs(dot(Ng,normalize(ray.dir)))));
+
+       /* calculate hit point */
+       float intensity = 0;
+       vec3f hitPos = add(ray.org,mul(ray.tfar,ray.dir));
+
+       /* trace some ambient occlusion rays */
+       int seed = 34*x+12*y;
+       for (uniform int i=0; i<32; i++) 
+        {
+         vec3f dir; 
+         const float oneOver10000f = 1.f/10000.f;
+         seed = 1103515245 * seed + 12345;
+         dir.x = (seed%10000)*oneOver10000f;
+         seed = 1103515245 * seed + 12345;
+         dir.y = (seed%10000)*oneOver10000f;
+         seed = 1103515245 * seed + 12345;
+         dir.z = (seed%10000)*oneOver10000f;
+    
+         /* initialize shadow ray */
+         RTCRay shadow;
+         shadow.org = hitPos;
+         shadow.dir = dir;
+         shadow.tnear = 0.001f;
+         shadow.tfar = inf;
+         shadow.id0 = 1;
+         shadow.id1 = 0;
+         shadow.mask = -1;
+         shadow.time = 0;
+    
+         /* trace shadow ray */
+         rtcOccluded(scene->accel,shadow);
+    
+         /* add light contribution */
+         intensity += (float)shadow.id0;
+        }
+       intensity *= 1.0f/32.0f;
+
+       /* shade pixel */
+       col = mul(col,intensity);
+      }
+
 #endif
       fb->set(fb,x,_y,col);
       }
