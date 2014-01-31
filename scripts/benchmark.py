@@ -67,8 +67,8 @@ dash = '/'
 oss = ['windows', 'unix']
 
 #compilers_win = ['V100']
-compilers_win = ['ICC']
-#compilers_win  = ['V100', 'ICC']
+#compilers_win = ['ICC']
+compilers_win  = ['V100', 'ICC']
 compilers_unix = ['ICC']
 #compilers_unix = ['GCC', 'ICC']
 #compilers_unix = ['GCC', 'CLANG', 'ICC']
@@ -142,22 +142,13 @@ def compile(OS,compiler,platform,isas,build,simd):
       sys.exit(1)
 
     # first compile Embree
-    command =  'msbuild ' + embreeDirWindows + '\\embree_vs2010.sln' + ' ' + cfg + ' /t:Clean'
-    os.system(command)
-    command =  'msbuild ' + embreeDirWindows + '\\embree_vs2010.sln' + ' ' + cfg
-    os.system(command)
-    command =  'msbuild ' + embreeDirWindows + '\\embree_vs2010.sln' + ' ' + cfg
+    command =  'msbuild ' + embreeDirWindows + '\\embree_vs2010.sln' + ' ' + cfg + ' /t:rebuild /verbosity:n'
     os.system(command)
 
     # now compile the Embree renderer      
-    command =  'msbuild embree-renderer_vs2010.sln' + ' ' + cfg + ' /t:Clean'
-    os.system(command)
-    command =  'msbuild embree-renderer_vs2010.sln' + ' ' + cfg
-    os.system(command)
-    command =  'msbuild embree-renderer_vs2010.sln' + ' ' + cfg
+    command =  'msbuild embree-renderer_vs2010.sln' + ' ' + cfg + ' /t:rebuild /verbosity:n'
     os.system(command)
   
-    #command += '/t:rebuild /verbosity:n'
   else:
 
     if (platform != 'x64'):
