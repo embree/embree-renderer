@@ -22,7 +22,7 @@ SET(FLAGS_AVX2  "-xCORE-AVX2")
 
 SET(CMAKE_CXX_COMPILER "icpc")
 SET(CMAKE_C_COMPILER "icc")
-SET(CMAKE_CXX_FLAGS "-Wall -fPIC -fvisibility-inlines-hidden -fvisibility=hidden")
+SET(CMAKE_CXX_FLAGS "-Wall -fPIC -static-intel -fvisibility-inlines-hidden -fvisibility=hidden")
 SET(CMAKE_CXX_FLAGS_DEBUG "-DDEBUG -g -O0")
 SET(CMAKE_CXX_FLAGS_RELEASE "-DNDEBUG -O3 -no-ansi-alias -restrict -fp-model fast -fimf-precision=low -no-prec-div -no-prec-sqrt")
 SET(CMAKE_EXE_LINKER_FLAGS "") 
