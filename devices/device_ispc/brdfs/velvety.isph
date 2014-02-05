@@ -40,7 +40,7 @@ vec3f uniform_Velvety__eval(const uniform BRDF* uniform _this,
   const uniform Velvety* uniform this = (const uniform Velvety* uniform) _this;
   const float cosThetaO = clamp(dot(wo,dg.Ns));
   const float cosThetaI = clamp(dot(wi,dg.Ns));
-  const float sinThetaO = sqrt(1.0f - cosThetaO);
+  const float sinThetaO = sqrt(1.0f - cosThetaO * cosThetaO);
   const float horizonScatter = pow(sinThetaO, this->f);
   return mul(horizonScatter * cosThetaI * one_over_pi, this->R);
 }

@@ -35,7 +35,7 @@ namespace embree
     __forceinline Color eval(const Vector3f& wo, const DifferentialGeometry& dg, const Vector3f& wi) const {
       float cosThetaO = clamp(dot(wo,dg.Ns));
       float cosThetaI = clamp(dot(wi,dg.Ns));
-      float sinThetaO = sqrtf(1.0f - cosThetaO);
+      float sinThetaO = sqrtf(1.0f - cosThetaO * cosThetaO);
       float horizonScatter = powf(sinThetaO, f);
       return R * horizonScatter * cosThetaI / float(pi);
     }
