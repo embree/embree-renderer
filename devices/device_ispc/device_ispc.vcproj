@@ -78,6 +78,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="$(EMBREE_INSTALL_DIR)\$(PlatformName)\$(ConfigurationName)\embree.lib"
+				IgnoreDefaultLibraryNames="libcpmt.lib"
 				GenerateDebugInformation="true"
 			/>
 			<Tool
@@ -158,6 +159,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="$(EMBREE_INSTALL_DIR)\$(PlatformName)\$(ConfigurationName)\embree.lib"
+				IgnoreDefaultLibraryNames="libcpmt.lib"
 				GenerateDebugInformation="true"
 			/>
 			<Tool
@@ -239,6 +241,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="$(EMBREE_INSTALL_DIR)\$(PlatformName)\$(ConfigurationName)\embree.lib"
+				IgnoreDefaultLibraryNames="libcpmt.lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -319,6 +322,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="$(EMBREE_INSTALL_DIR)\$(PlatformName)\$(ConfigurationName)\embree.lib"
+				IgnoreDefaultLibraryNames="libcpmt.lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -399,6 +403,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="$(EMBREE_INSTALL_DIR)\$(PlatformName)\$(ConfigurationName)\embree.lib"
+				IgnoreDefaultLibraryNames="libcpmt.lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -479,6 +484,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="$(EMBREE_INSTALL_DIR)\$(PlatformName)\$(ConfigurationName)\embree.lib"
+				IgnoreDefaultLibraryNames="libcpmt.lib"
 				TargetMachine="17"
 			/>
 			<Tool
@@ -560,6 +566,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="$(EMBREE_INSTALL_DIR)\$(PlatformName)\$(ConfigurationName)\embree.lib"
+				IgnoreDefaultLibraryNames="libcpmt.lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -640,6 +647,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="$(EMBREE_INSTALL_DIR)\$(PlatformName)\$(ConfigurationName)\embree.lib"
+				IgnoreDefaultLibraryNames="libcpmt.lib"
 				TargetMachine="17"
 			/>
 			<Tool
