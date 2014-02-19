@@ -23,6 +23,37 @@
 
 namespace embree
 {
+#if 1
+  struct ConditionWindows
+  {
+    CONDITION_VARIABLE condition;
+  };
+
+  ConditionSys::ConditionSys ()
+  {
+    cond = new ConditionWindows;
+    ConditionWindows *c = (ConditionWindows*)cond;
+    InitializeConditionVariable(&c->condition);
+  }
+
+  ConditionSys::~ConditionSys ()
+  {
+    delete cond;
+  }
+
+  void ConditionSys::wait(MutexSys& mutex)
+  {
+    ConditionWindows *c = (ConditionWindows*)cond;
+    SleepConditionVariableCS(&c->condition, (LPCRITICAL_SECTION)mutex.mutex, INFINITE);
+  }
+
+  void ConditionSys::broadcast()
+  {
+    ConditionWindows *c = (ConditionWindows*)cond;
+    WakeAllConditionVariable(&c->condition);
+  }
+}
+#else
   /* 
      This is an implementation of POSIX "compatible" condition variables 
      for Win32, as described by Douglas C. Schmidt and Irfan Pyarali: 
@@ -137,6 +168,9 @@ namespace embree
       SetEvent(cv->events[COND_BROADCAST]);
   }
 }
+
+#endif
+
 #endif
 
 #if defined(__UNIX__) || defined(PTHREADS_WIN32)
