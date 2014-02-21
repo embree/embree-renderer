@@ -19,8 +19,13 @@
 #include "network_server.h"
 #include "sys/sysinfo.h"
 
+#ifdef USE_IMAGEMAGICK
+#include <Magick++.h>
+#endif
+
 namespace embree 
 {
+
   NetworkServer::NetworkServer(network::socket_t socket, Device* device, int encoding, bool verbose) 
     : device(device), socket(socket), serverID(0), serverCount(1), encoding(encoding), verbose(verbose)
   {
@@ -52,6 +57,16 @@ namespace embree
     /* delete the device */
     delete device; device = NULL;
   }
+
+  size_t encodeRGBA8_to_RGB8(unsigned char *buffer, unsigned char *pixels, size_t width, size_t height)
+  {
+    for (size_t i=0 ; i < width * height ; i++, buffer +=3, pixels += 4) {
+      buffer[0] = pixels[0];
+      buffer[1] = pixels[1];
+      buffer[2] = pixels[2];
+    } 
+    return(width * height * 3);
+  }   
 
   size_t encodeRGBFloat32_to_RGB8(unsigned char *buffer, Col3f *pixels, size_t width, size_t height) 
   {
@@ -149,7 +164,7 @@ namespace embree
       
       if (verbose) printf("handle %06d = rtNewFrameBuffer(%s, %zu, %zu, %zu)\n", id, type.c_str(), width, height, depth);
       Device::RTFrameBuffer fb = device->rtNewFrameBuffer(type.c_str(), width, height, depth);
-      set(id, fb, new SwapChain(this,type,fb,id,width,height,depth,serverID,serverCount));
+      set(id, fb, new SwapChain(this, type, fb, id, width, height, depth, serverID, serverCount));
       break;
     }
 
@@ -642,56 +657,77 @@ namespace embree
       if (((y>>2)+serverID) % serverCount == 0)
         height1++;
 
-    /*! encode image */
-    size_t bytes = 0;    
-    void* sendbuffer = NULL;
-    switch (server->encoding) 
-    {
-    case EMBREE_FRAME_DATA_NATIVE: {
-      sendbuffer = data;
-      if      (type == "RGB_FLOAT32") bytes = 3*width*height1*sizeof(float);
-      else if (type == "RGBA8"      ) bytes = 4*width*height1;       
-      else if (type == "RGB8"       ) bytes = ((3*width+3)/4*4)*height1;
-      else throw std::runtime_error("unsupported framebuffer format: "+type);
-      break;
-    }
-
-    case EMBREE_FRAME_DATA_RGB8: {
-      sendbuffer = encoded;
-      if (type == "RGB_FLOAT32") 
-        bytes = encodeRGBFloat32_to_RGB8 (encoded, (Col3f*)data, width, height1); 
-      else if (type == "RGBA8"      ) {
-        char* src = (char*)data;
-        char* dst = (char*)encoded;
-        for (size_t i=0; i<width*height1; i++) {
-          dst[0] = src[0];
-          dst[1] = src[1];
-          dst[2] = src[2];
-          dst+=3; src+=4;
-        }
-        bytes = 3*width*height1;
-      }
-      else throw std::runtime_error("unsupported framebuffer format: "+type);
-      break;
-    }
-
-    case EMBREE_FRAME_DATA_RGBE8: {
-      sendbuffer = encoded;
-      if (type == "RGB_FLOAT32") bytes = encodeRGBFloat32_to_RGBE8(encoded, (Col3f*)data, width, height1);
-      else throw std::runtime_error("unsupported framebuffer format: "+type);
-      break;
-    }
-    default: throw std::runtime_error("invalid encoding");
-    }
-
-    /*! send the encoded frame buffer */
+    /*! send the framebuffer meta data */
     network::write(server->socket, (int) magick);
     network::write(server->socket, (int) server->encoding);
     network::write(server->socket, (int) frameBufferID);
     network::write(server->socket, (int) swapID);
     network::write(server->socket, (int) width);  
     network::write(server->socket, (int) height1);  
-    network::write(server->socket, sendbuffer, bytes);  
+
+    /*! encode the framebuffer */
+    switch (server->encoding) 
+    {
+
+    case EMBREE_FRAME_DATA_JPEG:
+    {
+#ifdef USE_IMAGEMAGICK
+
+      Magick::Image unencodedFrame;
+      Magick::Blob  encodedFrame;
+
+      if      (type == "RGB_FLOAT32") unencodedFrame = Magick::Image(width, height1, "RGB", Magick::FloatPixel, data);
+      else if (type == "RGBA8"      ) unencodedFrame = Magick::Image(width, height1, "RGBA", Magick::CharPixel, data);
+      else if (type == "RGB8"       ) unencodedFrame = Magick::Image(width, height1, "RGB",  Magick::CharPixel, data);
+      else throw std::runtime_error("unsupported framebuffer format: " + type);
+
+      unencodedFrame.magick("JPEG");
+      unencodedFrame.write(&encodedFrame);
+      network::write(server->socket, (int) encodedFrame.length());
+      network::write(server->socket, encodedFrame.data(), encodedFrame.length());
+      break;
+
+#else
+      throw std::runtime_error("enable the ImageMagick build option for JPEG framebuffer encoding");
+      break;
+#endif
+    }
+
+    case EMBREE_FRAME_DATA_NATIVE:
+    {
+      size_t bytes = 0;
+      if      (type == "RGB_FLOAT32") bytes = 3 * width * height1 * sizeof(float);
+      else if (type == "RGBA8"      ) bytes = 4 * width * height1;
+      else if (type == "RGB8"       ) bytes = ((3 * width + 3) / 4 * 4) * height1;
+      else throw std::runtime_error("unsupported framebuffer format: " + type);
+      network::write(server->socket, data, bytes);
+      break;
+    }
+
+    case EMBREE_FRAME_DATA_RGB8:
+    {
+      size_t bytes = 0;   
+      if      (type == "RGB_FLOAT32") bytes = encodeRGBFloat32_to_RGB8(encoded, (Col3f *) data, width, height1);
+      else if (type == "RGBA8")       bytes = encodeRGBA8_to_RGB8(encoded, (unsigned char *) data, width, height1);
+      else if (type == "RGB8")        bytes = width * height1 * 3;
+      else throw std::runtime_error("unsupported framebuffer format: " + type);
+      network::write(server->socket, (type == "RGB8") ? data : encoded, bytes);
+      break;
+    }
+
+    case EMBREE_FRAME_DATA_RGBE8:
+    {
+      size_t bytes = 0;
+      if (type == "RGB_FLOAT32") bytes = encodeRGBFloat32_to_RGBE8(encoded, (Col3f *) data, width, height1);
+      else throw std::runtime_error("unsupported framebuffer format: " + type);
+      network::write(server->socket, encoded, bytes);
+      break;
+    }
+
+    default: throw std::runtime_error("invalid framebuffer encoding");
+    }
+
+    /*! flush the socket */
     network::flush(server->socket);  
 
     /*! unmap framebuffer data */
@@ -699,6 +735,7 @@ namespace embree
 
     /*! goto next read buffer */
     nextReadBuffer();
+
   }
 
   /*! NetworkServer bookkeeping methods ================================== */

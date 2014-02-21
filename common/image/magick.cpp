@@ -25,7 +25,6 @@ using namespace Magick;
 
 namespace embree
 {
-
   Ref<Image> loadMagick(const FileName& fileName)
   {
     Magick::Image image(fileName.c_str());
