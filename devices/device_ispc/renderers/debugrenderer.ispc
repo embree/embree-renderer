@@ -61,7 +61,7 @@ task void DebugRenderer__renderTile(uniform DebugRenderer* uniform this,
       for (uniform int s=0; s<this->spp; s++) 
       {
       vec3f col;
-#if 1
+#if 0
       // -------------------------------------------------------
       // ray cast, display eyelight(gnormal)
       // -------------------------------------------------------
@@ -76,7 +76,7 @@ task void DebugRenderer__renderTile(uniform DebugRenderer* uniform this,
       if (hadHit(ray)) Ng = normalize(ray.Ng);
       col = make_vec3f(min(1.f,.3f+.8f*abs(dot(Ng,normalize(ray.dir)))));
       // col = randomID(ray.meshID+ray.triID);
-#elif 0
+#elif 1
       // -------------------------------------------------------
       // ray cast, but only display triangle ID
       // -------------------------------------------------------

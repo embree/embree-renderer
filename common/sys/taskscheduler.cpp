@@ -41,7 +41,7 @@ namespace embree
       throw std::runtime_error("Embree threads already running.");
 
 #if defined(__MIC__)
-#if 1
+#if 0
     /* enable fast spinning tasking system */
     instance = new TaskSchedulerMIC;
     std::cout << "DONE: TaskSchedulerMIC" << std::endl << std::flush;

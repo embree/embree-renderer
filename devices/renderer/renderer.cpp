@@ -24,6 +24,7 @@
 
 namespace embree
 {
+  //double upload_time = 0;
   /******************************************************************************/
   /*                                  State                                     */
   /******************************************************************************/
@@ -725,6 +726,9 @@ namespace embree
 
     /*! parse command line */  
     parseCommandLine(stream, FileName());
+
+    //upload_time = getSeconds();
+    //PRINT(upload_time);
 
     /*! if we did no render yet but have loaded a scene, switch to display mode */
     if (!g_rendered && g_prims.size()) { //displayMode();
