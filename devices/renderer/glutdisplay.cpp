@@ -313,6 +313,12 @@ namespace embree
     /* draw image in OpenGL */
     void* ptr = g_device->rtMapFrameBuffer(g_frameBuffer);
 
+    // extern double upload_time;
+    
+    // upload_time = getSeconds() - upload_time;
+    // std::cout << "upload " << upload_time << std::endl;
+    // exit(0);
+
     glRasterPos2i(-1, 1);
     glPixelZoom(1.0f, -1.0f);
 

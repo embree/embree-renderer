@@ -15,6 +15,7 @@
 // ======================================================================== //
 
 #include "default.h"
+#include "device/loaders/loaders.h"
 #include "network_common.h"
 #include "network_server.h"
 #include "sys/sysinfo.h"
@@ -145,12 +146,12 @@ namespace embree
     {
       int id = network::read_int(socket);
       std::string type = network::read_string(socket);
-      std::string fileName = network::read_string(socket);
+      std::string filename = network::read_string(socket);
       size_t offset = network::read_int(socket);
       size_t bytes = network::read_int(socket);
       
-      if (verbose) printf("handle %06d = rtNewDataFromFile(%s, %s, %zu, %zu)\n", id, type.c_str(), fileName.c_str(), offset, bytes);
-      set(id, device->rtNewDataFromFile(type.c_str(), fileName.c_str(), offset, bytes));
+      if (verbose) printf("handle %06d = rtNewDataFromFile(%s, %s, %zu, %zu)\n", id, type.c_str(), filename.c_str(), offset, bytes);
+      set(id, device->rtNewDataFromFile(type.c_str(), filename.c_str(), offset, bytes));
       break;
     } 
 
@@ -186,17 +187,17 @@ namespace embree
       
       if (verbose) printf("handle %06d = rtNewImage(%s, %zu, %zu)\n", id, type.c_str(), width, height);
       set(id, device->rtNewImage(type.c_str(), width, height, data, true));  
-	  free(data);
+      free(data);
       break;
     }
     
     case EMBREE_NEW_IMAGE_FROM_FILE: 
     {
       int id = network::read_int(socket);
-      std::string fileName = network::read_string(socket);
+      std::string filename = network::read_string(socket);
       
-      if (verbose) printf("handle %06d = rtNewImageFromFile(%s)\n", id, fileName.c_str());
-      set(id, device->rtNewImageFromFile(fileName.c_str()));
+      if (verbose) printf("handle %06d = rtNewImageFromFile(%s)\n", id, filename.c_str());
+      set(id, device->rtNewImageFromFile(filename.c_str()));
       break;
     }
       
@@ -251,13 +252,27 @@ namespace embree
       break;
     } 
 
+    case EMBREE_NEW_SCENE_FROM_FILE:
+    {
+      int id = network::read_int(socket);
+      std::string type = network::read_string(socket);
+      std::string filename = network::read_string(socket);
+      if (verbose) printf("handle %06d = rtNewScene(%s, %s)\n", id, type.c_str(), filename.c_str());
+      Device::RTScene scene = device->rtNewScene(type.c_str());  set(id, scene);
+
+      g_device = device;
+      std::vector<Handle<Device::RTPrimitive> > primitives = rtLoadScene(filename);
+      for (size_t i = 0; i < primitives.size(); i++) device->rtSetPrimitive(scene, i, primitives[i]);
+      break;
+    }
+
     case EMBREE_SET_SCENE_PRIMITIVE:
     {
       int sceneID = network::read_int(socket);
       int slot    = network::read_int(socket);
       int primID  = network::read_int(socket);
       if (verbose) printf("rtSetScenePrimitive(%06d, %06d, %06d)\n", sceneID, slot, primID);
-      device->rtSetPrimitive(get<Device::RTScene>(sceneID),slot,get<Device::RTPrimitive>(primID));
+      device->rtSetPrimitive(get<Device::RTScene>(sceneID), slot, get<Device::RTPrimitive>(primID));
       break;
     }
 
