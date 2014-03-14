@@ -55,10 +55,10 @@ OBJLoader::OBJLoader(FILE *objFile) {
         if (!strcasecmp(token, "usemtl")) { flushFaceGroup(faceGroup, materialName);  sscanf(line, "%*s %s", materialName); }
 
         /*! vertex coordinates */
-        if (!strcasecmp(token, "v"))  { Vector3f value;  sscanf(line, "%*s %f %f %f", &value.x, &value.y, &value.z);  v.push_back(value); }
+        if (!strcasecmp(token, "v"))  { Vec3f value;  sscanf(line, "%*s %f %f %f", &value.x, &value.y, &value.z);  v.push_back(value); }
 
         /*! vertex normal */
-        if (!strcasecmp(token, "vn")) { Vector3f value;  sscanf(line, "%*s %f %f %f", &value.x, &value.y, &value.z);  vn.push_back(value); }
+        if (!strcasecmp(token, "vn")) { Vec3f value;  sscanf(line, "%*s %f %f %f", &value.x, &value.y, &value.z);  vn.push_back(value); }
 
         /*! texture coordinates */
         if (!strcasecmp(token, "vt")) { Vec2f value;  sscanf(line, "%*s %f %f", &value.x, &value.y);  vt.push_back(value); }

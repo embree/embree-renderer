@@ -18,16 +18,16 @@
 
 namespace embree
 {
-  std::vector<Vector3f> VRMLLoader::parsePointArray(Ref<Stream<Token> >& cin, const AffineSpace3f& space)
+  std::vector<Vec3f> VRMLLoader::parsePointArray(Ref<Stream<Token> >& cin, const AffineSpace3f& space)
   {
-    std::vector<Vector3f> points;
+    std::vector<Vec3f> points;
 
     if (cin->get() != Token::Sym("[")) 
       throw std::runtime_error(cin->unget().Location().str()+": [ expected");
       
     while (cin->peek() != Token::Sym("]")) 
     {
-      Vector3f p;
+      Vec3f p;
       p.x = cin->get().Float(); 
       if (cin->peek() == Token::Sym(",")) cin->get();
       p.y = cin->get().Float(); 
@@ -41,16 +41,16 @@ namespace embree
     return points;
   }
 
-  std::vector<Vector3f> VRMLLoader::parseNormalArray(Ref<Stream<Token> >& cin, const AffineSpace3f& space)
+  std::vector<Vec3f> VRMLLoader::parseNormalArray(Ref<Stream<Token> >& cin, const AffineSpace3f& space)
   {
-    std::vector<Vector3f> normals;
+    std::vector<Vec3f> normals;
 
     if (cin->get() != Token::Sym("[")) 
       throw std::runtime_error(cin->unget().Location().str()+": [ expected");
       
     while (cin->peek() != Token::Sym("]")) 
     {
-      Vector3f n;
+      Vec3f n;
       n.x = cin->get().Float(); 
       if (cin->peek() == Token::Sym(",")) cin->get();
       n.y = cin->get().Float(); 
@@ -297,12 +297,12 @@ namespace embree
 
   void VRMLLoader::parseTransform(Ref<Stream<Token> >& cin, const AffineSpace3f& space_in)
   {
-    Vector3f center = zero;
-    Vector3f rotationAxis = Vector3f(1,0,0);
+    Vec3f center = zero;
+    Vec3f rotationAxis = Vec3f(1,0,0);
     float rotationAngle = 0.0f;
-    Vector3f scaleMagnitude = Vector3f(1,1,1);
-    Vector3f scaleOrientation = Vector3f(1,0,0);
-    Vector3f translation = zero;
+    Vec3f scaleMagnitude = Vec3f(1,1,1);
+    Vec3f scaleOrientation = Vec3f(1,0,0);
+    Vec3f translation = zero;
 
     if (cin->get() != Token::Sym("{"))
       throw std::runtime_error(cin->unget().Location().str()+": { expected");

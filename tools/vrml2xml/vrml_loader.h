@@ -32,6 +32,8 @@ namespace embree
 {
   class VRMLLoader {
   public:
+
+    typedef AffineSpaceT<LinearSpace3<Vec3f> > AffineSpace3f;
     
     /*! loaded geometry */
     std::vector<Mesh> model;
@@ -40,8 +42,8 @@ namespace embree
     VRMLLoader(const char* fileName);
 
   private:
-    std::vector<Vector3f> parsePointArray(Ref<Stream<Token> >& cin, const AffineSpace3f& space);
-    std::vector<Vector3f> parseNormalArray(Ref<Stream<Token> >& cin, const AffineSpace3f& space);
+    std::vector<Vec3f> parsePointArray(Ref<Stream<Token> >& cin, const AffineSpace3f& space);
+    std::vector<Vec3f> parseNormalArray(Ref<Stream<Token> >& cin, const AffineSpace3f& space);
     std::vector<Vec2f> parseTexCoordArray(Ref<Stream<Token> >& cin);
     std::vector<Vec3i> parseTriangleArray(Ref<Stream<Token> >& cin);
     void parseIndexedFaceSet(Ref<Stream<Token> >& cin, const AffineSpace3f& space, Mesh& mesh);

@@ -57,8 +57,8 @@ struct Material {
 
 struct Mesh {
 
-    std::vector<Vector3f> positions;
-    std::vector<Vector3f> normals;
+    std::vector<Vec3f> positions;
+    std::vector<Vec3f> normals;
     std::vector<Vec2f> texcoords;
     std::vector<Vec3i> triangles;
     Material           material;
@@ -77,8 +77,8 @@ public:
 private:
 
     /*! bookkeeping buffers */
-    std::vector<Vector3f> v;
-    std::vector<Vector3f> vn;
+    std::vector<Vec3f> v;
+    std::vector<Vec3f> vn;
     std::vector<Vec2f> vt;
 
     /*! materials library */
