@@ -302,6 +302,7 @@ namespace embree
     float rotationAngle = 0.0f;
     Vec3f scaleMagnitude = Vec3f(1,1,1);
     Vec3f scaleOrientation = Vec3f(1,0,0);
+    float scaleOrientationAngle = 1.0f;
     Vec3f translation = zero;
 
     if (cin->get() != Token::Sym("{"))
@@ -319,7 +320,7 @@ namespace embree
         rotationAxis.x = cin->get().Float();
         rotationAxis.y = cin->get().Float();
         rotationAxis.z = cin->get().Float();
-        rotationAngle = cin->get().Float();
+        rotationAngle  = cin->get().Float();
       }
       else if (type == "scale") {
         scaleMagnitude.x = cin->get().Float();
@@ -330,7 +331,7 @@ namespace embree
         scaleOrientation.x = cin->get().Float();
         scaleOrientation.y = cin->get().Float();
         scaleOrientation.z = cin->get().Float();
-        cin->get().Float();
+        scaleOrientationAngle = cin->get().Float();
       }
       else if (type == "translation") {
         translation.x = cin->get().Float();
@@ -343,8 +344,15 @@ namespace embree
     cin->get();
 
     AffineSpace3f space = space_in;
-    space = space * AffineSpace3f::rotate(center,rotationAxis,rotationAngle);
-    space = space * AffineSpace3f::translate(translation);
+    space *=
+      AffineSpace3f::translate(translation) *
+      AffineSpace3f::translate(center) *
+      AffineSpace3f::rotate(rotationAxis,rotationAngle) *
+      AffineSpace3f::rotate(scaleOrientation,scaleOrientationAngle) *
+      AffineSpace3f::scale(scaleMagnitude) *
+      rcp(AffineSpace3f::rotate(scaleOrientation,scaleOrientationAngle)) *
+      AffineSpace3f::translate(-center);
+      
     parseChildrenList(cin,space);
 
     if (cin->get() != Token::Sym("}"))
