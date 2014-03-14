@@ -257,9 +257,10 @@ namespace embree
     if (tag != "geometry"  ) throw std::runtime_error(cin->unget().Location().str()+": geometry expected");
     parseGeometry(cin,space,mesh);
 
-    tag = cin->get().Identifier();
-    if (tag != "appearance"  ) throw std::runtime_error(cin->unget().Location().str()+": geometry expected");
-    parseAppearance(cin,mesh);
+    if (cin->peek() == Token::Id("appearance")) {
+      cin->get();
+      parseAppearance(cin,mesh);
+    }
 
     numTriangles += mesh.triangles.size();
     PRINT(numTriangles);
