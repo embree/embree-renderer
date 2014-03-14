@@ -112,40 +112,58 @@ namespace embree
 
   void VRMLLoader::parseIndexedFaceSet(Ref<Stream<Token> >& cin, const AffineSpace3f& space, Mesh& mesh)
   {
-    std::string tag = cin->get().Identifier();
-    if (tag == "solid") {
-      std::string value = cin->get().Identifier();
-    }
-    if (tag == "coord") {
-      std::string name = cin->get().Identifier();
-      if (cin->get() != Token::Sym("{")) throw std::runtime_error(cin->unget().Location().str()+": { expected");
-      std::string type = cin->get().Identifier();
-      mesh.positions = parsePointArray(cin,space);
-      if (cin->get() != Token::Sym("}")) throw std::runtime_error(cin->unget().Location().str()+": } expected");
-    }
-    else if (tag == "normal")
+    if (cin->get() != Token::Sym("{")) 
+      throw std::runtime_error(cin->unget().Location().str()+": { expected");
+
+    while (cin->peek() != Token::Sym("}"))
     {
-      std::string name = cin->get().Identifier();
-      if (cin->get() != Token::Sym("{")) throw std::runtime_error(cin->unget().Location().str()+": { expected");
-      std::string type = cin->get().Identifier();
-      mesh.normals = parseNormalArray(cin,space);
-      if (cin->get() != Token::Sym("}")) throw std::runtime_error(cin->unget().Location().str()+": } expected");
-    }    
-    else if (tag == "texCoord")
-    {
-      std::string name = cin->get().Identifier();
-      if (cin->get() != Token::Sym("{")) throw std::runtime_error(cin->unget().Location().str()+": { expected");
-      std::string type = cin->get().Identifier();
-      mesh.texcoords = parseTexCoordArray(cin);
-      if (cin->get() != Token::Sym("}")) throw std::runtime_error(cin->unget().Location().str()+": } expected");
+      std::string tag = cin->get().Identifier();
+      if (tag == "solid") {
+        std::string value = cin->get().Identifier();
+      } 
+      else if (tag == "coord") {
+        std::string name = cin->get().Identifier();
+        if (cin->get() != Token::Sym("{")) throw std::runtime_error(cin->unget().Location().str()+": { expected");
+        std::string type = cin->get().Identifier();
+        mesh.positions = parsePointArray(cin,space);
+        if (cin->get() != Token::Sym("}")) throw std::runtime_error(cin->unget().Location().str()+": } expected");
+      }
+      else if (tag == "normal")
+      {
+        std::string name = cin->get().Identifier();
+        if (cin->get() != Token::Sym("{")) throw std::runtime_error(cin->unget().Location().str()+": { expected");
+        std::string type = cin->get().Identifier();
+        mesh.normals = parseNormalArray(cin,space);
+        if (cin->get() != Token::Sym("}")) throw std::runtime_error(cin->unget().Location().str()+": } expected");
+      }    
+      else if (tag == "texCoord")
+      {
+        std::string name = cin->get().Identifier();
+        if (cin->get() != Token::Sym("{")) throw std::runtime_error(cin->unget().Location().str()+": { expected");
+        std::string type = cin->get().Identifier();
+        mesh.texcoords = parseTexCoordArray(cin);
+        if (cin->get() != Token::Sym("}")) throw std::runtime_error(cin->unget().Location().str()+": } expected");
+      }
+      else if (tag == "coordIndex")
+      {
+        mesh.triangles = parseTriangleArray(cin);
+      }
+      else if (tag == "normalIndex")
+      {
+        std::vector<Vec3i> normalIndex = parseTriangleArray(cin);
+        if (normalIndex != mesh.triangles)
+          throw std::runtime_error("normal indices not supported");
+      }
+      else if (tag == "texCoordIndex")
+      {
+        std::vector<Vec3i> texcoordIndex = parseTriangleArray(cin);
+        if (texcoordIndex != mesh.triangles)
+          throw std::runtime_error("texcoord indices not supported");
+      }
+      else
+        std::cout << "unknown indexed face set array: " << tag << std::endl;
     }
-    else if (tag == "coordIndex")
-    {
-      std::string name = cin->get().Identifier();
-      mesh.triangles = parseTriangleArray(cin);
-    }
-    else
-      std::cout << "unknown indexed face set array: " << tag << std::endl;
+    cin->get();
   }
 
   void VRMLLoader::parseGeometry(Ref<Stream<Token> >& cin, const AffineSpace3f& space, Mesh& mesh)
@@ -165,7 +183,7 @@ namespace embree
     Material material;
     
     if (cin->get() != Token::Sym("{")) 
-      throw std::runtime_error(cin->unget().Location().str()+": [ expected");
+      throw std::runtime_error(cin->unget().Location().str()+": { expected");
       
     while (cin->peek() != Token::Sym("}")) 
     {
@@ -203,28 +221,52 @@ namespace embree
 
   void VRMLLoader::parseAppearance(Ref<Stream<Token> >& cin, Mesh& mesh)
   {
+    static std::map<std::string,Material> name2material;
+
+    std::string name = "";
     std::string tag = cin->get().Identifier();
     if (tag == "DEF") {
-      std::string name = cin->get().Identifier();
+      name = cin->get().Identifier();
       tag = cin->get().Identifier();
     }
-    std::string type = cin->get().Identifier();
+    else if (tag == "USE") {
+      name = cin->get().Identifier();
+      if (name2material.find(name) == name2material.end())
+        throw std::runtime_error("material with name "+name+" not known");
+      mesh.material = name2material[name];
+      return;
+    }
     if (cin->get() != Token::Sym("{")) throw std::runtime_error(cin->unget().Location().str()+": { expected");
     tag = cin->get().Identifier();
     if (tag != "material") throw std::runtime_error(cin->unget().Location().str()+": material expected");
     std::string type2 = cin->get().Identifier();
     mesh.material = parseMaterial(cin);
+    name2material[name] = mesh.material;
     if (cin->get() != Token::Sym("}")) throw std::runtime_error(cin->unget().Location().str()+": } expected");
   }
 
   void VRMLLoader::parseShape(Ref<Stream<Token> >& cin, const AffineSpace3f& space)
   {
+    static size_t numTriangles = 0;
+
+    if (cin->get() != Token::Sym("{"))
+      throw std::runtime_error(cin->unget().Location().str()+": { expected");
+
     Mesh mesh;
     std::string tag = cin->get().Identifier();
-    if      (tag == "geometry"  ) parseGeometry(cin,space,mesh);
-    else if (tag == "appearance") parseAppearance(cin,mesh);
-    else throw std::runtime_error(cin->unget().Location().str()+": invalid shape");
+    if (tag != "geometry"  ) throw std::runtime_error(cin->unget().Location().str()+": geometry expected");
+    parseGeometry(cin,space,mesh);
+
+    tag = cin->get().Identifier();
+    if (tag != "appearance"  ) throw std::runtime_error(cin->unget().Location().str()+": geometry expected");
+    parseAppearance(cin,mesh);
+
+    numTriangles += mesh.triangles.size();
+    PRINT(numTriangles);
     model.push_back(mesh);
+
+    if (cin->get() != Token::Sym("}"))
+      throw std::runtime_error(cin->unget().Location().str()+": } expected");
   }
 
   void VRMLLoader::parseChildrenList(Ref<Stream<Token> >& cin, const AffineSpace3f& space)
@@ -342,12 +384,20 @@ namespace embree
 
     /* create lexer for XML file */
     std::vector<std::string> symbols;
+    symbols.push_back("#");
     symbols.push_back("{");
     symbols.push_back("}");
     symbols.push_back("[");
     symbols.push_back("]");
     symbols.push_back(",");
     Ref<Stream<Token> > cin = new TokenStream(chars,TokenStream::alpha + TokenStream::ALPHA + "_", TokenStream::separators, symbols);
+
+    // FIXME: hack to skip header
+    cin->get();
+    cin->get();
+    cin->get();
+    cin->get();
+    cin->get();
 
     AffineSpace3f space(one);
     parseNode(cin,space);
