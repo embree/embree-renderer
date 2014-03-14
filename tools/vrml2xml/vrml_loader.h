@@ -23,6 +23,8 @@
 #include <map>
 #include <string>
 #include <vector>
+#include "math/vec3.h"
+#include "math/affinespace.h"
 #include "../obj2xml/objLoader.h"
 #include "../../devices/device/loaders/xml_parser.h"
 
@@ -38,12 +40,21 @@ namespace embree
     VRMLLoader(const char* fileName);
 
   private:
-    
-    /*! materials library */
-    std::map<std::string, Material> materials;
+    std::vector<Vector3f> parsePointArray(Ref<Stream<Token> >& cin, const AffineSpace3f& space);
+    std::vector<Vector3f> parseNormalArray(Ref<Stream<Token> >& cin, const AffineSpace3f& space);
+    std::vector<Vec2f> parseTexCoordArray(Ref<Stream<Token> >& cin);
+    std::vector<Vec3i> parseTriangleArray(Ref<Stream<Token> >& cin);
+    void parseIndexedFaceSet(Ref<Stream<Token> >& cin, const AffineSpace3f& space, Mesh& mesh);
+    void parseGeometry(Ref<Stream<Token> >& cin, const AffineSpace3f& space, Mesh& mesh);
+    Material parseMaterial(Ref<Stream<Token> >& cin);
+    void parseAppearance(Ref<Stream<Token> >& cin, Mesh& mesh);
+    void parseShape(Ref<Stream<Token> >& cin, const AffineSpace3f& space);
+    void parseChildrenList(Ref<Stream<Token> >& cin, const AffineSpace3f& space);
+    void parseChildren(Ref<Stream<Token> >& cin, const AffineSpace3f& space);
+    void parseTransform(Ref<Stream<Token> >& cin, const AffineSpace3f& space_in);
+    void parseGroup(Ref<Stream<Token> >& cin, const AffineSpace3f& space);
+    void parseNode(Ref<Stream<Token> >& cin, const AffineSpace3f& space);
   };
-  
-  std::vector<Mesh> loadVRML(const char *fileName);
 }
 
 #endif

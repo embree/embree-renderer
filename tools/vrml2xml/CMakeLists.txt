@@ -14,11 +14,11 @@
 ## limitations under the License.                                           ##
 ## ======================================================================== ##
 
-ADD_EXECUTABLE(obj2xml
-  obj2xml.cpp
-  objLoader.cpp
-  xmlWriter.cpp
+ADD_EXECUTABLE(vrml2xml
+  vrml_loader.cpp
+  ../obj2xml/xmlWriter.cpp
+  vrml2xml.cpp
 )
 
-TARGET_LINK_LIBRARIES(obj2xml sys image)
+TARGET_LINK_LIBRARIES(vrml2xml sys lexers image)
 

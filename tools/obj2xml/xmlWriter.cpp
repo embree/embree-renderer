@@ -22,6 +22,9 @@
 #include "math/col3.h"
 #include "image/image.h"
 
+namespace embree
+{
+
 std::map<std::string,std::string> g_bumpMaps;
 
 void writeMaterialTextures(FILE *file, const Material &material) {
@@ -151,5 +154,6 @@ void writeXML(const char *xmlFileName, const char *binFileName, const std::vecto
     /*! convert all bump maps */
     for (std::map<std::string,std::string>::iterator i=g_bumpMaps.begin(); i != g_bumpMaps.end(); i++) 
       embree::convertBumpMap(i->first,i->second);
+}
 }
 

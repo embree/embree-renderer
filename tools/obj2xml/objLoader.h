@@ -24,11 +24,17 @@
 #include <string>
 #include <vector>
 
-struct Col3f { float r, g, b; };
+#include "math/vec3.h"
+#include "math/col3.h"
+#include "math/affinespace.h"
+
+/*struct Col3f { float r, g, b; };
 struct Vec2f { float x, y;    };
 struct Vec3f { float x, y, z; };
-struct Vec3i { int   i, j, k; };
+struct Vec3i { int   i, j, k; };*/
 
+namespace embree
+{
 struct Material {
 
   std::string name;
@@ -51,8 +57,8 @@ struct Material {
 
 struct Mesh {
 
-    std::vector<Vec3f> positions;
-    std::vector<Vec3f> normals;
+    std::vector<Vector3f> positions;
+    std::vector<Vector3f> normals;
     std::vector<Vec2f> texcoords;
     std::vector<Vec3i> triangles;
     Material           material;
@@ -71,8 +77,8 @@ public:
 private:
 
     /*! bookkeeping buffers */
-    std::vector<Vec3f> v;
-    std::vector<Vec3f> vn;
+    std::vector<Vector3f> v;
+    std::vector<Vector3f> vn;
     std::vector<Vec2f> vt;
 
     /*! materials library */
@@ -105,6 +111,8 @@ inline std::vector<Mesh> loadOBJ(const char *fileName) {
 
     /*! the main loader routine */
     OBJLoader loader(objFile);  fclose(objFile);  return(loader.model);
+
+}
 
 }
 

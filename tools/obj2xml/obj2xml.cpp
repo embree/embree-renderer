@@ -17,10 +17,10 @@ int main(int argc, char **argv) {
     if (argc != 4) printf("  USAGE:  obj2xml <infile.OBJ> <outfile.xml> <outfile.bin>\n"), exit(1);
 
     /*! load the OBJ file */
-    std::vector<Mesh> model = loadOBJ(argv[1]);
+    std::vector<embree::Mesh> model = embree::loadOBJ(argv[1]);
 
     /*! write the Embree XML shell and binary scene data */
-    writeXML(argv[2], argv[3], model);
+    embree::writeXML(argv[2], argv[3], model);
 
 }
 

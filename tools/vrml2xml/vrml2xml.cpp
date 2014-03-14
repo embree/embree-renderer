@@ -8,19 +8,18 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include "objLoader.h"
-#include "xmlWriter.h"
+#include "vrml_loader.h"
+#include "../obj2xml/xmlWriter.h"
 
 int main(int argc, char **argv) {
 
     /*! all file names must be specified on the command line */
-    if (argc != 4) printf("  USAGE:  obj2xml <infile.OBJ> <outfile.xml> <outfile.bin>\n"), exit(1);
+    if (argc != 4) printf("  USAGE:  obj2xml <infile.vrml> <outfile.xml> <outfile.bin>\n"), exit(1);
 
-    /*! load the OBJ file */
-    std::vector<Mesh> model = loadOBJ(argv[1]);
+    /*! load the VRML file */
+    embree::VRMLLoader loader(argv[1]);
 
     /*! write the Embree XML shell and binary scene data */
-    writeXML(argv[2], argv[3], model);
-
+    embree::writeXML(argv[2], argv[3], loader.model);
 }
 

@@ -19,11 +19,14 @@
 #include "objLoader.h"
 #include <stdio.h>
 
+namespace embree
+{
+
 static inline bool operator < (const Vec3i &a, const Vec3i &b) {
 
-    if (a.i != b.i) return(a.i < b.i);
-    if (a.j != b.j) return(a.j < b.j);
-    if (a.k != b.k) return(a.k < b.k);
+    if (a.x != b.x) return(a.x < b.x);
+    if (a.y != b.y) return(a.y < b.y);
+    if (a.z != b.z) return(a.z < b.z);
     return(false);
 
 }
@@ -52,10 +55,10 @@ OBJLoader::OBJLoader(FILE *objFile) {
         if (!strcasecmp(token, "usemtl")) { flushFaceGroup(faceGroup, materialName);  sscanf(line, "%*s %s", materialName); }
 
         /*! vertex coordinates */
-        if (!strcasecmp(token, "v"))  { Vec3f value;  sscanf(line, "%*s %f %f %f", &value.x, &value.y, &value.z);  v.push_back(value); }
+        if (!strcasecmp(token, "v"))  { Vector3f value;  sscanf(line, "%*s %f %f %f", &value.x, &value.y, &value.z);  v.push_back(value); }
 
         /*! vertex normal */
-        if (!strcasecmp(token, "vn")) { Vec3f value;  sscanf(line, "%*s %f %f %f", &value.x, &value.y, &value.z);  vn.push_back(value); }
+        if (!strcasecmp(token, "vn")) { Vector3f value;  sscanf(line, "%*s %f %f %f", &value.x, &value.y, &value.z);  vn.push_back(value); }
 
         /*! texture coordinates */
         if (!strcasecmp(token, "vt")) { Vec2f value;  sscanf(line, "%*s %f %f", &value.x, &value.y);  vt.push_back(value); }
@@ -73,9 +76,9 @@ uint32_t OBJLoader::appendVertex(const Vec3i &vertex, Mesh &mesh, std::map<Vec3i
     if (entry != vertexMap.end()) return(entry->second);
 
     /*! this is a new vertex, store the indices */
-    if (vertex.i >= 0) mesh.positions.push_back(v[vertex.i]);
-    if (vertex.j >= 0) mesh.normals.push_back(vn[vertex.j]);
-    if (vertex.k >= 0) mesh.texcoords.push_back(vt[vertex.k]);
+    if (vertex.x >= 0) mesh.positions.push_back(v[vertex.x]);
+    if (vertex.y >= 0) mesh.normals.push_back(vn[vertex.y]);
+    if (vertex.z >= 0) mesh.texcoords.push_back(vt[vertex.z]);
 
     /*! map this vertex to a unique id */
     return(vertexMap[vertex] = int(mesh.positions.size()) - 1);
@@ -97,26 +100,14 @@ void OBJLoader::flushFaceGroup(std::vector<std::vector<Vec3i> > &faceGroup, cons
         for (size_t i=0, j=1, k=2 ; k < faceGroup[face].size() ; j++, k++) {
 
             Vec3i triangle;
-            triangle.i = appendVertex(faceGroup[face][i], mesh, vertexMap);
-            triangle.j = appendVertex(faceGroup[face][j], mesh, vertexMap);
-            triangle.k = appendVertex(faceGroup[face][k], mesh, vertexMap);
+            triangle.x = appendVertex(faceGroup[face][i], mesh, vertexMap);
+            triangle.y = appendVertex(faceGroup[face][j], mesh, vertexMap);
+            triangle.z = appendVertex(faceGroup[face][k], mesh, vertexMap);
             mesh.triangles.push_back(triangle);
 
         }
     } 
 
-    /* fix some materials */
-    if (//mesh.material.name == "BeltStrap1" ||
-        //mesh.material.name == "BeltBuckle1" || 
-        //mesh.material.name == "Belt1" || 
-        mesh.material.name == "JeansStraps1" ||
-        //mesh.material.name == "JeansButton1" || 
-        mesh.material.name == "Jeans1")// ||
-        //mesh.material.name == "2_SkinHip") 
-    {
-      mesh.material.Ks.r = 0; mesh.material.Ks.g = 0; mesh.material.Ks.b = 0;
-    }
-    
     /* fix some texture coordinate issues */
     for (size_t i=0; i<mesh.texcoords.size(); i++)
       mesh.texcoords[i].y = 1.0f-mesh.texcoords[i].y;
@@ -127,10 +118,6 @@ void OBJLoader::flushFaceGroup(std::vector<std::vector<Vec3i> > &faceGroup, cons
 }
 
 void OBJLoader::flushMaterial(Material &material, const std::string materialName) {
-
-  if (strstr(material.name.c_str(),"Skin")) {
-    material.Ks.r = 1.0f; material.Ks.g = 1.0f; material.Ks.b = 1.0f; 
-  }
 
     /*! store the material */
     materials[materialName] = material;
@@ -145,34 +132,34 @@ void OBJLoader::loadFace(char *line, std::vector<Vec3i> &face) {
     for (char *token = strtok(line, " f\t\r\n") ; token ; token = strtok(NULL, " \t\r\n")) {
 
         /*! vertex is defined as indices into position, normal, texture coordinate buffers */
-        Vec3i vertex;  vertex.i = -1, vertex.j = -1, vertex.k = -1;
+        Vec3i vertex;  vertex.x = -1, vertex.y = -1, vertex.z = -1;
 
         /*! vertex has texture coordinates and a normal */
-        if (sscanf(token, "%d/%d/%d", &vertex.i, &vertex.k, &vertex.j) == 3) {
+        if (sscanf(token, "%d/%d/%d", &vertex.x, &vertex.z, &vertex.y) == 3) {
 
-            vertex.i = (vertex.i > 0) ? vertex.i - 1 : (vertex.i == 0 ? 0 :  v.size() + vertex.i);
-            vertex.j = (vertex.j > 0) ? vertex.j - 1 : (vertex.j == 0 ? 0 : vn.size() + vertex.j);
-            vertex.k = (vertex.k > 0) ? vertex.k - 1 : (vertex.k == 0 ? 0 : vt.size() + vertex.k);
+            vertex.x = (vertex.x > 0) ? vertex.x - 1 : (vertex.x == 0 ? 0 :  v.size() + vertex.x);
+            vertex.y = (vertex.y > 0) ? vertex.y - 1 : (vertex.y == 0 ? 0 : vn.size() + vertex.y);
+            vertex.z = (vertex.z > 0) ? vertex.z - 1 : (vertex.z == 0 ? 0 : vt.size() + vertex.z);
             face.push_back(vertex);
 
         /*! vertex has a normal */
-        } else if (sscanf(token, "%d//%d", &vertex.i, &vertex.j) == 2) {
+        } else if (sscanf(token, "%d//%d", &vertex.x, &vertex.y) == 2) {
 
-            vertex.i = (vertex.i > 0) ? vertex.i - 1 : (vertex.i == 0 ? 0 :  v.size() + vertex.i);
-            vertex.j = (vertex.j > 0) ? vertex.j - 1 : (vertex.j == 0 ? 0 : vn.size() + vertex.j);
+            vertex.x = (vertex.x > 0) ? vertex.x - 1 : (vertex.x == 0 ? 0 :  v.size() + vertex.x);
+            vertex.y = (vertex.y > 0) ? vertex.y - 1 : (vertex.y == 0 ? 0 : vn.size() + vertex.y);
             face.push_back(vertex);
 
         /*! vertex has texture coordinates */
-        } else if (sscanf(token, "%d/%d", &vertex.i, &vertex.k) == 2) {
+        } else if (sscanf(token, "%d/%d", &vertex.x, &vertex.z) == 2) {
 
-            vertex.i = (vertex.i > 0) ? vertex.i - 1 : (vertex.i == 0 ? 0 :  v.size() + vertex.i);
-            vertex.k = (vertex.k > 0) ? vertex.k - 1 : (vertex.k == 0 ? 0 : vt.size() + vertex.k);
+            vertex.x = (vertex.x > 0) ? vertex.x - 1 : (vertex.x == 0 ? 0 :  v.size() + vertex.x);
+            vertex.z = (vertex.z > 0) ? vertex.z - 1 : (vertex.z == 0 ? 0 : vt.size() + vertex.z);
             face.push_back(vertex);
 
         /*! vertex has no texture coordinates or normal */
-        } else if (sscanf(token, "%d", &vertex.i) == 1) {
+        } else if (sscanf(token, "%d", &vertex.x) == 1) {
 
-            vertex.i = (vertex.i > 0) ? vertex.i - 1 : (vertex.i == 0 ? 0 : v.size() + vertex.i);
+            vertex.x = (vertex.x > 0) ? vertex.x - 1 : (vertex.x == 0 ? 0 : v.size() + vertex.x);
             face.push_back(vertex);
 
         }
@@ -256,6 +243,8 @@ void OBJLoader::loadMTL(const std::string libraryName) {
         if (!strcasecmp(token, "Ns")) { sscanf(line, "%*s %f", &material.Ns); }
 
     } fclose(mtlFile);
+
+}
 
 }
 
