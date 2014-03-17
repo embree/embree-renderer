@@ -112,7 +112,7 @@ namespace embree
 
   Ref<Mesh> VRMLLoader::parseIndexedFaceSet(Ref<Stream<Token> >& cin, const AffineSpace3f& space)
   {
-    Ref<Mesh> mesh = new Mesh;
+    Ref<Mesh> mesh = new Mesh(defaultMaterial);
 
     if (cin->get() != Token::Sym("{")) 
       throw std::runtime_error(cin->unget().Location().str()+": { expected");
@@ -180,14 +180,13 @@ namespace embree
     if (tag == "IndexedFaceSet"  ) return parseIndexedFaceSet(cin,space);
     else {
       std::cout << "unknown geometry: " << tag << std::endl;
-      return new Mesh;
+      return new Mesh(defaultMaterial);
     }
   }
 
   Ref<Material> VRMLLoader::parseMaterial(Ref<Stream<Token> >& cin, const std::string& name)
   {
-    Ref<Material> material = new Material;
-    material->name = name;
+    Ref<Material> material = new Material(name);
     
     if (cin->get() != Token::Sym("{")) 
       throw std::runtime_error(cin->unget().Location().str()+": { expected");
@@ -393,7 +392,7 @@ namespace embree
   }
 
   VRMLLoader::VRMLLoader(const char* fileName) 
-    : scene(new Scene)
+    : scene(new Scene), defaultMaterial(new Material("default"))
   {
     Ref<Stream<int> > chars  = new FileStream(fileName);
 
@@ -415,6 +414,7 @@ namespace embree
     cin->get();
 
     AffineSpace3f space(one);
+    scene->materials.push_back(defaultMaterial);
     parseNode(cin,space);
   }
 }

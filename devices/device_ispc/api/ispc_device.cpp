@@ -90,8 +90,6 @@ double __get_seconds() {
   return embree::getSeconds();
 }
 
-#define ASYNC_RENDER 0
-
 extern "C" {
   int g_serverCount = 1;
   int g_serverID = 0;
@@ -112,29 +110,12 @@ namespace embree
                              construction
   *******************************************************************/
   
-#if ASYNC_RENDER
-  volatile bool g_terminate = false;
-  thread_t renderThread = NULL;
-  BarrierSys renderBarrier;
-  void renderThreadFunction(void* ptr);
-#endif
-
   ISPCDevice::ISPCDevice(size_t numThreads, const char* cfg)
   {
     rtcInit(cfg);
-#if ASYNC_RENDER
-    g_terminate = false;
-    renderBarrier.init(2);
-    renderThread = createThread((thread_func)renderThreadFunction,NULL,4*1024*1024);
-    renderBarrier.wait();
-#endif
   }
 
   ISPCDevice::~ISPCDevice() {
-#if ASYNC_RENDER
-    g_terminate = true;
-    renderBarrier.wait();
-#endif
     rtcExit();
   }
 
@@ -250,11 +231,13 @@ namespace embree
 
   Device::RTShape ISPCDevice::rtNewShape(const char* type) 
   {
-    if      (!strcasecmp(type,"trianglemesh")) return (Device::RTShape) new ISPCCreateHandle<ISPCTriangleMesh>;
-    else if (!strcasecmp(type,"triangle")    ) return (Device::RTShape) new ISPCCreateHandle<Triangle>;
-    else if (!strcasecmp(type,"sphere")      ) return (Device::RTShape) new ISPCCreateHandle<Sphere>;
-    //else if (!strcasecmp(type,"disk")        ) return (Device::RTShape) new ISPCCreateHandle<Disk,Shape>;
+    _RTHandle* shape = NULL;
+    if      (!strcasecmp(type,"trianglemesh")) shape = new ISPCCreateHandle<ISPCTriangleMesh>;
+    else if (!strcasecmp(type,"triangle")    ) shape = new ISPCCreateHandle<Triangle>;
+    else if (!strcasecmp(type,"sphere")      ) shape = new ISPCCreateHandle<Sphere>;
+    //else if (!strcasecmp(type,"disk")        ) shape = new ISPCCreateHandle<Disk,Shape>;
     else throw std::runtime_error("unknown shape type: "+std::string(type));
+    return (Device::RTShape) shape;
   }
 
   Device::RTLight ISPCDevice::rtNewLight(const char* type) 
@@ -279,11 +262,6 @@ namespace embree
                      light_mask_t illumMask = -1, light_mask_t shadowMask = -1)
       : shape(shape), light(light), material(material), transform(transform),
         illumMask(illumMask), shadowMask(shadowMask), light_instance(NULL) {}
-
-    ~PrimitiveHandle () {
-      //if (shape_instance) rtcDeleteGeometry(shape_instance);
-      //shape_instance = NULL;
-    }
 
     /*! Creation of new primitive. */
     void create() 
@@ -310,30 +288,6 @@ namespace embree
       return light_instance;
     }
 
-#if 0
-    RTCGeometry* getShapeInstance()
-    {
-      if (!shape_instance && shape) 
-      {
-        Vec3fa lower,upper; 
-        size_t numTriangles = ispc::Shape__getNumTriangles(shape.ptr);
-        size_t numVertices  = ispc::Shape__getNumVertices(shape.ptr);
-        RTCGeometry* mesh = rtcNewTriangleMesh (numTriangles, numVertices, "default");
-        RTCTriangle* triangles = (RTCTriangle*) rtcMapTriangleBuffer(mesh);
-        Vec3fa*      vertices  = (Vec3fa*     ) rtcMapPositionBuffer(mesh);
-        ispc::Shape__extract(shape.ptr,0x7FFFFFFF,
-                             (ispc::RTCTriangle*)triangles,(int&)numTriangles,
-                             (ispc::RTCVertex  *)vertices ,(int&)numVertices,
-                             (ispc::vec3f&)lower,(ispc::vec3f&)upper);
-        rtcSetApproxBounds(mesh, (float*)&lower, (float*)&upper);
-        rtcUnmapTriangleBuffer(mesh);
-        rtcUnmapPositionBuffer(mesh);
-        rtcBuildAccel(mesh, "default");
-        shape_instance = mesh;
-      }
-      return shape_instance;
-    }
-#endif
 
   public:
     ISPCRef shape;              //!< Shape in case of a shape primitive
@@ -343,7 +297,6 @@ namespace embree
     light_mask_t illumMask; 
     light_mask_t shadowMask;
     ISPCRef light_instance;
-    //RTCGeometry* shape_instance;
   };
 
   Device::RTPrimitive ISPCDevice::rtNewShapePrimitive(Device::RTShape shape_i, Device::RTMaterial material_i, const float* transform)
@@ -410,32 +363,7 @@ namespace embree
       Vec3fa lower,upper; 
       int mesh = ispc::Shape__add(scene,shape.ptr,(ispc::vec3f&)lower,(ispc::vec3f&)upper);
       if (mesh != id) 
-	{
-	  PING;
-	  PRINT(mesh);
-	  PRINT(id);
-	  throw std::runtime_error("ID does not match");
-	}
-
-#if 0
-      int numVertices = ispc::Shape__getNumVertices(shape.ptr);
-      int numTriangles = ispc::Shape__getNumTriangles(shape.ptr);
-
-      unsigned mesh = rtcNewTriangleMesh (scene, RTC_GEOMETRY_STATIC, numTriangles, numVertices);
-      if (mesh != id) throw std::runtime_error("ID does not match");
-      Vec3fa* vertices_o = (Vec3fa*) rtcMapBuffer(scene,mesh,RTC_VERTEX_BUFFER); 
-      RTCTriangle* triangles_o = (RTCTriangle*) rtcMapBuffer(scene,mesh,RTC_INDEX_BUFFER);
-
-      Vec3fa lower,upper; 
-      numTriangles = numVertices = 0;
-      ispc::Shape__extract(shape.ptr,numInstances,
-                           (ispc::RTCTriangle*)triangles_o,(int&)numTriangles,
-                           (ispc::RTCVertex  *)vertices_o ,(int&)numVertices,
-                           (ispc::vec3f&)lower,(ispc::vec3f&)upper);
-
-      rtcUnmapBuffer(scene,mesh,RTC_VERTEX_BUFFER); 
-      rtcUnmapBuffer(scene,mesh,RTC_INDEX_BUFFER);
-#endif
+	throw std::runtime_error("ID does not match");
 
       instances[numInstances++] = ispc::Instance__new(shape.ptr,prim->material.ptr,NULL);
       bounds.grow(BBox3f(lower,upper));
@@ -458,31 +386,9 @@ namespace embree
       {
         Vec3fa lower,upper; 
         int mesh = ispc::Shape__add(scene,shape.ptr,(ispc::vec3f&)lower,(ispc::vec3f&)upper);
-        if (mesh != id) {
-	  PRINT(mesh);
-	  PRINT(id);
+        if (mesh != id)
 	  throw std::runtime_error("ID does not match");
-	}
 
-#if 0
-        int numVertices = ispc::Shape__getNumVertices(shape.ptr);
-        int numTriangles = ispc::Shape__getNumTriangles(shape.ptr);
-        
-        unsigned mesh = rtcNewTriangleMesh (scene, RTC_GEOMETRY_STATIC, numTriangles, numVertices);
-        if (mesh != id) throw std::runtime_error("ID does not match");
-        Vec3fa* vertices_o = (Vec3fa*) rtcMapBuffer(scene,mesh,RTC_VERTEX_BUFFER); 
-        RTCTriangle* triangles_o = (RTCTriangle*) rtcMapBuffer(scene,mesh,RTC_INDEX_BUFFER);
-
-        Vec3fa lower,upper; 
-        numTriangles = numVertices = 0;
-        ispc::Shape__extract(shape.ptr,numInstances,
-                             (ispc::RTCTriangle*)triangles_o,(int&)numTriangles,
-                             (ispc::RTCVertex  *)vertices_o ,(int&)numVertices,
-                             (ispc::vec3f&)lower,(ispc::vec3f&)upper);
-        rtcUnmapBuffer(scene,mesh,RTC_VERTEX_BUFFER); 
-        rtcUnmapBuffer(scene,mesh,RTC_INDEX_BUFFER);
-#endif
-        
         instances[numInstances++] = ispc::Instance__new(shape.ptr,prim->material.ptr,light.ptr);
         bounds.grow(BBox3f(lower,upper));
       }
@@ -571,7 +477,6 @@ namespace embree
       //rtcSetApproxBounds(mesh, (float*)&bounds.lower, (float*)&bounds.upper); // FIXME: support this again?
 
       rtcCommit(scene);
-      //rtcBuildAccel(mesh, builderTy.c_str());
       instance  = ispc::Scene__new(scene,(void*)traverserTy.c_str(),
                                    numAllLights, (void**) allLights,
                                    numEnvLights, (void**) envLights,
@@ -869,50 +774,11 @@ namespace embree
                             render call
   *******************************************************************/
 
-#if ASYNC_RENDER
-  ISPCNormalHandle* g_renderer = NULL;
-  ISPCNormalHandle* g_camera = NULL;
-  SceneHandle* g_scene = NULL;
-  ISPCNormalHandle* g_toneMapper = NULL;
-  ISPCConstHandle* g_swapchain = NULL;
-  bool g_accumulate = false;
-
-  void renderThreadFunction(void* ptr) try 
-  {
-    renderBarrier.wait();
-    while (true) {
-      renderBarrier.wait();
-      if (g_terminate) break;
-      renderBarrier.wait();
-      ispc::Renderer__renderFrameInit(g_renderer->instance.ptr,g_scene->instance.ptr);
-      double t0 = getSeconds();
-      int numRays = ispc::Renderer__renderFrame(g_renderer->instance.ptr,g_camera->instance.ptr,g_scene->instance.ptr,g_toneMapper->instance.ptr,g_swapchain->instance.ptr,g_accumulate);
-      double dt = getSeconds() - t0;
-      printf("render %3.2f fps, %.2f ms,  %3.3f mrps\n",1.0f/dt,dt*1000.0f,numRays/dt*1E-6); flush(std::cout);
-    }
-  }
-  catch (const std::exception& e) {
-    std::cout << "Error: " << e.what() << std::endl;
-    exit(1);
-  }
-#endif
-
   void ISPCDevice::rtRenderFrame(Device::RTRenderer renderer_i, Device::RTCamera camera_i,
                                    Device::RTScene scene_i, Device::RTToneMapper toneMapper_i, 
                                    Device::RTFrameBuffer swapchain_i, int accumulate)
   {
     Lock<MutexSys> lock(mutex);
-
-#if ASYNC_RENDER
-    renderBarrier.wait();
-    g_renderer   = castHandle<ISPCNormalHandle>(renderer_i   ,"renderer"  );
-    g_camera     = castHandle<ISPCNormalHandle>(camera_i     ,"camera"    );
-    g_scene       = castHandle<SceneHandle> (scene_i      ,"scene"     );
-    g_toneMapper = castHandle<ISPCNormalHandle>(toneMapper_i ,"tonemapper");
-    g_swapchain    = castHandle<ISPCConstHandle>  (swapchain_i,"framebuffer");
-    g_accumulate = accumulate;
-    renderBarrier.wait();
-#else
     ISPCNormalHandle* renderer   = castHandle<ISPCNormalHandle>(renderer_i   ,"renderer"  );
     ISPCNormalHandle* camera     = castHandle<ISPCNormalHandle>(camera_i     ,"camera"    );
     SceneHandle* scene       = castHandle<SceneHandle> (scene_i      ,"scene"     );
@@ -924,7 +790,6 @@ namespace embree
     int numRays = ispc::Renderer__renderFrame(renderer->instance.ptr,camera->instance.ptr,scene->instance.ptr,toneMapper->instance.ptr,swapchain->instance.ptr,accumulate);
     double dt = getSeconds() - t0;
     printf("render %3.2f fps, %.2f ms,  %3.3f mrps\n",1.0f/dt,dt*1000.0f,numRays/dt*1E-6); flush(std::cout);
-#endif
   }
 
   bool ISPCDevice::rtPick(Device::RTCamera camera_i, float x, float y, Device::RTScene scene_i, float& px, float& py, float& pz)

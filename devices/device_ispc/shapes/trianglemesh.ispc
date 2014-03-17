@@ -191,6 +191,11 @@ void TriangleMesh__Destructor(uniform RefCount* uniform _this)
 
 void* uniform TriangleMesh__transform(const uniform Shape* uniform _this,  const uniform AffineSpace3f& xfm)
 {
+  uniform AffineSpace3f identity = make_AffineSpace3f(make_vec3f(1,0,0),make_vec3f(0,1,0),make_vec3f(0,0,1),make_vec3f(0,0,0));
+  if (similar(xfm,identity)) {
+    return _this;
+  }
+
   const uniform TriangleMesh* uniform this = (const uniform TriangleMesh* uniform) _this;
   uniform TriangleMesh *uniform mesh = uniform new uniform TriangleMesh;
 

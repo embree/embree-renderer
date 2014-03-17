@@ -109,15 +109,19 @@ namespace embree
     fprintf(xmlFile, "<scene>\n");
 
     /*! write materials */
-    for (size_t i=0; i < scene->materials.size() ; i++) writeMaterial(xmlFile, scene->materials[i]);
-
+    for (size_t i=0; i < scene->materials.size() ; i++) 
+      writeMaterial(xmlFile, scene->materials[i]);
+    
     /*! write the XML triangle mesh meta data */
     fprintf(xmlFile, "  <Group>\n");
-    for (size_t i=0, offset=0 ; i < scene->meshes.size() ; i++) writeMeshHeader(xmlFile, scene->meshes[i], i + 1, offset);
+    for (size_t i=0, offset=0 ; i < scene->meshes.size() ; i++)
+      writeMeshHeader(xmlFile, scene->meshes[i], i + 1, offset);
     fprintf(xmlFile, "  </Group>\n");
 
     /*! write the triangle mesh binary data */
-    for (size_t i=0 ; i<scene->meshes.size() ; i++) writeMeshData(binFile, scene->meshes[i]);  fclose(binFile);
+    for (size_t i=0 ; i<scene->meshes.size() ; i++)
+      writeMeshData(binFile, scene->meshes[i]);  
+    fclose(binFile);
 
     /*! write the XML footer */
     fprintf(xmlFile, "</scene>\n");  fclose(xmlFile);

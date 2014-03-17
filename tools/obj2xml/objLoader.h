@@ -42,7 +42,9 @@ namespace embree
     std::string map_Ns;  float Ns;    /*! specular coefficient */
     std::string map_Bump;             /*! bump map */
     
-    Material() {
+    Material(const std::string& name = "") 
+      : name(name)
+    {
       Ka.r = 0.5f, Ka.g = 0.5f, Ka.b = 0.5f;  d  = 1.0f;
       Kd.r = 0.5f, Kd.g = 0.5f, Kd.b = 0.5f;  Ns = 0.0f;
       Ks.r = 0.0f, Ks.g = 0.0f, Ks.b = 0.0f;
@@ -51,6 +53,9 @@ namespace embree
   
   struct Mesh  : public RefCount 
   {
+    Mesh (Ref<Material> material)
+      : material(material) {}
+
     std::vector<Vec3f> positions;
     std::vector<Vec3f> normals;
     std::vector<Vec2f> texcoords;

@@ -40,6 +40,9 @@ namespace embree
 
     /*! mapping from name to material */
     std::map<std::string,Ref<Material> > name2material;
+
+    /*! default material */
+    Ref<Material> defaultMaterial;
     
     /*! constructor */
     VRMLLoader(const char* fileName);
