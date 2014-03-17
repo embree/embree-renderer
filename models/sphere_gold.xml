@@ -1,6 +1,18 @@
 <?xml version="1.0"?>
 
 <scene>
+
+  <assign type="material" id="gold">
+    <material>
+      <code>"Metal"</code>
+      <parameters>
+        <float3 name="eta">0.19 0.45 1.50</float3>
+        <float3 name="k">3.06 2.40 1.88</float3>
+        <float name="roughness">0.005</float>
+      </parameters>
+    </material>
+  </assign>
+
   <Group>
 
     <Sphere>
@@ -8,14 +20,7 @@
       <radius>100</radius>
       <numTheta>100</numTheta>
       <numPhi>100</numPhi>
-      <material>
-        <code>"Metal"</code>
-        <parameters>
-          <float3 name="eta">0.19 0.45 1.50</float3>
-          <float3 name="k">3.06 2.40 1.88</float3>
-          <float name="roughness">0.005</float>
-        </parameters>
-      </material>
+      <material id="gold"/>
     </Sphere> 
 
     <TriangleMesh>

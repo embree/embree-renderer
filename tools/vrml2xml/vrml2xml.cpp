@@ -20,6 +20,6 @@ int main(int argc, char **argv) {
     embree::VRMLLoader loader(argv[1]);
 
     /*! write the Embree XML shell and binary scene data */
-    embree::writeXML(argv[2], argv[3], loader.model);
+    embree::writeXML(argv[2], argv[3], loader.scene);
 }
 

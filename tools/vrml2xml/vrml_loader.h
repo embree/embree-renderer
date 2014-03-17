@@ -36,7 +36,10 @@ namespace embree
     typedef AffineSpaceT<LinearSpace3<Vec3f> > AffineSpace3f;
     
     /*! loaded geometry */
-    std::vector<Mesh> model;
+    Ref<Scene> scene;
+
+    /*! mapping from name to material */
+    std::map<std::string,Ref<Material> > name2material;
     
     /*! constructor */
     VRMLLoader(const char* fileName);
@@ -46,10 +49,10 @@ namespace embree
     std::vector<Vec3f> parseNormalArray(Ref<Stream<Token> >& cin, const AffineSpace3f& space);
     std::vector<Vec2f> parseTexCoordArray(Ref<Stream<Token> >& cin);
     std::vector<Vec3i> parseTriangleArray(Ref<Stream<Token> >& cin);
-    void parseIndexedFaceSet(Ref<Stream<Token> >& cin, const AffineSpace3f& space, Mesh& mesh);
-    void parseGeometry(Ref<Stream<Token> >& cin, const AffineSpace3f& space, Mesh& mesh);
-    Material parseMaterial(Ref<Stream<Token> >& cin);
-    void parseAppearance(Ref<Stream<Token> >& cin, Mesh& mesh);
+    Ref<Mesh> parseIndexedFaceSet(Ref<Stream<Token> >& cin, const AffineSpace3f& space);
+    Ref<Mesh> parseGeometry(Ref<Stream<Token> >& cin, const AffineSpace3f& space);
+    Ref<Material> parseMaterial(Ref<Stream<Token> >& cin, const std::string& name);
+    Ref<Material> parseAppearance(Ref<Stream<Token> >& cin);
     void parseShape(Ref<Stream<Token> >& cin, const AffineSpace3f& space);
     void parseChildrenList(Ref<Stream<Token> >& cin, const AffineSpace3f& space);
     void parseChildren(Ref<Stream<Token> >& cin, const AffineSpace3f& space);

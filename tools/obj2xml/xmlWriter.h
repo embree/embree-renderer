@@ -23,7 +23,7 @@ namespace embree
 {
 
 /*! write out scene geometry and materials in Embree XML format */
-void writeXML(const char *xmlFileName, const char *binFileName, const std::vector<Mesh> &model);
+void writeXML(const char *xmlFileName, const char *binFileName, const Ref<Scene> scene);
 
 }
 

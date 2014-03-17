@@ -67,7 +67,7 @@ OBJLoader::OBJLoader(FILE *objFile) {
 
 }
 
-uint32_t OBJLoader::appendVertex(const Vec3i &vertex, Mesh &mesh, std::map<Vec3i, uint32_t> &vertexMap) {
+  uint32_t OBJLoader::appendVertex(const Vec3i &vertex, Ref<Mesh>& mesh, std::map<Vec3i, uint32_t> &vertexMap) {
 
     /*! determine if we've seen this vertex before */
     const std::map<Vec3i, uint32_t>::iterator &entry = vertexMap.find(vertex);
@@ -76,12 +76,12 @@ uint32_t OBJLoader::appendVertex(const Vec3i &vertex, Mesh &mesh, std::map<Vec3i
     if (entry != vertexMap.end()) return(entry->second);
 
     /*! this is a new vertex, store the indices */
-    if (vertex.x >= 0) mesh.positions.push_back(v[vertex.x]);
-    if (vertex.y >= 0) mesh.normals.push_back(vn[vertex.y]);
-    if (vertex.z >= 0) mesh.texcoords.push_back(vt[vertex.z]);
+    if (vertex.x >= 0) mesh->positions.push_back(v[vertex.x]);
+    if (vertex.y >= 0) mesh->normals.push_back(vn[vertex.y]);
+    if (vertex.z >= 0) mesh->texcoords.push_back(vt[vertex.z]);
 
     /*! map this vertex to a unique id */
-    return(vertexMap[vertex] = int(mesh.positions.size()) - 1);
+    return(vertexMap[vertex] = int(mesh->positions.size()) - 1);
 
 }
 
@@ -91,7 +91,8 @@ void OBJLoader::flushFaceGroup(std::vector<std::vector<Vec3i> > &faceGroup, cons
     std::map<Vec3i, uint32_t> vertexMap;
 
     /*! mesh that will be constructed from this face group */
-    Mesh mesh;  mesh.material = materials[materialName];
+    Ref<Mesh> mesh; 
+    mesh->material = materials[materialName];
 
     /*! construct a mesh for this face group */
     for (size_t face=0 ; face < faceGroup.size() ; face++) {
@@ -103,27 +104,22 @@ void OBJLoader::flushFaceGroup(std::vector<std::vector<Vec3i> > &faceGroup, cons
             triangle.x = appendVertex(faceGroup[face][i], mesh, vertexMap);
             triangle.y = appendVertex(faceGroup[face][j], mesh, vertexMap);
             triangle.z = appendVertex(faceGroup[face][k], mesh, vertexMap);
-            mesh.triangles.push_back(triangle);
-
+            mesh->triangles.push_back(triangle);
         }
     } 
 
-    /* fix some texture coordinate issues */
-    for (size_t i=0; i<mesh.texcoords.size(); i++)
-      mesh.texcoords[i].y = 1.0f-mesh.texcoords[i].y;
-    
     /*! append the mesh to the model */
-    if (faceGroup.size()) model.push_back(mesh);  
+    if (faceGroup.size()) scene->meshes.push_back(mesh);  
     faceGroup.clear();
 }
 
-void OBJLoader::flushMaterial(Material &material, const std::string materialName) {
+  void OBJLoader::flushMaterial(Ref<Material>& material, const std::string materialName) {
 
     /*! store the material */
     materials[materialName] = material;
 
     /*! clear the material */
-    material = Material();
+    material = new Material();
 
 }
 
@@ -195,11 +191,12 @@ void OBJLoader::loadMTL(const std::string libraryName) {
     FILE *mtlFile = fopen(libraryName.c_str(), "r");  if (!mtlFile) { printf("  ERROR:  unable to open %s\n", libraryName.c_str());  return; }
 
     /*! current material and name */
-    Material material;  char materialName[1024];  sprintf(materialName, "default");
+    Ref<Material> material = new Material;
+    char materialName[1024];  sprintf(materialName, "default");
 
     /*! iterate over lines of the file, store the current material on EOF */
-    for (char line[1024] ; fgets(line, 1024, mtlFile) ? true : (flushMaterial(material, materialName), false); ) {
-
+    for (char line[1024] ; fgets(line, 1024, mtlFile) ? true : (flushMaterial(material, materialName), false); ) 
+    {
         /*! acquire the first token on this line */
         char token[1024];  if (!sscanf(line, "%s", token)) continue;
 
@@ -207,40 +204,40 @@ void OBJLoader::loadMTL(const std::string libraryName) {
         if (!strcmp(token, "#")) continue;
 
         /*! opacity value */
-        if (!strcasecmp(token, "d")) { sscanf(line, "%*s %f", &material.d); }
+        if (!strcasecmp(token, "d")) { sscanf(line, "%*s %f", &material->d); }
 
         /*! ambient color */
-        if (!strcasecmp(token, "Ka")) { sscanf(line, "%*s %f %f %f", &material.Ka.r, &material.Ka.g, &material.Ka.b); }
+        if (!strcasecmp(token, "Ka")) { sscanf(line, "%*s %f %f %f", &material->Ka.r, &material->Ka.g, &material->Ka.b); }
 
         /*! diffuse color */
-        if (!strcasecmp(token, "Kd")) { sscanf(line, "%*s %f %f %f", &material.Kd.r, &material.Kd.g, &material.Kd.b); }
+        if (!strcasecmp(token, "Kd")) { sscanf(line, "%*s %f %f %f", &material->Kd.r, &material->Kd.g, &material->Kd.b); }
 
         /*! specular color */
-        if (!strcasecmp(token, "Ks")) { sscanf(line, "%*s %f %f %f", &material.Ks.r, &material.Ks.g, &material.Ks.b); }
+        if (!strcasecmp(token, "Ks")) { sscanf(line, "%*s %f %f %f", &material->Ks.r, &material->Ks.g, &material->Ks.b); }
 
         /*! opacity texture */
-        if (!strcasecmp(token, "map_d")) { char textureName[1024];  material.map_d = parseString(line+5,textureName); }
+        if (!strcasecmp(token, "map_d")) { char textureName[1024];  material->map_d = parseString(line+5,textureName); }
 
         /*! ambient color texture */
-        if (!strcasecmp(token, "map_Ka")) { char textureName[1024];  material.map_Ka = parseString(line+6,textureName); }
+        if (!strcasecmp(token, "map_Ka")) { char textureName[1024];  material->map_Ka = parseString(line+6,textureName); }
 
         /*! diffuse color texture */
-        if (!strcasecmp(token, "map_Kd")) { char textureName[1024];  material.map_Kd = parseString(line+6,textureName); }
+        if (!strcasecmp(token, "map_Kd")) { char textureName[1024];  material->map_Kd = parseString(line+6,textureName); }
 
         /*! specular color texture */
-        if (!strcasecmp(token, "map_Ks")) { char textureName[1024];  material.map_Ks = parseString(line+6,textureName); }
+        if (!strcasecmp(token, "map_Ks")) { char textureName[1024];  material->map_Ks = parseString(line+6,textureName); }
 
         /*! specular coefficient texture */
-        if (!strcasecmp(token, "map_Ns")) { char textureName[1024];  material.map_Ns = parseString(line+6,textureName); }
+        if (!strcasecmp(token, "map_Ns")) { char textureName[1024];  material->map_Ns = parseString(line+6,textureName); }
 
         /*! bump map */
-        if (!strcasecmp(token, "map_Bump")) { char textureName[1024];  material.map_Bump = parseString(line+8,textureName); }
+        if (!strcasecmp(token, "map_Bump")) { char textureName[1024];  material->map_Bump = parseString(line+8,textureName); }
 
         /*! new material delimiter */
-        if (!strcasecmp(token, "newmtl")) { flushMaterial(material, materialName);  sscanf(line, "%*s %s", materialName); material.name = materialName; }
+        if (!strcasecmp(token, "newmtl")) { flushMaterial(material, materialName);  sscanf(line, "%*s %s", materialName); material->name = materialName; }
 
         /*! specular coefficient */
-        if (!strcasecmp(token, "Ns")) { sscanf(line, "%*s %f", &material.Ns); }
+        if (!strcasecmp(token, "Ns")) { sscanf(line, "%*s %f", &material->Ns); }
 
     } fclose(mtlFile);
 
