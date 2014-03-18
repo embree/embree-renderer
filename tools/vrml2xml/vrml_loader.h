@@ -56,12 +56,12 @@ namespace embree
     Ref<Mesh> parseGeometry(Ref<Stream<Token> >& cin, const AffineSpace3f& space);
     Ref<Material> parseMaterial(Ref<Stream<Token> >& cin, const std::string& name);
     Ref<Material> parseAppearance(Ref<Stream<Token> >& cin);
-    void parseShape(Ref<Stream<Token> >& cin, const AffineSpace3f& space);
-    void parseChildrenList(Ref<Stream<Token> >& cin, const AffineSpace3f& space);
-    void parseChildren(Ref<Stream<Token> >& cin, const AffineSpace3f& space);
-    void parseTransform(Ref<Stream<Token> >& cin, const AffineSpace3f& space_in);
-    void parseGroup(Ref<Stream<Token> >& cin, const AffineSpace3f& space);
-    void parseNode(Ref<Stream<Token> >& cin, const AffineSpace3f& space);
+    void parseShape(Ref<Stream<Token> >& cin, const AffineSpace3f& space, bool visible);
+    void parseChildrenList(Ref<Stream<Token> >& cin, const AffineSpace3f& space, bool visible);
+    void parseChildren(Ref<Stream<Token> >& cin, const AffineSpace3f& space, bool visible);
+    void parseTransform(Ref<Stream<Token> >& cin, const AffineSpace3f& space_in, bool visible);
+    void parseGroup(Ref<Stream<Token> >& cin, const AffineSpace3f& space, bool visible);
+    void parseNode(Ref<Stream<Token> >& cin, const AffineSpace3f& space, bool visible);
   };
 }
 

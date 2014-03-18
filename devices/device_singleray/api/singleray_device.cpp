@@ -581,6 +581,7 @@ namespace embree
     Ray ray; camera->getInstance()->ray(Vec2f(x,y), Vec2f(0.5f, 0.5f), ray);
     //scene->getInstance()->intersector->intersect(ray);
     rtcIntersect(scene->getInstance()->scene,(RTCRay&)ray);
+    //PRINT(ray.id0);
     Vector3f p = ray.org + ray.tfar * ray.dir; 
     px = p.x; py = p.y; pz = p.z; 
     return (bool)ray;

@@ -115,7 +115,7 @@ namespace embree
     /*! write the XML triangle mesh meta data */
     fprintf(xmlFile, "  <Group>\n");
     for (size_t i=0, offset=0 ; i < scene->meshes.size() ; i++)
-      writeMeshHeader(xmlFile, scene->meshes[i], i + 1, offset);
+      writeMeshHeader(xmlFile, scene->meshes[i], i, offset);
     fprintf(xmlFile, "  </Group>\n");
 
     /*! write the triangle mesh binary data */
