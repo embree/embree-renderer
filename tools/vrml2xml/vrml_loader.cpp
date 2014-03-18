@@ -347,16 +347,15 @@ namespace embree
     }
     cin->get();
 
-    AffineSpace3f space = space_in;
-    space *=
-      AffineSpace3f::translate(translation) *
-      AffineSpace3f::translate(center) *
-      AffineSpace3f::rotate(rotationAxis,rotationAngle) *
-      AffineSpace3f::rotate(scaleOrientation,scaleOrientationAngle) *
-      AffineSpace3f::scale(scaleMagnitude) *
-      rcp(AffineSpace3f::rotate(scaleOrientation,scaleOrientationAngle)) *
-      AffineSpace3f::translate(-center);
-      
+    AffineSpace3f space = space_in *
+	AffineSpace3f::translate(translation) *
+	AffineSpace3f::translate(center) *
+	AffineSpace3f::rotate(rotationAxis,rotationAngle) *
+	AffineSpace3f::rotate(scaleOrientation,scaleOrientationAngle) *
+	AffineSpace3f::scale(scaleMagnitude) *
+	rcp(AffineSpace3f::rotate(scaleOrientation,scaleOrientationAngle)) *
+	AffineSpace3f::translate(-center);
+
     parseChildrenList(cin,space);
 
     if (cin->get() != Token::Sym("}"))
