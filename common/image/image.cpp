@@ -81,7 +81,7 @@ namespace embree
 #endif
     if (ext == "ppm") { storePPM(img,fileName); return; }
     if (ext == "pfm") { storePFM(img,fileName); return; }
-    //if (ext == "tga") { storeTga(img,fileName); return; }
+    if (ext == "tga") { storeTga(img,fileName); return; }
     throw std::runtime_error("image format " + ext + " not supported");
   }
   catch (const std::exception& e) {
