@@ -16,6 +16,9 @@
 
 #include "vrml_loader.h"
 
+#define IGNORE_VARIANTS 1
+#define SWAP_YZ 1
+
 namespace embree
 {
   std::vector<Vec3f> VRMLLoader::parsePointArray(Ref<Stream<Token> >& cin, const AffineSpace3f& space)
@@ -34,9 +37,11 @@ namespace embree
       if (cin->peek() == Token::Sym(",")) cin->get();
       p.z = cin->get().Float(); 
       if (cin->peek() == Token::Sym(",")) cin->get();
-      Vec3f pp = xfmPoint(space,p);
-      //std::swap(pp.y,pp.z);
-      points.push_back(pp);
+      p = xfmPoint(space,p);
+#if SWAP_YZ
+      std::swap(p.y,p.z);
+#endif
+      points.push_back(p);
     }
     cin->get();
     return points;
@@ -58,9 +63,11 @@ namespace embree
       if (cin->peek() == Token::Sym(",")) cin->get();
       n.z = cin->get().Float(); 
       if (cin->peek() == Token::Sym(",")) cin->get();
-      Vec3f nn = xfmNormal(space,n);
-      //std::swap(nn.y,nn.z);
-      normals.push_back(nn);
+      n = xfmNormal(space,n);
+#if SWAP_YZ
+      std::swap(n.y,n.z);
+#endif
+      normals.push_back(n);
     }
     cin->get();
     return normals;
@@ -252,7 +259,7 @@ namespace embree
     return material;
   }
 
-  void VRMLLoader::parseShape(Ref<Stream<Token> >& cin, const AffineSpace3f& space)
+  void VRMLLoader::parseShape(Ref<Stream<Token> >& cin, const AffineSpace3f& space, bool visible)
   {
     static size_t numTriangles = 0;
 
@@ -268,26 +275,30 @@ namespace embree
       mesh->material = parseAppearance(cin);
     }
 
-    numTriangles += mesh->triangles.size();
-    PRINT(numTriangles);
-    scene->meshes.push_back(mesh);
+    if (visible) {
+      std::cout << "+" << std::flush;
+      numTriangles += mesh->triangles.size();
+      scene->meshes.push_back(mesh);
+    }
+    else
+      std::cout << "-" << std::flush;
 
     if (cin->get() != Token::Sym("}"))
       throw std::runtime_error(cin->unget().Location().str()+": } expected");
   }
 
-  void VRMLLoader::parseChildrenList(Ref<Stream<Token> >& cin, const AffineSpace3f& space)
+  void VRMLLoader::parseChildrenList(Ref<Stream<Token> >& cin, const AffineSpace3f& space, bool visible)
   {
     if (cin->get() != Token::Sym("["))
       throw std::runtime_error(cin->unget().Location().str()+": [ expected");
 
     while (cin->peek() != Token::Sym("]")) 
-      parseNode(cin,space);
+      parseNode(cin,space,visible);
 
     cin->get();
   }
 
-  void VRMLLoader::parseChildren(Ref<Stream<Token> >& cin, const AffineSpace3f& space)
+  void VRMLLoader::parseChildren(Ref<Stream<Token> >& cin, const AffineSpace3f& space, bool visible)
   {
     if (cin->get() != Token::Sym("{"))
       throw std::runtime_error(cin->unget().Location().str()+": { expected");
@@ -295,13 +306,13 @@ namespace embree
     if (cin->get().Identifier() != "children")
       throw std::runtime_error(cin->unget().Location().str()+": expected children");
 
-    parseChildrenList(cin,space);
+    parseChildrenList(cin,space,visible);
 
     if (cin->get() != Token::Sym("}"))
       throw std::runtime_error(cin->unget().Location().str()+": } expected");
   }
 
-  void VRMLLoader::parseTransform(Ref<Stream<Token> >& cin, const AffineSpace3f& space_in)
+  void VRMLLoader::parseTransform(Ref<Stream<Token> >& cin, const AffineSpace3f& space_in, bool visible)
   {
     Vec3f center = zero;
     Vec3f rotationAxis = Vec3f(1,0,0);
@@ -349,23 +360,22 @@ namespace embree
     }
     cin->get();
 
-    AffineSpace3f space = space_in;
-    space *=
-      AffineSpace3f::translate(translation) *
-      AffineSpace3f::translate(center) *
-      AffineSpace3f::rotate(rotationAxis,rotationAngle) *
-      AffineSpace3f::rotate(scaleOrientation,scaleOrientationAngle) *
-      AffineSpace3f::scale(scaleMagnitude) *
-      rcp(AffineSpace3f::rotate(scaleOrientation,scaleOrientationAngle)) *
-      AffineSpace3f::translate(-center);
-      
-    parseChildrenList(cin,space);
+    AffineSpace3f space = space_in *
+	AffineSpace3f::translate(translation) *
+	AffineSpace3f::translate(center) *
+	AffineSpace3f::rotate(rotationAxis,rotationAngle) *
+	AffineSpace3f::rotate(scaleOrientation,scaleOrientationAngle) *
+	AffineSpace3f::scale(scaleMagnitude) *
+	rcp(AffineSpace3f::rotate(scaleOrientation,scaleOrientationAngle)) *
+	AffineSpace3f::translate(-center);
+
+    parseChildrenList(cin,space,visible);
 
     if (cin->get() != Token::Sym("}"))
       throw std::runtime_error(cin->unget().Location().str()+": } expected");
   }
 
-  void VRMLLoader::parseGroup(Ref<Stream<Token> >& cin, const AffineSpace3f& space)
+  void VRMLLoader::parseGroup(Ref<Stream<Token> >& cin, const AffineSpace3f& space, bool visible)
   {
     if (cin->get() != Token::Sym("{"))
       throw std::runtime_error(cin->unget().Location().str()+": { expected");
@@ -373,23 +383,29 @@ namespace embree
     if (cin->get().Identifier() != "children")
       throw std::runtime_error(cin->unget().Location().str()+": children expected");
     
-    parseChildrenList(cin,space);
+    parseChildrenList(cin,space,visible);
 
     if (cin->get() != Token::Sym("}"))
       throw std::runtime_error(cin->unget().Location().str()+": } expected");
   }
 
-  void VRMLLoader::parseNode(Ref<Stream<Token> >& cin, const AffineSpace3f& space)
+  void VRMLLoader::parseNode(Ref<Stream<Token> >& cin, const AffineSpace3f& space, bool visible)
   {
     std::string tag = cin->get().Identifier();
     if (tag == "DEF") {
       std::string name = cin->get().Identifier();
+#if IGNORE_VARIANTS
+      if (name.find("ALTERNATIVE") != std::string::npos) { // && name.find("ALTERNATIVE_1_") == std::string::npos) {
+	visible = false;
+	//PRINT(name);
+      }
+#endif
       tag = cin->get().Identifier();
     }
     
-    if      (tag == "Shape"    ) parseShape(cin,space);
-    else if (tag == "Group"    ) parseGroup(cin,space);
-    else if (tag == "Transform") parseTransform(cin,space);
+    if      (tag == "Shape"    ) parseShape(cin,space,visible);
+    else if (tag == "Group"    ) parseGroup(cin,space,visible);
+    else if (tag == "Transform") parseTransform(cin,space,visible);
     else throw std::runtime_error(cin->unget().Location().str()+": unknown node type");
   }
 
@@ -417,7 +433,7 @@ namespace embree
 
     AffineSpace3f space(one);
     scene->materials.push_back(defaultMaterial);
-    parseNode(cin,space);
+    parseNode(cin,space,true);
   }
 }
   

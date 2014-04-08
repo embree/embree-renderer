@@ -68,4 +68,5 @@ namespace embree
   }
 }
 
-#endif
+#endif // USE_IMAGEMAGICK
+
