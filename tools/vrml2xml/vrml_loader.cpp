@@ -34,8 +34,9 @@ namespace embree
       if (cin->peek() == Token::Sym(",")) cin->get();
       p.z = cin->get().Float(); 
       if (cin->peek() == Token::Sym(",")) cin->get();
-
-      points.push_back(xfmPoint(space,p));
+      Vec3f pp = xfmPoint(space,p);
+      //std::swap(pp.y,pp.z);
+      points.push_back(pp);
     }
     cin->get();
     return points;
@@ -57,8 +58,9 @@ namespace embree
       if (cin->peek() == Token::Sym(",")) cin->get();
       n.z = cin->get().Float(); 
       if (cin->peek() == Token::Sym(",")) cin->get();
-
-      normals.push_back(xfmNormal(space,n));
+      Vec3f nn = xfmNormal(space,n);
+      //std::swap(nn.y,nn.z);
+      normals.push_back(nn);
     }
     cin->get();
     return normals;
