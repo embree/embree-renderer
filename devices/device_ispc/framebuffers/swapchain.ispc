@@ -41,7 +41,7 @@ void SwapChain__Constructor(uniform SwapChain* uniform this,
                             const uniform uint width, 
                             const uniform uint height,
                             const uniform uint depth,
-                            const void* uniform* uniform ptrs,
+                            void* uniform* uniform ptrs,
                             const uniform DestructorFunc destructor,
                             const uniform FrameBuffer__new create)
 {
