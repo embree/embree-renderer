@@ -59,14 +59,14 @@ void SwapChain__Constructor(uniform SwapChain* uniform this,
   this->accu = AccuBuffer__new(width,height);
 }
 
-export void* uniform SwapChainRGBFloat32__new(const uniform uint width, const uniform uint height, const uniform uint depth, const void* uniform* uniform ptrs)
+export void* uniform SwapChainRGBFloat32__new(const uniform uint width, const uniform uint height, const uniform uint depth, void* uniform* uniform ptrs)
 {
   uniform SwapChain* uniform this = uniform new uniform SwapChain;
   SwapChain__Constructor(this,width,height,depth,ptrs,SwapChain__Destructor,FrameBufferRGBFloat32__new);
   return this;
 }
 
-export void* uniform SwapChainRGBA8__new(const uniform uint width, const uniform uint height, const uniform uint depth, const void* uniform* uniform ptrs)
+export void* uniform SwapChainRGBA8__new(const uniform uint width, const uniform uint height, const uniform uint depth, void* uniform* uniform ptrs)
 {
   uniform SwapChain* uniform this = uniform new uniform SwapChain;
   SwapChain__Constructor(this,width,height,depth,ptrs,SwapChain__Destructor,FrameBufferRGBA8__new);
@@ -74,7 +74,7 @@ export void* uniform SwapChainRGBA8__new(const uniform uint width, const uniform
 }
 
 #if !defined(__MIC__)
-export void* uniform SwapChainRGB8__new(const uniform uint width, const uniform uint height, const uniform uint depth, const void* uniform* uniform ptrs)
+export void* uniform SwapChainRGB8__new(const uniform uint width, const uniform uint height, const uniform uint depth, void* uniform* uniform ptrs)
 {
   uniform SwapChain* uniform this = uniform new uniform SwapChain;
   SwapChain__Constructor(this,width,height,depth,ptrs,SwapChain__Destructor,FrameBufferRGB8__new);
