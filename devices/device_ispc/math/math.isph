@@ -53,6 +53,9 @@ inline varying float clamp (const varying float v, const varying float lower, co
 inline uniform int clamp (const uniform int v, const uniform int lower, const uniform int upper) { return max(lower,min(v,upper)); }
 inline varying int clamp (const varying int v, const varying int lower, const varying int upper) { return max(lower,min(v,upper)); }
 
+inline varying int clamp (varying int v, uniform int lower, uniform int upper) { return max((const varying int)lower,min(v,(const varying int)upper)); }
+inline varying int clamp (varying int v, const varying int lower, const varying int upper) { return max(lower,min(v,upper)); }
+
 inline uniform float deg2rad (const uniform float x)  { return x * 1.74532925199432957692e-2f; }
 inline varying float deg2rad (const varying float x)  { return x * 1.74532925199432957692e-2f; }
 
