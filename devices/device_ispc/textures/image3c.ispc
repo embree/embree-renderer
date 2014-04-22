@@ -53,8 +53,8 @@ varying vec3f Image3c__get_bilinear_varying(const uniform Image *uniform _this, 
   const float sy = yr-floor(yr);
 
   /* read texels */
-  const int x0 = clamp((int)xr,0,this->base.size.x-1);
-  const int y0 = clamp((int)yr,0,this->base.size.y-1);
+  const int x0 = clamp((int)xr,(int)0,(int)this->base.size.x-1);
+  const int y0 = clamp((int)yr,(int)0,(int)this->base.size.y-1);
   const int x1 = x0+1 == this->base.size.x ? 0 : x0+1;
   const int y1 = y0+1 == this->base.size.y ? 0 : y0+1;
 
