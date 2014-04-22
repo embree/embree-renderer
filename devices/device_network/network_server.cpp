@@ -669,7 +669,7 @@ namespace embree
     /*! count active rows */
     int height1 = 0;
     for (size_t y=0; y<height; y++)
-      if (((y>>2)+serverID) % serverCount == 0)
+      if (((ssize_t)((y>>2)-serverID) % (ssize_t)serverCount) == 0)
         height1++;
 
     /*! send the framebuffer meta data */
