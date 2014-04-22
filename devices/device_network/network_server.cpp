@@ -14,15 +14,12 @@
 // limitations under the License.                                           //
 // ======================================================================== //
 
+#include "common/image/image.h"
 #include "default.h"
 #include "device/loaders/loaders.h"
 #include "network_common.h"
 #include "network_server.h"
 #include "sys/sysinfo.h"
-
-#ifdef USE_IMAGEMAGICK
-#include <Magick++.h>
-#endif
 
 namespace embree 
 {
@@ -686,26 +683,30 @@ namespace embree
 
     case EMBREE_FRAME_DATA_JPEG:
     {
-#ifdef USE_IMAGEMAGICK
 
-      Magick::Image unencodedFrame;
-      Magick::Blob  encodedFrame;
+#ifdef USE_LIBJPEG
 
-      if      (type == "RGB_FLOAT32") unencodedFrame = Magick::Image(width, height1, "RGB", Magick::FloatPixel, data);
-      else if (type == "RGBA8"      ) unencodedFrame = Magick::Image(width, height1, "RGBA", Magick::CharPixel, data);
-      else if (type == "RGB8"       ) unencodedFrame = Magick::Image(width, height1, "RGB",  Magick::CharPixel, data);
-      else throw std::runtime_error("unsupported framebuffer format: " + type);
+      /*! JPEG encoding path minimizes copy / conversion of pixels and thus only supports RGB8 */
+      if (type != "RGB8") throw std::runtime_error("JPEG encoding is supported for RGB8 framebuffers only: " + type);
 
-      unencodedFrame.magick("JPEG");
-      unencodedFrame.write(&encodedFrame);
-      network::write(server->socket, (int) encodedFrame.length());
-      network::write(server->socket, encodedFrame.data(), encodedFrame.length());
+      /*! libjpeg may resize the output buffer */
+      size_t bytes = 4 * width * height * sizeof(unsigned char);
+
+      /*! encode */
+      encodeRGB8_to_JPEG((unsigned char *) data, width, height1, &encoded, &bytes);
+
+      /*! write the encoded image to the socket */
+      network::write(server->socket, (int) bytes);
+      network::write(server->socket, encoded, bytes);
       break;
 
-#else
-      throw std::runtime_error("enable the ImageMagick build option for JPEG framebuffer encoding");
+#else  // USE_LIBJPEG
+
+      throw std::runtime_error("JPEG framebuffer encoding requires LibJPEG 8a or higher (enable USE_LIBJPEG)");
       break;
-#endif
+
+#endif // USE_LIBJPEG
+
     }
 
     case EMBREE_FRAME_DATA_NATIVE:
