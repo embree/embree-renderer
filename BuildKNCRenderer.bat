@@ -1,5 +1,14 @@
 @ECHO ON&& SETLOCAL&& PUSHD "%~dp0"&& SETLOCAL ENABLEDELAYEDEXPANSION&& SETLOCAL ENABLEEXTENSIONS&& SET V=5&& IF NOT "!V!"=="5" (ECHO DelayedExpansion Failed&& GOTO :EOF)
 
+REM
+REM  ----- NOTE NOTE NOTE ----
+REM  Be sure to create the "objs" and "ispcgen" directories in the Embree and Embree sample renderer directories
+REM  before running this script
+REM
+REM  Run this script in an "Intel Composer XE 2013 SP1 Intel(R) 64 Visual Studio 2010" command window
+
+REM
+
 SET CC=icl
 SET ISPCDIR=C:\Users\cwcongdo\Documents\ispc-v1.6.0-windows
 SET ISPC=%ISPCDIR%\ispc.exe
@@ -36,6 +45,7 @@ REM
 REM   --- Embree kernel C++ file builds
 REM 
 
+set OLDDIR = %CD%
 cd  %EOBJDIR%
 
 %CC% %EKERNISPCDIR%\*.dev.cpp %EMBREECFLAGSISPC% -I%EKERNELSPHIDIR% -I%EKERNELSDIR% -I%EKERNISPCDIR%
@@ -50,6 +60,7 @@ cd  %EOBJDIR%
 %CC%  %EMBREEROOT%\kernels\xeonphi\bvh4mb\*.cpp %EMBREECFLAGS% -I%EKERNELSDIR% -I%EKERNELSPHIDIR%
 %CC%  %EMBREEROOT%\kernels\xeonphi\bvh16i\*.cpp %EMBREECFLAGS% -I%EKERNELSDIR% -I%EKERNELSPHIDIR%
 
+cd %OLDDIR%
 
 REM
 REM   -------------- Build process for the render devices --------------
