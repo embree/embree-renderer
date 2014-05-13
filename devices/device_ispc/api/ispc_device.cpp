@@ -53,6 +53,7 @@
 #include "materials/matte_textured.h"
 #include "materials/obj.h"
 #include "materials/velvet.h"
+#include "materials/uber.h"
 
 /* include all shapes */
 #include "shape_ispc.h"
@@ -233,6 +234,7 @@ namespace embree
     else if (!strcasecmp(type,"MatteTextured") ) return (Device::RTMaterial) new ISPCCreateHandle<MatteTextured>;
     else if (!strcasecmp(type,"Obj")           ) return (Device::RTMaterial) new ISPCCreateHandle<Obj>;
     else if (!strcasecmp(type,"Velvet")        ) return (Device::RTMaterial) new ISPCCreateHandle<Velvet>;
+    else if (!strcasecmp(type,"Uber")          ) return (Device::RTMaterial) new ISPCCreateHandle<Uber>;
     //else if (!strcasecmp(type,"Velvet2")       ) return (Device::RTMaterial) new ISPCCreateHandle<Velvet2>;
     //else if (!strcasecmp(type,"Satin")         ) return (Device::RTMaterial) new ISPCCreateHandle<Satin>;
     //else if (!strcasecmp(type,"Skin")          ) return (Device::RTMaterial) new ISPCCreateHandle<Skin>;
@@ -335,6 +337,21 @@ namespace embree
     }
 #endif
 
+    bool hasShape()
+    {
+      if (shape) {
+        return true;
+      }
+#if SHOW_AREALIGHT_SHAPE == 1
+      else if (light) {
+        if (ispc::Light__shape(light.ptr)) {
+          return true;
+        }
+      }
+#endif
+      return false;
+    }
+
   public:
     ISPCRef shape;              //!< Shape in case of a shape primitive
     ISPCRef light;              //!< Light in case of a light primitive
@@ -390,6 +407,29 @@ namespace embree
       throw std::runtime_error("invalid primitive");
   }
   
+  //-----
+  void extractLight(PrimitiveHandle* prim,
+                     ISPCRef* allLights, size_t& numAllLights,
+                     ISPCRef* envLights, size_t& numEnvLights)
+  {
+	if (!prim) return;
+    /* extract light */
+    if (prim->light)
+    {
+      ISPCRef light = ispc::Light__transform(prim->light.ptr,
+                                           (ispc::vec3f&)prim->transform.l.vx,
+                                           (ispc::vec3f&)prim->transform.l.vy,
+                                           (ispc::vec3f&)prim->transform.l.vz,
+                                           (ispc::vec3f&)prim->transform.p);
+
+      allLights[numAllLights++] = light;
+      if (ispc::Light__getType(light.ptr) & ispc::ENV_LIGHT) {
+		envLights[numEnvLights++] = light;
+      }
+    }
+  }
+
+  //-------
   BBox3f extractTriangles(RTCScene scene, PrimitiveHandle* prim, int id, 
                           ISPCRef* instances, size_t& numInstances, 
                           ISPCRef* allLights, size_t& numAllLights,
@@ -497,7 +537,7 @@ namespace embree
     ALIGNED_CLASS;
   public:
     SceneHandle () 
-      : accelTy("default"), builderTy("default"), traverserTy("default"), instance(NULL) {}
+      : accelTy("default"), builderTy("default"), traverserTy("default"), instance(NULL), rebuild(false) {}
     ~SceneHandle () {
       for (size_t i=0; i<prims.size(); i++)
         if (prims[i]) 
@@ -518,9 +558,25 @@ namespace embree
         modified.resize(slot+1);
       }
       
-      if (prims[slot]) prims[slot]->decRef();
+//      if (prims[slot]) prims[slot]->decRef();
+//      prims[slot] = prim;
+//      if (prims[slot]) prims[slot]->incRef();
+      if (prims[slot]) {
+        // check if existing primitive is a shape, if so, changes will require
+		// a rebuild (may be assigned to NULL later, but still need to rebuild).
+        if (prims[slot]->hasShape()) {
+          rebuild = true;
+        }
+        prims[slot]->decRef();
+      }
       prims[slot] = prim;
-      if (prims[slot]) prims[slot]->incRef();
+      if (prims[slot]) {
+        // check if new primitive is a shape, if so, we need to rebuild
+        if (prims[slot]->hasShape()) {
+          rebuild = true;
+        }
+        prims[slot]->incRef();
+      }
       modified[slot] = true;
     }
 
@@ -531,6 +587,7 @@ namespace embree
     ISPCRef instance;
     std::vector<PrimitiveHandle*> prims;
     std::vector<bool> modified;
+	bool rebuild;
   };
 
   class FlatSceneHandle : public SceneHandle {
@@ -539,44 +596,72 @@ namespace embree
 
     void create()
     {
-      RTCAlgorithmFlags aflags = (RTCAlgorithmFlags) (RTC_INTERSECT1 | RTC_INTERSECT4 | RTC_INTERSECT8 | RTC_INTERSECT16);
-      RTCScene scene = rtcNewScene(RTC_SCENE_STATIC,aflags);
+		if (!rebuild) {
+			// No need to rebuild, just replace lights
+			size_t numAllocatedLights = 0;
+			for (size_t i=0; i<prims.size(); i++) {
+				if (prims[i] && prims[i]->light) {
+					numAllocatedLights++;
+				}
+			}  // Find all lights
 
-      /* count number of vertices and triangles */
-      size_t numAllocatedTriangles = 0;
-      size_t numAllocatedVertices = 0;
-      size_t numAllocatedLights = 0;
-      size_t numAllocatedInstances = prims.size();
-      for (size_t i=0; i<prims.size(); i++)
-        calculateSize(prims[i],numAllocatedTriangles,numAllocatedVertices,numAllocatedLights);
+			ISPCRef* allLights = new ISPCRef[numAllocatedLights];
+			ISPCRef* envLights = new ISPCRef[numAllocatedLights];
+			size_t numAllLights = 0;
+			size_t numEnvLights = 0;
+			// Gather actual light data
+			for (size_t i=0; i<prims.size(); i++) {
+				extractLight(prims[i], allLights, numAllLights, envLights, numEnvLights);
+			}
+			if (numAllLights > numAllocatedLights) throw std::runtime_error("internal error - bad number of lights");
+			if (numEnvLights > numAllocatedLights) throw std::runtime_error("internal error - bad number of env lights");
+			ispc::Scene__updateLights(instance.ptr, numAllLights, (void**) allLights,
+											  numEnvLights, (void**) envLights);
+
+		}  // No need to rebuild, just replace lights
+		else
+		{
+			// Full scene rebuild required
+			RTCAlgorithmFlags aflags = (RTCAlgorithmFlags) (RTC_INTERSECT1 | RTC_INTERSECT4 | RTC_INTERSECT8 | RTC_INTERSECT16);
+			RTCScene scene = rtcNewScene(RTC_SCENE_STATIC,aflags);
+
+			/* count number of vertices and triangles */
+			size_t numAllocatedTriangles = 0;
+			size_t numAllocatedVertices = 0;
+			size_t numAllocatedLights = 0;
+			size_t numAllocatedInstances = prims.size();
+			for (size_t i=0; i<prims.size(); i++)
+				calculateSize(prims[i],numAllocatedTriangles,numAllocatedVertices,numAllocatedLights);
     
-      ISPCRef* instances = new ISPCRef[numAllocatedInstances];
-      ISPCRef* allLights = new ISPCRef[numAllocatedLights];
-      ISPCRef* envLights = new ISPCRef[numAllocatedLights];
+			ISPCRef* instances = new ISPCRef[numAllocatedInstances];
+			ISPCRef* allLights = new ISPCRef[numAllocatedLights];
+			ISPCRef* envLights = new ISPCRef[numAllocatedLights];
 
-      /* extract all primitives */
-      BBox3f bounds = empty;
-      size_t numInstances = 0;
-      size_t numAllLights = 0;
-      size_t numEnvLights = 0;
-      for (size_t i=0; i<prims.size(); i++)
-        bounds.grow(extractTriangles(scene,prims[i],i,
-                                     instances,numInstances,
-                                     allLights,numAllLights,
-                                     envLights,numEnvLights));
+			/* extract all primitives */
+			BBox3f bounds = empty;
+			size_t numInstances = 0;
+			size_t numAllLights = 0;
+			size_t numEnvLights = 0;
+			for (size_t i=0; i<prims.size(); i++)
+				bounds.grow(extractTriangles(scene,prims[i],i,
+											instances,numInstances,
+											allLights,numAllLights,
+											envLights,numEnvLights));
 
-      if (numAllLights > numAllocatedLights   ) throw std::runtime_error("internal error");
-      if (numEnvLights > numAllocatedLights   ) throw std::runtime_error("internal error");
-      if (numInstances > numAllocatedInstances) throw std::runtime_error("internal error");
-      //rtcSetApproxBounds(mesh, (float*)&bounds.lower, (float*)&bounds.upper); // FIXME: support this again?
+			if (numAllLights > numAllocatedLights   ) throw std::runtime_error("internal error");
+			if (numEnvLights > numAllocatedLights   ) throw std::runtime_error("internal error");
+			if (numInstances > numAllocatedInstances) throw std::runtime_error("internal error");
+			//rtcSetApproxBounds(mesh, (float*)&bounds.lower, (float*)&bounds.upper); // FIXME: support this again?
 
-      rtcCommit(scene);
-      //rtcBuildAccel(mesh, builderTy.c_str());
-      instance  = ispc::Scene__new(scene,(void*)traverserTy.c_str(),
-                                   numAllLights, (void**) allLights,
-                                   numEnvLights, (void**) envLights,
-                                   numInstances, (void**) instances);
-    }
+			rtcCommit(scene);
+			//rtcBuildAccel(mesh, builderTy.c_str());
+			instance  = ispc::Scene__new(scene,(void*)traverserTy.c_str(),
+										numAllLights, (void**) allLights,
+										numEnvLights, (void**) envLights,
+										numInstances, (void**) instances);
+			rebuild = false;
+		}  // Need to rebuild
+    }  // create()
   };
 
 #if 0
@@ -888,7 +973,7 @@ namespace embree
       double t0 = getSeconds();
       int numRays = ispc::Renderer__renderFrame(g_renderer->instance.ptr,g_camera->instance.ptr,g_scene->instance.ptr,g_toneMapper->instance.ptr,g_swapchain->instance.ptr,g_accumulate);
       double dt = getSeconds() - t0;
-      printf("render %3.2f fps, %.2f ms,  %3.3f mrps\n",1.0f/dt,dt*1000.0f,numRays/dt*1E-6); flush(std::cout);
+      printf("ispc render %3.2f fps, %.2f ms,  %3.3f mrps\n",1.0f/dt,dt*1000.0f,numRays/dt*1E-6); flush(std::cout);
     }
   }
   catch (const std::exception& e) {
@@ -923,7 +1008,7 @@ namespace embree
     double t0 = getSeconds();
     int numRays = ispc::Renderer__renderFrame(renderer->instance.ptr,camera->instance.ptr,scene->instance.ptr,toneMapper->instance.ptr,swapchain->instance.ptr,accumulate);
     double dt = getSeconds() - t0;
-    printf("render %3.2f fps, %.2f ms,  %3.3f mrps\n",1.0f/dt,dt*1000.0f,numRays/dt*1E-6); flush(std::cout);
+    printf("ispc render %3.2f fps, %.2f ms,  %3.3f mrps\n",1.0f/dt,dt*1000.0f,numRays/dt*1E-6); flush(std::cout);
 #endif
   }
 

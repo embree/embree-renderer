@@ -53,7 +53,7 @@ namespace embree
       Ref<Material> material;
       light_mask_t illumMask;  /*! which light masks we receive illum from */
       light_mask_t shadowMask; /*! which light masks we cast shadows to */
-    };
+    };  // Primitive
 
     /*! API handle that manages user actions. */
     class Handle : public BackendScene::Handle {
@@ -62,31 +62,95 @@ namespace embree
       
       void setPrimitive(size_t slot, Ref<PrimitiveHandle> prim) 
       {
-        if (slot >= prims.size()) prims.resize(slot+1);
+		// BUG BUG BUG - this mostly works, although the visual artifacts suggest something is
+		// still wrong
+        if (slot >= prims.size()) {
+			prims.resize(slot+1);
+			modified.resize(slot+1);
+		}
         Ref<Shape> shape = prim->getShapeInstance();
         Ref<Light> light = prim->getLightInstance();
         if (light) shape = light->shape();
         if (shape) shape = shape->transform(prim->transform);
         if (light) light = light->transform(prim->transform,prim->illumMask,prim->shadowMask);
+		if (prims[slot]) {
+			// check if existing primitive is a shape, if so, changes will require
+			// a rebuild (may be assigned to NULL later, but still need to rebuild).
+			if (!(prims[slot]->light)) {
+			  rebuild = true;
+			}
+        }
         prims[slot] = new Primitive(shape,light,prim->getMaterialInstance(),prim->illumMask,prim->shadowMask);
+		// If new primitive is a shape we need to rebuild
+		if (!light) rebuild=true;
+		modified[slot] = true;
       }
       
       void create() 
       {
-        RTCScene scene = rtcNewScene(RTC_SCENE_STATIC,RTC_INTERSECT1);
-        for (size_t i=0; i<prims.size(); i++) {
-          if (prims[i] && prims[i]->shape)
-            prims[i]->shape->extract(scene,i);
-        }
-        rtcCommit(scene);
+		if (rebuild) {
+			RTCScene scene = rtcNewScene(RTC_SCENE_STATIC,RTC_INTERSECT1);
+			for (size_t i=0; i<prims.size(); i++) {
+			  if (prims[i] && prims[i]->shape)
+				prims[i]->shape->extract(scene,i);
+			}
+			rtcCommit(scene);
         
-        /* create new scene */
-        instance = new BackendSceneFlat(prims,scene);
+			/* create new scene */
+			instance = new BackendSceneFlat(prims,scene);
+			rebuild = false;
+		}
+		else
+		{
+		// BUG BUG BUG - this mostly works, although the visual artifacts suggest something is
+		// still wrong
+			// Just replace/add existing lights - geometry unchanged
+			size_t numoldlights = instance->allLights.size();  // lights already in the geometry list
+			Ref<BackendSceneFlat>& besf = (Ref<BackendSceneFlat>&)instance;
+			size_t numoldgeom = besf->geometry.size(); // size of old geometry list
+			size_t numnewgeom = prims.size();  // size of new geometry list
+
+			// Zap old light list and rebuild
+			instance->allLights.clear();
+			instance->envLights.clear();
+			for (size_t i=0; i<numnewgeom; i++) 
+			{
+				// This mirrors what new BackendSceneFlat(prims,scene) does
+				const Ref<Primitive>& prim = prims[i];
+				if (prim && prim->light) 
+					besf->add(prim->light);
+			}
+
+			size_t currnewlight = 0;
+			// Now go through old geometry list and replace old lights with new ones
+			for (size_t i=0; i<numoldgeom; i++) {
+				size_t j;
+				const Ref<Primitive>& prim = besf->geometry[i];
+				if (prim && prim->light) {
+					// Replace old light with new one
+					for  (j = currnewlight; j<numnewgeom; j++) {
+						// Find next light in new list
+						const Ref<Primitive>& newprim = prims[j];
+						if (newprim && newprim->light)
+							break;  // Found the next light
+					}
+					// And replace the old light with the new one
+					besf->geometry[i] = prims[j];
+
+					currnewlight = j+1;  // Record where to start looking for the next light
+				} // found light
+			}
+
+			// Finally, add any new stuff (lights) to the end
+			for (size_t i=currnewlight; i<numnewgeom; i++)
+				besf->geometry.push_back(prims[i]);
+
+		}
       }
       
     public:
       std::vector<Ref<Primitive> > prims;
-    };
+    };  // Handle
         
     /*! Construction of scene. */
     BackendSceneFlat (const std::vector<Ref<Primitive> >& geometry, RTCScene scene)

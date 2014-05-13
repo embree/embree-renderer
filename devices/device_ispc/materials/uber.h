@@ -17,21 +17,37 @@
 #pragma once
 
 #include "api/parms.h"
-#include "spotlight_ispc.h"
+#include "uber_ispc.h"
 
 namespace embree
 {
-  struct SpotLight
+  struct Uber
   {
     static void* create(const Parms& parms)
     {
-      const Vector3f P = parms.getVector3f("P");
-      const Vector3f D = parms.getVector3f("D");
-      const Color I = parms.getColor("I");
-	  const int decayRate = parms.getInt("decayRate", zero);
-      const float angleMin = parms.getFloat("angleMin");
-      const float angleMax = parms.getFloat("angleMax");
-      return ispc::SpotLight__new((ispc::vec3f&)P,(ispc::vec3f&)D,(ispc::vec3f&)I,decayRate,angleMin,angleMax);
+		const Color diffColor = parms.getColor("diffColor",one);
+		const Color reflColor = parms.getColor("reflColor",one);
+		ISPCRef Kd = parms.getTexture("diffTexture");
+		const Vec2f s0 = parms.getVec2f("s0",Vec2f(0.0f,0.0f));
+		const Vec2f ds = parms.getVec2f("ds",Vec2f(1.0f,1.0f));
+		const float surfEta = parms.getFloat("surfEta",1.4f);
+		const float roughness = parms.getFloat("roughness",0.01f);
+		const float etaOutside = parms.getFloat("etaOutside",1.0f);
+		const float etaInside  = parms.getFloat("etaInside",1.4f);
+		const Color transmissionOutside = parms.getColor("transColorOutside",one);
+		const Color transmissionInside  = parms.getColor("transColor",one);
+
+      return ispc::Uber__new((ispc::vec3f&)diffColor,
+								(ispc::vec3f&)reflColor,
+								Kd.ptr,
+								(ispc::vec2f&)s0,
+								(ispc::vec2f&)ds,
+								surfEta,
+								roughness,
+								etaOutside,
+								(ispc::vec3f&)transmissionOutside,
+                                etaInside,
+								(ispc::vec3f&)transmissionInside);
     }
   };
 }

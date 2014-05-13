@@ -23,6 +23,7 @@ struct SpotLight
   vec3f P;             //!< Position of the spot light
   vec3f D;             //!< Light direction of the spot light
   vec3f I;             //!< Radiant intensity (W/sr)
+  int decayRate;
   float angleMin;      //!< Start of linear falloff region
   float angleMax;      //!< End of linear falloff region
   float cosAngleMin;   //!< Start of linear falloff region
@@ -32,6 +33,7 @@ struct SpotLight
 SpotLight* uniform SpotLight__New(const uniform vec3f& P,
                                   const uniform vec3f& D,
                                   const uniform vec3f& I,
+								  const uniform int decayRate,
                                   const uniform float angleMin,
                                   const uniform float angleMax);
 
@@ -39,7 +41,7 @@ uniform Light* uniform SpotLight__transform(const uniform Light *uniform _this,
                                             const uniform AffineSpace3f& xfm) 
 {
   const uniform SpotLight *uniform this = (const uniform SpotLight *uniform)_this;
-  return (uniform Light* uniform) SpotLight__New(xfmPoint(xfm,this->P),xfmVector(xfm,this->D),this->I,this->angleMin,this->angleMax);
+  return (uniform Light* uniform) SpotLight__New(xfmPoint(xfm,this->P),xfmVector(xfm,this->D),this->I,this->decayRate,this->angleMin,this->angleMax);
 }
 
 varying vec3f SpotLight__eval(const uniform Light *uniform _this, 
@@ -58,7 +60,12 @@ varying vec3f SpotLight__sample(const uniform Light *uniform _this,
   const uniform SpotLight *uniform this = (const uniform SpotLight *uniform)_this;
   const vec3f d = sub(this->P, dg.P);
   const float distance = length(d);
-  wi = make_Sample3f(mul(d,rcp(distance)), distance*distance);
+  if (2 == this->decayRate)
+	  wi = make_Sample3f(mul(d,rcp(distance)), distance*distance);  // 1/r^2 light
+  else if (1 == this->decayRate)
+	  wi = make_Sample3f(mul(d,rcp(distance)), distance);  // 1/r light
+  else
+	  wi = make_Sample3f(mul(d,rcp(distance)), 1.0f); // constant intensity light
   tMax = distance;
 
   const float cosAngle = -dot(wi.v,this->D);
@@ -74,6 +81,7 @@ void SpotLight__Constructor (uniform SpotLight *uniform this,
                              const uniform vec3f P,
                              const uniform vec3f D,
                              const uniform vec3f I,
+							 const uniform int decayRate,
                              const uniform float angleMin,
                              const uniform float angleMax)
 {
@@ -82,6 +90,7 @@ void SpotLight__Constructor (uniform SpotLight *uniform this,
   this->P = P;
   this->D = normalize(D);
   this->I = I;
+  this->decayRate = decayRate;
   this->angleMin = angleMin;
   this->angleMax = angleMax;
   this->cosAngleMin = cos(0.5f*deg2rad(angleMin));
@@ -91,19 +100,21 @@ void SpotLight__Constructor (uniform SpotLight *uniform this,
 SpotLight* uniform SpotLight__New(const uniform vec3f& P,
                                   const uniform vec3f& D,
                                   const uniform vec3f& I,
+								  const uniform int decayRate,
                                   const uniform float angleMin,
                                   const uniform float angleMax)
 {
   uniform SpotLight *uniform this = uniform new uniform SpotLight;
-  SpotLight__Constructor(this,P,D,I,angleMin,angleMax);
+  SpotLight__Constructor(this,P,D,I,decayRate,angleMin,angleMax);
   return this;
 }
 
 export void* uniform SpotLight__new(const uniform vec3f& P,
                                     const uniform vec3f& D,
                                     const uniform vec3f& I,
+									const uniform int decayRate,
                                     const uniform float angleMin,
                                     const uniform float angleMax)
 {
-  return SpotLight__New(P,D,I,angleMin,angleMax);
+  return SpotLight__New(P,D,I,decayRate,angleMin,angleMax);
 }

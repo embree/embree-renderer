@@ -79,3 +79,25 @@ export void* uniform Scene__new(void* uniform accel,
   return this;
 }
 
+export void Scene__updateLights(void* uniform scene,
+                                const uniform int num_allLights,
+                                void** uniform allLights,
+                                const uniform int num_envLights,
+				void** uniform envLights) 
+{
+  uniform Scene* uniform this = (uniform Scene* uniform) scene;
+  /*! free old data */
+  for (uniform int i=0; i<this->num_allLights; i++)
+    RefCount__DecRef(&this->allLights[i]->base);
+
+  for (uniform int i=0; i<this->num_envLights; i++)
+    RefCount__DecRef(&this->envLights[i]->base.base);
+    
+  /*! add list of lights */
+  this->num_allLights = num_allLights;
+  this->allLights = (uniform Light**) allLights;
+
+  /*! add list of environment lights */
+  this->num_envLights = num_envLights;
+  this->envLights = (uniform EnvironmentLight**) envLights;
+}

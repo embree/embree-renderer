@@ -20,6 +20,20 @@
 #include "sys/filename.h"
 #include "image/image.h"
 
+#ifdef WIN32
+// VS 2010 doesn't seem to come with strings.h
+int strcasecmp( const char *s1, const char *s2 )
+{
+	while (1)
+	{
+		int c1 = tolower( (unsigned char) *s1++ );
+		int c2 = tolower( (unsigned char) *s2++ );
+		if (c1 == 0 || c1 != c2) return c1 - c2;
+	}
+}
+#endif
+
+
 namespace embree
 {
   COIDevice::COIProcess::COIProcess (int cardID, const char* executable, size_t numThreads, const char* rtcore_cfg)
@@ -43,7 +57,7 @@ namespace embree
     std::string strNumThreads = std::stringOf(numThreads);
     //std::string strVerbose = std::stringOf(verbose);
     const char* argv[2] = { strNumThreads.c_str(), rtcore_cfg }; 
-
+	std::cout << "Running MIC binary " << fname.c_str() << std::endl;
     /* create process */
     result = COIProcessCreateFromFile
       (engine,
@@ -52,7 +66,9 @@ namespace embree
        false, NULL,      // Environment variables to set for the sink process.
        true, NULL,       // Enable the proxy but don't specify a proxy root path.
        0,                // The amount of memory to reserve for COIBuffers.
-       NULL,             // Path to search for dependencies
+       "C:\\Users\\cwcongdo\\Documents\\maya\\plug-ins", 
+//	   "C:/Users/cwcongdo/Documents/maya/plug-ins", 
+//		NULL,             // Path to search for dependencies
        &process          // The resulting process handle.
        );
     // if fail check loading by name
@@ -65,8 +81,10 @@ namespace embree
          false, NULL,      // Environment variables to set for the sink process.
          true, NULL,       // Enable the proxy but don't specify a proxy root path.
          0,                // The amount of memory to reserve for COIBuffers.
-         NULL,             // Path to search for dependencies
-         &process          // The resulting process handle.
+         "C:\\Users\\cwcongdo\\Documents\\maya\\plug-ins", 
+//         "C:/Users/cwcongdo/Documents/maya/plug-ins", 
+//			NULL,             // Path to search for dependencies
+		 &process          // The resulting process handle.
          );
     }
     
@@ -143,7 +161,12 @@ namespace embree
     std::cout << "Loading library from file \"" << library << "\"" << std::endl;
 
     COILIBRARY lib;
+#ifdef WIN32
+	// Actually, this is the new MPSS 3.x syntax
+	COIRESULT result = COIProcessLoadLibraryFromFile(process,library,library,NULL,0, &lib);
+#else
     COIRESULT result = COIProcessLoadLibraryFromFile(process,library,library,NULL,&lib);
+#endif
     if (result != COI_SUCCESS) 
       throw std::runtime_error(std::string("Failed to load libary: ") + COIResultGetName(result));
     

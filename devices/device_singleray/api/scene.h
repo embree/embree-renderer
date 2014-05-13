@@ -37,7 +37,7 @@ namespace embree
       ALIGNED_CLASS;
     public:
       
-      Handle () : accelTy("default"), builderTy("default"), traverserTy("default") {}
+      Handle () : accelTy("default"), builderTy("default"), traverserTy("default"), rebuild(false) {}
       
       void set(const std::string& property, const Variant& data)
       {
@@ -52,7 +52,9 @@ namespace embree
       std::string accelTy;
       std::string builderTy;
       std::string traverserTy;
-    };
+	  std::vector<bool> modified;
+	  bool rebuild;
+    };  // Handle
 
   public:
 
@@ -77,7 +79,7 @@ namespace embree
     std::vector<Ref<Light> > allLights;              //!< All lights of the scene
     std::vector<Ref<EnvironmentLight> > envLights;   //!< Environment lights of the scene
     RTCScene scene;
-  };
+  };  // BackendScene
 }
 
 #endif

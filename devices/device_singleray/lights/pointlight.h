@@ -25,11 +25,11 @@ namespace embree
   class PointLight : public Light
   {
     /*! Construction from position and intensity. */
-    PointLight (const Vector3f& P, const Color& I,
+    PointLight (const Vector3f& P, const Color& I, const int dRate,
                 light_mask_t illumMask=-1,
                 light_mask_t shadowMask=-1) 
       : Light(illumMask,shadowMask), 
-        P(P), I(I) 
+        P(P), I(I), decayRate(dRate) 
     {}
 
   public:
@@ -38,19 +38,25 @@ namespace embree
     PointLight (const Parms& parms) {
       P = parms.getVector3f("P",zero);
       I = parms.getColor("I",zero);
+	  decayRate = parms.getInt("decayRate", zero);
     }
 
     Ref<Light> transform(const AffineSpace3f& xfm,
                          light_mask_t illumMask,
                          light_mask_t shadowMask) const {
-      return new PointLight(xfmPoint(xfm,P),I,illumMask,shadowMask);
+      return new PointLight(xfmPoint(xfm,P),I,decayRate,illumMask,shadowMask);
     }
 
     Color sample(const DifferentialGeometry& dg, Sample3f& wi, float& tMax, const Vec2f& s) const
     {
       Vector3f d = P - dg.P;
       float distance = length(d);
-      wi = Sample3f(d / distance, distance*distance);
+	  if (2 == decayRate)
+		  wi = Sample3f(d / distance, distance*distance);  // 1/r^2 lights
+	  else if (1 == decayRate)
+		  wi = Sample3f(d / distance, distance);  // 1/^r lighting
+	  else
+		  wi = Sample3f(d / distance);  // ?? constant intensity point lights
       tMax = distance;
       return I;
     }
@@ -62,6 +68,7 @@ namespace embree
   private:
     Vector3f P;       //!< Position of the point light
     Color I;       //!< Radiant intensity (W/sr)
+	int decayRate; //!< Light falloff exponent
   };
 }
 

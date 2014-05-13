@@ -55,6 +55,7 @@
 #include "materials/matte_textured.h"
 #include "materials/obj.h"
 #include "materials/velvet.h"
+#include "materials/uber.h"
 
 /* include all shapes */
 #include "shapes/triangle.h"
@@ -146,13 +147,17 @@ namespace embree
     rtcInit(cfg);
     //rtcSetVerbose(verbose);
     //rtcStartThreads(numThreads);
+#if !defined (__MIC__)  // At least in Windows, we need to create threads twice, once in rtcInit, once here
     TaskScheduler::create(numThreads);
+#endif
   }
 
   SingleRayDevice::~SingleRayDevice() 
   {
     //rtcStopThreads();
+#if !defined (__MIC__)
     TaskScheduler::destroy();
+#endif
     rtcExit();
   }
 
@@ -252,6 +257,7 @@ namespace embree
     else if (!strcasecmp(type,"MatteTextured") ) return (Device::RTMaterial) new ConstructorHandle<MatteTextured,Material>;
     else if (!strcasecmp(type,"Obj")           ) return (Device::RTMaterial) new ConstructorHandle<Obj,Material>;
     else if (!strcasecmp(type,"Velvet")        ) return (Device::RTMaterial) new ConstructorHandle<Velvet,Material>;
+	else if (!strcasecmp(type,"Uber")          ) return (Device::RTMaterial) new ConstructorHandle<Uber,Material>;
     else throw std::runtime_error("unknown material type: "+std::string(type));
   }
 
