@@ -666,7 +666,7 @@ namespace embree
     /*! count active rows */
     int height1 = 0;
     for (size_t y=0; y<height; y++)
-      if (((y>>2)+serverID) % serverCount == 0)
+      if (((ssize_t)((y>>2)-serverID) % (ssize_t)serverCount) == 0)
         height1++;
 
     /*! send the framebuffer meta data */
@@ -683,6 +683,7 @@ namespace embree
 
     case EMBREE_FRAME_DATA_JPEG:
     {
+
 #ifdef USE_LIBJPEG
 
       /*! JPEG encoding path minimizes copy / conversion of pixels and thus only supports RGB8 */
@@ -699,10 +700,13 @@ namespace embree
       network::write(server->socket, encoded, bytes);
       break;
 
-#else
-      throw std::runtime_error("enable the LibJPEG build option for JPEG framebuffer encoding");
+#else  // USE_LIBJPEG
+
+      throw std::runtime_error("JPEG framebuffer encoding requires LibJPEG 8a or higher (enable USE_LIBJPEG)");
       break;
-#endif
+
+#endif // USE_LIBJPEG
+
     }
 
     case EMBREE_FRAME_DATA_NATIVE:
