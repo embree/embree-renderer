@@ -25,5 +25,5 @@ struct Instance
   RefCount base;
   uniform Shape* shape;      //!< Shape of the instance.
   uniform Material* material;//!< Material attached to the shape.
-  uniform AreaLight* light;  //!< Area light attached to the shape.
+  uniform Light* light;  //!< Area light attached to the shape.
 };

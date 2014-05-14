@@ -323,231 +323,59 @@ namespace embree
     return (Device::RTPrimitive) new PrimitiveHandle(prim->shape,prim->light,prim->material,space * prim->transform);
   }
 
-  void calculateSize(PrimitiveHandle* prim, size_t& numTriangles, size_t& numVertices, size_t& numLights) // FIXME: no longer required
-  {
-    if (!prim) return;
-    
-    if (prim->shape) {
-      numVertices  += ispc::Shape__getNumVertices(prim->shape.ptr);
-      numTriangles += ispc::Shape__getNumTriangles(prim->shape.ptr);
-    }
-    else if (prim->light)
-    {
-      numLights++;
-      if (ISPCRef shape = ispc::Light__shape(prim->light.ptr)) {
-        numVertices  += ispc::Shape__getNumVertices(shape.ptr);
-        numTriangles += ispc::Shape__getNumTriangles(shape.ptr);
-      }
-    }
-    else
-      throw std::runtime_error("invalid primitive");
-  }
-  
-  BBox3f extractTriangles(RTCScene scene, PrimitiveHandle* prim, int id, 
-                          ISPCRef* instances, size_t& numInstances, 
-                          ISPCRef* allLights, size_t& numAllLights,
-                          ISPCRef* envLights, size_t& numEnvLights)
-  {
-    BBox3f bounds = empty;
-    if (!prim) return bounds;
-
-    /* extract geometry */
-    if (prim->shape)
-    {
-      ISPCRef shape = ispc::Shape__transform(prim->shape.ptr,
-                                           (ispc::vec3f&)prim->transform.l.vx,
-                                           (ispc::vec3f&)prim->transform.l.vy,
-                                           (ispc::vec3f&)prim->transform.l.vz,
-                                           (ispc::vec3f&)prim->transform.p);
-
-      Vec3fa lower,upper; 
-      int mesh = ispc::Shape__add(scene,shape.ptr,(ispc::vec3f&)lower,(ispc::vec3f&)upper);
-      if (mesh != id) 
-	throw std::runtime_error("ID does not match");
-
-      instances[numInstances++] = ispc::Instance__new(shape.ptr,prim->material.ptr,NULL);
-      bounds.grow(BBox3f(lower,upper));
-    }
-    
-    /* extract lights */
-    else if (prim->light)
-    {
-      ISPCRef light = ispc::Light__transform(prim->light.ptr,
-                                           (ispc::vec3f&)prim->transform.l.vx,
-                                           (ispc::vec3f&)prim->transform.l.vy,
-                                           (ispc::vec3f&)prim->transform.l.vz,
-                                           (ispc::vec3f&)prim->transform.p);
-
-      allLights[numAllLights++] = light;
-      if (ispc::Light__getType(light.ptr) & ispc::ENV_LIGHT)
-        envLights[numEnvLights++] = light;
-
-      if (ISPCRef shape = ispc::Light__shape(light.ptr)) 
-      {
-        Vec3fa lower,upper; 
-        int mesh = ispc::Shape__add(scene,shape.ptr,(ispc::vec3f&)lower,(ispc::vec3f&)upper);
-        if (mesh != id)
-	  throw std::runtime_error("ID does not match");
-
-        instances[numInstances++] = ispc::Instance__new(shape.ptr,prim->material.ptr,light.ptr);
-        bounds.grow(BBox3f(lower,upper));
-      }
-    }
-    else throw std::runtime_error("invalid primitive");
-
-    return bounds;
-  }
-
   class SceneHandle : public _RTHandle 
   {
     ALIGNED_CLASS;
   public:
-    SceneHandle () 
-      : accelTy("default"), builderTy("default"), traverserTy("default"), instance(NULL) {}
-    ~SceneHandle () {
-      for (size_t i=0; i<prims.size(); i++)
-        if (prims[i]) 
-          prims[i]->decRef();
-    }
 
-    void set(const std::string& property, const Variant& data)
-    {
-      if      (property == "accel"    ) accelTy = data.getString();
-      else if (property == "builder"  ) builderTy = data.getString();
-      else if (property == "traverser") traverserTy = data.getString();
+    SceneHandle () 
+      : instance(ispc::Scene__new()) {}
+
+    void set(const std::string& property, const Variant& data) {
     }
 
     void set(size_t slot, PrimitiveHandle* prim)
     {
-      if (slot >= prims.size()) {
-        prims.resize(slot+1);
-        modified.resize(slot+1);
-      }
-      
-      if (prims[slot]) prims[slot]->decRef();
-      prims[slot] = prim;
-      if (prims[slot]) prims[slot]->incRef();
-      modified[slot] = true;
-    }
+      if (prim == NULL)
+        ispc::Scene__set(instance.ptr,slot,NULL);
 
-  public:
-    std::string accelTy;
-    std::string builderTy;
-    std::string traverserTy;
-    ISPCRef instance;
-    std::vector<PrimitiveHandle*> prims;
-    std::vector<bool> modified;
-  };
-
-  class FlatSceneHandle : public SceneHandle {
-    ALIGNED_CLASS;
-  public:
-
-    void create()
-    {
-      RTCAlgorithmFlags aflags = (RTCAlgorithmFlags) (RTC_INTERSECT1 | RTC_INTERSECT4 | RTC_INTERSECT8 | RTC_INTERSECT16);
-      RTCScene scene = rtcNewScene(RTC_SCENE_STATIC,aflags);
-
-      /* count number of vertices and triangles */
-      size_t numAllocatedTriangles = 0;
-      size_t numAllocatedVertices = 0;
-      size_t numAllocatedLights = 0;
-      size_t numAllocatedInstances = prims.size();
-      for (size_t i=0; i<prims.size(); i++)
-        calculateSize(prims[i],numAllocatedTriangles,numAllocatedVertices,numAllocatedLights);
-    
-      ISPCRef* instances = new ISPCRef[numAllocatedInstances];
-      ISPCRef* allLights = new ISPCRef[numAllocatedLights];
-      ISPCRef* envLights = new ISPCRef[numAllocatedLights];
-
-      /* extract all primitives */
-      BBox3f bounds = empty;
-      size_t numInstances = 0;
-      size_t numAllLights = 0;
-      size_t numEnvLights = 0;
-      for (size_t i=0; i<prims.size(); i++)
-        bounds.grow(extractTriangles(scene,prims[i],i,
-                                     instances,numInstances,
-                                     allLights,numAllLights,
-                                     envLights,numEnvLights));
-
-      if (numAllLights > numAllocatedLights   ) throw std::runtime_error("internal error");
-      if (numEnvLights > numAllocatedLights   ) throw std::runtime_error("internal error");
-      if (numInstances > numAllocatedInstances) throw std::runtime_error("internal error");
-      //rtcSetApproxBounds(mesh, (float*)&bounds.lower, (float*)&bounds.upper); // FIXME: support this again?
-
-      rtcCommit(scene);
-      instance  = ispc::Scene__new(scene,(void*)traverserTy.c_str(),
-                                   numAllLights, (void**) allLights,
-                                   numEnvLights, (void**) envLights,
-                                   numInstances, (void**) instances);
-    }
-  };
-
-#if 0
-  class InstancingSceneHandle : public SceneHandle {
-    ALIGNED_CLASS;
-  public:
-
-    void create()
-    {
-      /*! create list of lights and shapes */
-      std::vector<ISPCRef> allLights;
-      std::vector<ISPCRef> envLights;
-      std::vector<ISPCRef> instances;
-      
-      RTCGeometry* objs = rtcNewVirtualGeometry(prims.size(),"default");
-      for (size_t i=0; i<prims.size(); i++) 
+      if (prim->shape)
       {
-        PrimitiveHandle* prim = prims[i];
-        if (!prim) continue;
+        ISPCRef shape = ispc::Shape__transform(prim->shape.ptr,
+                                               (ispc::vec3f&)prim->transform.l.vx,
+                                               (ispc::vec3f&)prim->transform.l.vy,
+                                               (ispc::vec3f&)prim->transform.l.vz,
+                                               (ispc::vec3f&)prim->transform.p);
 
-        if (prim->light) {
-          ISPCRef light = ispc::Light__transform(prim->light.ptr,
-                                                 (ispc::vec3f&)prim->transform.l.vx,
-                                                 (ispc::vec3f&)prim->transform.l.vy,
-                                                 (ispc::vec3f&)prim->transform.l.vz,
-                                                 (ispc::vec3f&)prim->transform.p);
-
-          allLights.push_back(light);
-          if (ispc::Light__getType(light.ptr) & ispc::ENV_LIGHT)
-            envLights.push_back(light);
-        }
-
-        if (prim->shape) 
-        {
-          instances.push_back(ispc::Instance__new(prim->shape.ptr,prim->material.ptr,NULL));
-
-          RTCGeometry* geom = prim->getShapeInstance();
-          BBox3f bounds; rtcGetBounds(geom,&bounds.lower.x,&bounds.upper.x);
-          Array12f array = copyToArray(prim->transform);
-          rtcSetVirtualGeometryUserData (objs, i, i, 0, prim->shadowMask);
-          rtcSetVirtualGeometryBounds(objs, i, &bounds.lower.x, &bounds.upper.x, (RTCTransformation*) (float*) array);
-#if defined (__ISPC_TARGET_SSE__)
-          RTCIntersector4* intersector4 = rtcQueryIntersector4(geom,"default.default");
-          rtcSetVirtualGeometryIntersector4(objs,i,intersector4);
-#elif defined (__ISPC_TARGET_AVX__)
-          RTCIntersector8* intersector8 = rtcQueryIntersector8(geom,"default.default");
-          rtcSetVirtualGeometryIntersector8(objs,i,intersector8);
-#elif defined (__ISPC_TARGET_MIC__)
-          RTCIntersector16* intersector16 = rtcQueryIntersector16(geom,"default.default");
-          rtcSetVirtualGeometryIntersector16(objs,i,intersector16);
-#endif
-        }
+        ISPCRef inst = ispc::Instance__new(shape.ptr,prim->material.ptr,NULL);
+        ispc::Scene__set(instance.ptr,slot,inst.ptr);
       }
-      rtcBuildAccel(objs, "objectsplit");
-      instance  = ispc::Scene__new(objs,(void*)"default.default",
-                                   allLights.size(), allLights.size() ? (void**)&allLights.front() : NULL,
-                                   envLights.size(), envLights.size() ? (void**)&envLights.front() : NULL,
-                                   instances.size(), instances.size() ? (void**)&instances.front() : NULL);
+      
+      else if (prim->light)
+      {
+        ISPCRef light = ispc::Light__transform(prim->light.ptr,
+                                               (ispc::vec3f&)prim->transform.l.vx,
+                                               (ispc::vec3f&)prim->transform.l.vy,
+                                               (ispc::vec3f&)prim->transform.l.vz,
+                                               (ispc::vec3f&)prim->transform.p);
+        
+        ISPCRef shape = ispc::Light__shape(light.ptr);
+        ISPCRef inst = ispc::Instance__new(shape.ptr,prim->material.ptr,light.ptr);
+        ispc::Scene__set(instance.ptr,slot,inst.ptr);
+      }
+      else throw std::runtime_error("invalid primitive");
     }
+
+    void create() {
+      ispc::Scene__commit(instance.ptr);
+    }
+
+  public:
+    ISPCRef instance;
   };
-#endif
 
   Device::RTScene ISPCDevice::rtNewScene(const char* type) {
-    if      (!strcmp(type,"default" )) return (Device::RTScene) new FlatSceneHandle;
-    else if (!strcmp(type,"flat"    )) return (Device::RTScene) new FlatSceneHandle;
-    //else if (!strcmp(type,"twolevel")) return (Device::RTScene) new InstancingSceneHandle;
+    if (!strcmp(type,"default" )) return (Device::RTScene) new SceneHandle;
     else throw std::runtime_error("unknown scene type: "+std::string(type));
   }
      

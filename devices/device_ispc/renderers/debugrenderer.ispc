@@ -71,7 +71,7 @@ task void DebugRenderer__renderTile(uniform DebugRenderer* uniform this,
       camera->initRay(camera,ray,
                             make_vec2f(fx,fy),
                             make_vec2f(0.f,0.f));
-      rtcIntersect(scene->accel,ray);
+      rtcIntersect(scene->handle,ray);
       vec3f Ng = make_vec3f(0,0,0);
       if (hadHit(ray)) Ng = normalize(ray.Ng);
       col = make_vec3f(min(1.f,.3f+.8f*abs(dot(Ng,normalize(ray.dir)))));
@@ -87,7 +87,7 @@ task void DebugRenderer__renderTile(uniform DebugRenderer* uniform this,
                             make_vec2f(fx,fy),
                             make_vec2f(0.f,0.f));
       ray.u = ray.v = 0.0f;
-      rtcIntersect(scene->accel,ray);
+      rtcIntersect(scene->handle,ray);
 
       col = make_vec3f(ray.u,ray.v,1.0f-ray.u-ray.v);
       //col = randomID(ray.geomID+ray.primID);
@@ -102,7 +102,7 @@ task void DebugRenderer__renderTile(uniform DebugRenderer* uniform this,
                             make_vec2f(fx,fy),
                             make_vec2f(0.f,0.f));
       DifferentialGeometry dg;
-      rtcIntersect(scene->accel,ray);
+      rtcIntersect(scene->handle,ray);
       //postIntersect(scene,ray,dg);
       vec3f Ng = make_vec3f(0,0,0);
       if (hadHit(ray)) Ng = normalize(ray.Ng);
@@ -134,7 +134,7 @@ task void DebugRenderer__renderTile(uniform DebugRenderer* uniform this,
                             make_vec2f(fx,fy),
                             make_vec2f(0.f,0.f));
       ray.u = ray.v = 0.0f;
-      rtcIntersect(scene->accel,ray);
+      rtcIntersect(scene->handle,ray);
 
       /* return black if nothing hit */
       col = make_vec3f(0,0,0);
@@ -173,7 +173,7 @@ task void DebugRenderer__renderTile(uniform DebugRenderer* uniform this,
          shadow.time = 0;
     
          /* trace shadow ray */
-         rtcOccluded(scene->accel,shadow);
+         rtcOccluded(scene->handle,shadow);
     
          /* add light contribution */
          intensity += (float)shadow.id0;

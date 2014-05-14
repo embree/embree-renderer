@@ -32,16 +32,6 @@ struct TriangleMesh
 ///////////////////////////////////////////////////////////////////////////////
 // Implementation
 
-uniform int TriangleMesh__getNumVertices(uniform const Shape *uniform _this) {
-  const uniform TriangleMesh* uniform this = (const uniform TriangleMesh* uniform) _this;
-  return this->numPositions;
-}
-
-uniform int TriangleMesh__getNumTriangles(uniform const Shape *uniform _this) {
-  const uniform TriangleMesh* uniform this = (const uniform TriangleMesh* uniform) _this;
-  return this->numTriangles;
-}
-
 void TriangleMesh__postIntersect(uniform const Shape *uniform _this,
                                  const varying Ray &ray, 
                                  varying DifferentialGeometry &dg) 
@@ -91,43 +81,7 @@ void TriangleMesh__postIntersect(uniform const Shape *uniform _this,
   }
 }
 
-void TriangleMesh__extract(const uniform Shape* uniform _this,
-                           const uniform int& id0,
-                           uniform RTCTriangle* uniform triangles,
-                           uniform int& numTriangles,
-                           uniform RTCVertex* uniform vertices,
-                           uniform int& numVertices,
-                           uniform vec3f& lower_o,
-                           uniform vec3f& upper_o)
-{
-  const uniform TriangleMesh* uniform this = (const uniform TriangleMesh* uniform) _this;
-
-  vec3f lower = make_vec3f(+inf);
-  vec3f upper = make_vec3f(-inf);
-  foreach(j=0 ... this->numTriangles) {
-    const vec4i tri = this->triangle[j];
-    triangles[numTriangles+j].v0 = numVertices+tri.x;
-    triangles[numTriangles+j].v1 = numVertices+tri.y;
-    triangles[numTriangles+j].v2 = numVertices+tri.z;
-  }
-  foreach(j=0 ... this->numPositions) {
-    const vec3f p = make_vec3f(this->position[j]);
-    vertices[numVertices+j].x = p.x;
-    vertices[numVertices+j].y = p.y;
-    vertices[numVertices+j].z = p.z;
-    lower = min(lower,p);
-    upper = max(upper,p);
-  }
-  numTriangles+=this->numTriangles;
-  numVertices +=this->numPositions;
-  lower_o = __reduce_min(lower);
-  upper_o = __reduce_max(upper);
-}
-
-uniform int TriangleMesh__add(RTCScene scene,
-                              const uniform Shape* uniform _this,
-                              uniform vec3f& lower_o,
-                              uniform vec3f& upper_o)
+uniform int TriangleMesh__add(RTCScene scene, const uniform Shape* uniform _this)
 {
   const uniform TriangleMesh* uniform this = (const uniform TriangleMesh* uniform) _this;
 
@@ -135,9 +89,6 @@ uniform int TriangleMesh__add(RTCScene scene,
   if (this->motion) motion = 2;
   uniform unsigned int mesh = rtcNewTriangleMesh (scene, RTC_GEOMETRY_STATIC, this->numTriangles, this->numPositions, motion);
   
-  vec3f lower = make_vec3f(+inf);
-  vec3f upper = make_vec3f(-inf);
-
   uniform RTCTriangle* uniform triangles = (uniform RTCTriangle* uniform) rtcMapBuffer(scene,mesh,RTC_INDEX_BUFFER);
   foreach(j=0 ... this->numTriangles) {
     const vec4i tri = this->triangle[j];
@@ -153,8 +104,6 @@ uniform int TriangleMesh__add(RTCScene scene,
     vertices0[j].x = p.x;
     vertices0[j].y = p.y;
     vertices0[j].z = p.z;
-    lower = min(lower,p);
-    upper = max(upper,p);
   }
   rtcUnmapBuffer(scene,mesh,RTC_VERTEX_BUFFER0);
 
@@ -167,14 +116,10 @@ uniform int TriangleMesh__add(RTCScene scene,
       vertices1[j].x = p.x + dp.x;
       vertices1[j].y = p.y + dp.y;
       vertices1[j].z = p.z + dp.z;
-      lower = min(lower,p);
-      upper = max(upper,p);
     }
     rtcUnmapBuffer(scene,mesh,RTC_VERTEX_BUFFER1);
   }
 
-  lower_o = __reduce_min(lower);
-  upper_o = __reduce_max(upper);
   return mesh;
 }
 
@@ -201,8 +146,6 @@ void* uniform TriangleMesh__transform(const uniform Shape* uniform _this,  const
 
   Shape__Constructor(&mesh->base,
                      TriangleMesh__Destructor,
-                     TriangleMesh__getNumVertices,
-                     TriangleMesh__getNumTriangles,
                      TriangleMesh__postIntersect,
                      TriangleMesh__transform,
                      TriangleMesh__add);
@@ -273,8 +216,6 @@ void TriangleMesh__Constructor(uniform TriangleMesh* uniform this,
 {
   Shape__Constructor(&this->base,
                      TriangleMesh__Destructor,
-                     TriangleMesh__getNumVertices,
-                     TriangleMesh__getNumTriangles,
                      TriangleMesh__postIntersect,
                      TriangleMesh__transform,
                      TriangleMesh__add);

@@ -130,7 +130,7 @@ vec3f PathTraceIntegrator_Li(const uniform PathTracer* uniform this,
 
     /*! Traverse ray. */
     DifferentialGeometry dg;
-    rtcIntersect(scene->accel,lightPath.ray);
+    rtcIntersect(scene->handle,lightPath.ray);
     postIntersect(scene,lightPath.ray,dg);
     numRays++;  
 
@@ -146,7 +146,7 @@ vec3f PathTraceIntegrator_Li(const uniform PathTracer* uniform this,
       }
       else {
         if (!lightPath.ignoreVisibleLights) {
-          for (uniform int i=0; i<scene->num_envLights; i++) {
+          for (uniform int i=0; i<scene->numEnvLights; i++) {
             uniform const EnvironmentLight *uniform l = scene->envLights[i]; 
             L = add(L, mul(Lw,l->Le(l,wo)));
           }      
@@ -159,12 +159,13 @@ vec3f PathTraceIntegrator_Li(const uniform PathTracer* uniform this,
     uniform CompositedBRDF brdfs;
     CompositedBRDF__Constructor(&brdfs);
 #if 0
-    uniform Material* material = scene->geometry[lightPath.ray.id0]->material;
+    uniform Material* material = scene->instances[scene->handle2id[lightPath.ray.geomID]]->material;
     foreach_unique(m in material) 
       if (m != NULL) m->shade(m,lightPath.ray, lightPath.lastMedium, dg, brdfs);
 #else
     foreach_unique(geomID in lightPath.ray.id0) {
-      uniform Material* uniform m = scene->geometry[geomID]->material;
+      uniform int id = scene->handle2id[geomID];
+      uniform Material* uniform m = scene->instances[id]->material;
       if (m != NULL) m->shade(m,lightPath.ray, lightPath.lastMedium, dg, brdfs);
     }
 #endif
@@ -172,7 +173,8 @@ vec3f PathTraceIntegrator_Li(const uniform PathTracer* uniform this,
     /*! Add light emitted by hit area light source. */
     if (!lightPath.ignoreVisibleLights) {
       foreach_unique(geomID in lightPath.ray.id0) {
-        const uniform AreaLight* uniform l = scene->geometry[geomID]->light;
+        uniform int id = scene->handle2id[geomID];
+        const uniform AreaLight* uniform l = (const uniform AreaLight* uniform) scene->instances[id]->light;
         if (l != NULL) L = add(L, mul(Lw, l->Le(l,dg,wo)));
       }
     }
@@ -183,7 +185,7 @@ vec3f PathTraceIntegrator_Li(const uniform PathTracer* uniform this,
     /*! Direct lighting. Shoot shadow rays to all light sources. */
     if (useDirectLighting) 
     {
-      uniform int numAllLights = min(MAX_LIGHTS,(int)scene->num_allLights);
+      uniform int numAllLights = min(MAX_LIGHTS,(int)scene->numAllLights);
       for (uniform int i=0; i<numAllLights; i++) 
       {
         uniform Light* uniform light = scene->allLights[i];
@@ -213,7 +215,7 @@ vec3f PathTraceIntegrator_Li(const uniform PathTracer* uniform this,
         Ray shadow_ray; 
         init_Ray(shadow_ray,dg.P,ls.wi.v,dg.error*this->epsilon,ls.tMax-dg.error*this->epsilon);
         shadow_ray.time = lightPath.ray.time;
-        rtcOccluded(scene->accel,shadow_ray);
+        rtcOccluded(scene->handle,shadow_ray);
         if (hadHit(shadow_ray)) continue; 
 
         L = add(L,mul(mul(Lw,ls.L),mul(brdf,rcp(ls.wi.pdf))));
@@ -246,7 +248,8 @@ vec3f PathTraceIntegrator_Li(const uniform PathTracer* uniform this,
         if (m != NULL)  m->selectNextMedium(m,lightPath.lastMedium);
 #else
       foreach_unique(geomID in lightPath.ray.id0) {
-        uniform Material* uniform m = scene->geometry[geomID]->material;
+        uniform int id = scene->handle2id[geomID];
+        uniform Material* uniform m = scene->instances[id]->material;
         if (m != NULL)  m->selectNextMedium(m,lightPath.lastMedium);
       }
 #endif
@@ -346,7 +349,7 @@ void PathTracer__initSampler(uniform PathTracer* uniform this, const uniform Sce
   PrecomputedSampler__Constructor(&this->sampler,16*16,64); // first argument HAS to be a square number, both have to be a power of two
 
   this->lightSampleID = PrecomputedSampler__request2D(&this->sampler,1);
-  uniform int numAllLights = min(MAX_LIGHTS,(int)scene->num_allLights);
+  uniform int numAllLights = min(MAX_LIGHTS,(int)scene->numAllLights);
   for (uniform int i=0; i<numAllLights; i++) {
     this->precomputedLightSampleID[i] = -1;
     if (scene->allLights[i]->type & TY_PRECOMPUTE_LIGHT_SAMPLES) 
