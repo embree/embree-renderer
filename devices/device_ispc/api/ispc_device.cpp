@@ -580,6 +580,17 @@ namespace embree
       modified[slot] = true;
     }
 
+//	void updateMaterial(size_t slot, ISPCNormalHandle *material)
+	void updateMaterial(size_t slot, const ISPCRef& material)
+	{
+		// Update the primitive's information
+		PrimitiveHandle *prim = prims[slot];
+		prim->material = material; // Just in case
+
+		// Now reach into the ISPC scene and update the working copy of the material
+		ispc::Scene__updateObjectMaterial(instance.ptr, material.ptr, slot);
+	}
+
   public:
     std::string accelTy;
     std::string builderTy;
@@ -737,6 +748,15 @@ namespace embree
     if (hprim == NULL) { scene->set(slot,NULL); return; }
     PrimitiveHandle* prim = dynamic_cast<PrimitiveHandle*>((_RTHandle*)hprim);
     scene->set(slot,prim);
+  }
+
+  void ISPCDevice::rtUpdateObjectMaterial(RTScene scene_i, RTMaterial material_i, 
+										  size_t slot)
+  {
+	SceneHandle* scene = castHandle<SceneHandle>(scene_i,"scene");
+//    ISPCNormalHandle* material = castHandle<ISPCNormalHandle>(material_i,"material");
+	ISPCRef material = castHandle<ISPCNormalHandle>(material_i,"material")->instance;
+	scene->updateMaterial(slot, material);
   }
 
   Device::RTToneMapper ISPCDevice::rtNewToneMapper(const char* type)

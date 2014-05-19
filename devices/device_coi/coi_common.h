@@ -76,6 +76,12 @@ namespace embree
     float transform[12];
   };
 
+  struct parmsUpdateObjectMaterial{
+	  int scene;
+	  int material;
+	  size_t slot;
+  };
+
   struct parmsNewLightPrimitive {
     int id;
     int light;

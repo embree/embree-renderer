@@ -196,6 +196,16 @@ namespace embree
     g_device->rtSetPrimitive(get<Device::RTScene>(parms->scene),parms->slot,get<Device::RTPrimitive>(parms->prim));
   }
 
+  extern "C" void rtUpdateObjectMaterial(uint32_t numBuffers, void** buffers, uint64_t* bufferBytes, 
+			parmsUpdateObjectMaterial* parms, uint16_t parmBytes, void* ret, uint16_t retBytes)
+  {
+    if (g_verbose) {
+      printf("rtUpdateObjectMaterial(%06d, %06d, %06d)\n", parms->scene, parms->material, parms->slot);
+      fflush(stdout);
+    }
+    g_device->rtUpdateObjectMaterial(get<Device::RTScene>(parms->scene),get<Device::RTMaterial>(parms->material), parms->slot);
+  }
+
   extern "C" void rtNewToneMapper(uint32_t numBuffers, void** buffers, uint64_t* bufferBytes, parmsNewToneMapper* parms, uint16_t parmBytes, void* ret, uint16_t retBytes)
   {
     if (g_verbose) {

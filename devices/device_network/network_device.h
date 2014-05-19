@@ -56,6 +56,7 @@ namespace embree
     RTPrimitive rtTransformPrimitive(RTPrimitive prim, const float* transform);
     RTScene rtNewScene(const char* type);
     void rtSetPrimitive(RTScene scene, size_t slot, RTPrimitive prim);
+    void rtUpdateObjectMaterial(RTScene scene_i, RTMaterial material_i, size_t slot);
     RTToneMapper rtNewToneMapper(const char* type);
     RTRenderer rtNewRenderer(const char* type);
     RTFrameBuffer rtNewFrameBuffer(const char* type, size_t width, size_t height, size_t buffers, void** ptr);

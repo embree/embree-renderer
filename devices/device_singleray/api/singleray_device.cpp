@@ -332,6 +332,15 @@ namespace embree
     scene->setPrimitive(slot,prim);
   }
 
+  void SingleRayDevice::rtUpdateObjectMaterial(RTScene scene_i, RTMaterial material_i, size_t slot)
+  {
+    RT_COMMAND_HEADER;
+    Ref<BackendScene::Handle> scene = castHandle<BackendScene::Handle>(scene_i,"scene");
+	Ref<InstanceHandle<Material> > material = castHandle<InstanceHandle<Material> >(material_i,"material");
+	Ref<BackendSceneFlat>& besf = (Ref<BackendSceneFlat>&)scene->instance;
+	besf->updateObjectMaterial(slot, material);
+  }
+
   Device::RTToneMapper SingleRayDevice::rtNewToneMapper(const char* type)
   {
     RT_COMMAND_HEADER;

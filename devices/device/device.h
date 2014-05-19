@@ -201,6 +201,9 @@ namespace embree
         deleted by adding NULL to a primitive slot. */
     virtual void rtSetPrimitive(RTScene scene, size_t slot, RTPrimitive prim) = 0;
 
+	/*! Updates the material attached to a primitive in the specified slot */
+	virtual void rtUpdateObjectMaterial(RTScene scene_i, RTMaterial material_i, size_t slot) = 0;
+
     /*! Creates a new tonemapper. \returns tonemapper handle. */
     virtual RTToneMapper rtNewToneMapper(const char* type) = 0;
 

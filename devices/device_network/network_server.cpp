@@ -246,6 +246,16 @@ namespace embree
       break;
     }
 
+	case EMBREE_UPDATE_OBJECT_MATERIAL:
+	{
+		int scene_i = network::read_int(socket);
+		int material_i = network::read_int(socket);
+		int slot = network::read_int(socket);
+		if (verbose) printf("rtSetScenePrimitive(%06d, %06d, %06d)\n", scene_i, material_i, slot);
+		device->rtUpdateObjectMaterial(get<Device::RTScene>(scene_i), get<Device::RTMaterial>(material_i), slot);
+		break;
+	}
+
     case EMBREE_NEW_SHAPE: 
     {
       int id = network::read_int(socket);

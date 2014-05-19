@@ -101,3 +101,19 @@ export void Scene__updateLights(void* uniform scene,
   this->num_envLights = num_envLights;
   this->envLights = (uniform EnvironmentLight**) envLights;
 }
+
+export void Scene__updateObjectMaterial(void* uniform scene_i, 
+										void* uniform material_i, 
+										uniform int slot)
+{
+	uniform Scene* uniform this = (uniform Scene* uniform) scene_i;
+	uniform Material*  uniform material	= (uniform Material*  uniform) material_i;
+	uniform Instance* uniform geometry = this->geometry[slot];
+
+	// Drop old material
+	uniform Material*  uniform oldmaterial = (uniform Material*  uniform)geometry->material;
+	RefCount__DecRef(&oldmaterial->base); 
+
+	// Add new
+	RefCount__IncRef(&material->base); geometry->material = material;
+}

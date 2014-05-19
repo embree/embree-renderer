@@ -145,7 +145,8 @@ namespace embree
       "rtPick",
       "rtNewDataStart",
       "rtNewDataSet",
-      "rtNewDataEnd"
+      "rtNewDataEnd",
+	  "rtUpdateObjectMaterial"
     };
 
     result = COIProcessGetFunctionHandles (process, sizeof(fctNameArray)/sizeof(char*), fctNameArray, &runNewCamera);
@@ -440,6 +441,19 @@ namespace embree
     parms.prim = (int) (long) prim;
 
     COIRESULT result = COIPipelineRunFunction (pipeline, runSetPrimitive, 0, NULL, NULL, 0, NULL, &parms, sizeof(parms), NULL, 0, NULL);
+    if (result != COI_SUCCESS) throw std::runtime_error("COIPipelineRunFunction failed: "+std::string(COIResultGetName(result)));
+  }
+
+  void COIDevice::COIProcess::rtUpdateObjectMaterial(Device::RTScene scene_i, 
+													 Device::RTMaterial material_i, 
+													 size_t slot)
+  {
+    parmsUpdateObjectMaterial parms;
+	parms.material = (int) (long) material_i;
+	parms.scene = (int) (long) scene_i;
+	parms.slot = slot;
+
+    COIRESULT result = COIPipelineRunFunction (pipeline, runUpdateObjectMaterial, 0, NULL, NULL, 0, NULL, &parms, sizeof(parms), NULL, 0, NULL);
     if (result != COI_SUCCESS) throw std::runtime_error("COIPipelineRunFunction failed: "+std::string(COIResultGetName(result)));
   }
 
@@ -1050,6 +1064,12 @@ namespace embree
   { 
     for (size_t i=0; i<devices.size(); i++)
       devices[i]->rtSetPrimitive(scene,slot,prim);
+  }
+
+  void COIDevice::rtUpdateObjectMaterial(Device::RTScene scene_i, Device::RTMaterial material_i, size_t slot)
+  {
+	for (size_t i=0; i<devices.size(); i++)
+	  devices[i]->rtUpdateObjectMaterial(scene_i, material_i, slot);
   }
 
   Device::RTToneMapper COIDevice::rtNewToneMapper(const char* type)

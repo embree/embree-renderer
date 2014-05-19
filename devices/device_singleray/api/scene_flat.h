@@ -168,6 +168,12 @@ namespace embree
       if (ray) geometry[ray.id0]->postIntersect(ray,dg);
     }
 
+	void updateObjectMaterial(size_t slot, Ref<InstanceHandle<Material> > material)
+	{
+		Ref<Primitive>& prim = geometry[slot];
+		prim->material = material->getInstance();
+	}
+
   private:
     std::vector<Ref<Primitive> > geometry;  //!< Geometry of the scene
   };

@@ -167,7 +167,8 @@ protected:
 								std::vector<MDagPath> &currentObjects,
 								std::vector<MDagPath> &currentLights);
 	int				convertMayaObjectsToEmbree(std::vector<MDagPath> &currentObjects, 
-								int objectReplacementNeeded);
+								int objectReplacementNeeded,
+								int *materialUpdated);
 	int				convertMayaLightsToEmbree(std::vector<MDagPath> &currentLights, 
 								int lightReplacementNeeded);
 	bool			renderToTarget( const MRenderingInfo &renderInfo );
@@ -179,7 +180,8 @@ protected:
 	void			getMaterialData(const MDagPath &currObject, int haveTexture, SceneData &materialInfo);
 
 	void			getObjectData(MDagPath &currObject, SceneData &objectInfo);
-	int				checkObjectProperities(MDagPath &currObject, SceneData &oldSceneInfo, int i);
+	int				checkObjectProperities(MDagPath &currObject, SceneData &oldSceneInfo, int i,
+								int *materialUpdated);
 	void			recordObjectProperties(MDagPath &currObject, int i, int eindex);
 
 	void			getLightData(MDagPath &currLight, SceneData &lightInfo);

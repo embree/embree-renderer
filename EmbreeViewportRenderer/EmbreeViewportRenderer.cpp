@@ -1272,15 +1272,16 @@ void EmbreeViewportRenderer::getLightData(MDagPath &currLight, SceneData &lightI
 }
 
 // ------------------------------
-int EmbreeViewportRenderer::checkObjectProperities(MDagPath &currObject, SceneData &oldSceneInfo, int i) 
+int EmbreeViewportRenderer::checkObjectProperities(MDagPath &currObject, SceneData &oldSceneInfo, int i,
+												   int *materialUpdated) 
 {
 	int replacementNeeded = 0;
 	SceneData currObjectData;
 
-	// Get information on the light from Maya
+	// Get information on the object from Maya
 	getObjectData(currObject, currObjectData);
 
-	// Look for changes
+	// Look for changes in the object itself
 	if (oldSceneInfo.numPrimitives != currObjectData.numPrimitives) replacementNeeded = 1;
 	if (oldSceneInfo.numIndices != currObjectData.numIndices) replacementNeeded = 1;
 	if (oldSceneInfo.numPositions != currObjectData.numPositions) replacementNeeded = 1;
@@ -1290,8 +1291,55 @@ int EmbreeViewportRenderer::checkObjectProperities(MDagPath &currObject, SceneDa
 	if (oldSceneInfo.boundBox.max() != currObjectData.boundBox.max()) replacementNeeded = 1;
 	if (oldSceneInfo.lindex != i) replacementNeeded = 1;
 
-	if (0 == replacementNeeded)
-		replacementNeeded = checkMaterialProperties(currObject, currObjectData.haveTexture, oldSceneInfo);
+	// If materials change, do not force an object rebuild - just replace material
+	// Yes, this implementation is relatively brute-force...
+	if (0 == replacementNeeded) 
+	{
+		int replaceMaterial;
+
+		replaceMaterial = checkMaterialProperties(currObject, currObjectData.haveTexture, oldSceneInfo);
+
+		if (replaceMaterial && (NULL != m_render_scene))
+		{
+			// Let's see if we still have a texture
+			MObject object = currObject.node();
+			MFnMesh mesh(object);
+
+			// Figure out texturing
+			bool haveTexture = false;
+			int	numUVsets = mesh.numUVSets();
+			MString uvSetName;
+			MObjectArray textures;
+			if (numUVsets > 0)
+			{
+				mesh.getCurrentUVSetName( uvSetName );
+				MStatus status = mesh.getAssociatedUVSetTextures(uvSetName, textures);
+				if (status == MS::kSuccess && textures.length())
+				{
+					haveTexture = true;
+				}
+			}
+
+			// Grab the new material
+			embree::Handle<embree::Device::RTMaterial> material;
+			convertSurfaceMaterial(currObject, haveTexture, material);
+			m_device->rtCommit(material);
+
+			// Update the recorded material data for change detection next time
+			getMaterialData(currObject, haveTexture, oldSceneInfo);
+
+			// Now replace the material in the scene
+			m_device->rtUpdateObjectMaterial(m_render_scene, material, oldSceneInfo.eindex);
+
+			// And update the information in the object database
+			std::string currObjectName = currObject.fullPathName().asChar();
+			std::pair<std::map<std::string, SceneData>::iterator, bool> retstat;
+			m_objectDatabase.erase(currObjectName);  // Remove old information
+			retstat = m_objectDatabase.insert(std::pair<std::string, SceneData>(currObjectName, oldSceneInfo)); // add new
+
+			*materialUpdated = 1;
+		}
+	}
 
 	return replacementNeeded;
 }
@@ -1376,7 +1424,8 @@ void EmbreeViewportRenderer::recordLightProperties(MDagPath &currLight, int i, i
 // ------------------------------
 
 int	 EmbreeViewportRenderer::convertMayaObjectsToEmbree(std::vector<MDagPath> &currentObjects, 
-								int objectReplacementNeeded)
+								int objectReplacementNeeded,
+								int *materialUpdated)
 {
 	int i;
 	int numObjects = currentObjects.size();
@@ -1411,7 +1460,8 @@ int	 EmbreeViewportRenderer::convertMayaObjectsToEmbree(std::vector<MDagPath> &c
 				// Seen this object before - let's make sure it hasn't changed
 				oldSceneInfo = oldInfoIter->second;
 
-				replacementNeeded = checkObjectProperities(currObject, oldSceneInfo, i);
+				replacementNeeded = checkObjectProperities(currObject, oldSceneInfo, i, 
+														   materialUpdated);
 
 				if (replacementNeeded == 1)
 					break;   // There was a change - no point in checking further
@@ -1438,7 +1488,9 @@ int	 EmbreeViewportRenderer::convertMayaObjectsToEmbree(std::vector<MDagPath> &c
 		convertSurface(currObject);
 
 		// Record the object's properties for change detection
-		recordObjectProperties(currObject, i, m_prims.size());
+		// Objects are loaded before lights, so that object's list and embree indexes
+		// are the same
+		recordObjectProperties(currObject, i, i);
 	}  // retranslate all objects
 
 	return 1;
@@ -1505,7 +1557,9 @@ int	EmbreeViewportRenderer::convertMayaLightsToEmbree(std::vector<MDagPath> &cur
 		convertLight(currLight);
 
 		// Record the object's properties for change detection
-		recordLightProperties(currLight, i, m_lights.size());
+		// Lights are loaded after objects, so their embree index is
+		// picks up after the objects
+		recordLightProperties(currLight, i, m_prims.size()+i);
 	}  // retranslate all lights
 
 	return 1;
@@ -1822,6 +1876,7 @@ bool EmbreeViewportRenderer::renderToTarget( const MRenderingInfo &renderInfo )
 	std::vector<MDagPath>  currentLights;
 	int objectReplacementNeeded = 0;
 	int lightReplacementNeeded = 0;
+	int materialUpdated = 0;
 	embree::Handle<embree::Device::RTCamera> curr_camera;
 	embree::Handle<embree::Device::RTFrameBuffer> curr_frameBuffer;
 
@@ -1847,7 +1902,8 @@ bool EmbreeViewportRenderer::renderToTarget( const MRenderingInfo &renderInfo )
 
 	// Now dive down into the objects and check them as we decide
 	// if they need to be created/recreated
-	objectReplacementNeeded = convertMayaObjectsToEmbree(currentObjects, objectReplacementNeeded);
+	objectReplacementNeeded = convertMayaObjectsToEmbree(currentObjects, objectReplacementNeeded,
+		&materialUpdated);
 
 	lightReplacementNeeded = convertMayaLightsToEmbree(currentLights, lightReplacementNeeded);
 
@@ -1883,6 +1939,8 @@ bool EmbreeViewportRenderer::renderToTarget( const MRenderingInfo &renderInfo )
 #endif
 		accumulate = 0;
 	}
+	else if (1 == materialUpdated)
+		accumulate = 0;    // Reset framebuffer on material update
 
 	// Set up the frame buffer and camera used for rendering based on
 	// the Maya camera in use.
