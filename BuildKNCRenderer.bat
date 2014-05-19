@@ -10,9 +10,10 @@ REM  Run this script in an "Intel Composer XE 2013 SP1 Intel(R) 64 Visual Studio
 REM
 
 SET CC=icl
-SET ISPCDIR=C:\Users\cwcongdo\Documents\ispc-v1.6.0-windows
+REM SET ISPCDIR=C:\Users\cwcongdo\Documents\ispc-v1.6.0-windows
+SET ISPCDIR=C:\Users\cwcongdo\Documents\ispc-v1.6dev-mic_win_cross
+REM SET ISPC=%ISPCDIR%\ispc_wintophixcompile.exe
 SET ISPC=%ISPCDIR%\ispc.exe
-REM   SET ISPC=%ISPCDIR%\ispc_wintophixcompile.exe
 
 SET EMBREEROOT=C:\Users\cwcongdo\Documents\embree-2.2
 SET EMBREERENDROOT=C:\Users\cwcongdo\Documents\dcc_render-embree-renderer
@@ -30,6 +31,7 @@ SET EMBREECFLAGSISPC=/Qmic -c -g -debug inline-debug-info -Dembree_xeonphi_EXPOR
 		  
 REM EMBREEISPCFLAGS = --arch=x86-64 --pic -O3 --target=generic-16 --emit-c++ --c++-include-file=$(ISPCDIR)\examples\intrinsics\knc.h --woff --opt=fast-math --opt=force-aligned-memory 
 SET EMBREEISPCFLAGS=--arch=x86-64  -O1 --target=generic-16 --emit-c++ --c++-include-file=%ISPCDIR%\examples\intrinsics\knc.h --woff --opt=fast-math --opt=force-aligned-memory 
+REM SET EMBREEISPCFLAGS=--arch=x86-64  -O1 --target=generic-16 --emit-c++ --c++-include-file=%ISPCDIR%\examples\intrinsics\knc-i1x16.h --woff --opt=fast-math --opt=force-aligned-memory 
 SET EMBREEISPCINCLUDE=-I%EMBREEROOT% -I%EKERNELSPHIDIR%
 
 REM
@@ -81,16 +83,17 @@ SET RENDISPCDEVINCL=%RENDINCLUDE% -I%RENDDEVDIR%\device_ispc
 
 SET RENDISPCINCLUDE=-I%RENDISPCDEVDIR% -I%EMBREEROOT%\include
 
-SET RENDCFLAGS=/Qmic -c -g -debug inline-debug-info -restrict -Wall -fasm-blocks -fPIC -O3 -DNDEBUG -mCG_lrb_num_threads=4 -mCG_lrb_num_threads=4 -fp-model fast -fimf-precision=low -fasm-blocks -no-inline-max-total-size -inline-factor=200 -fPIC  -fma  -restrict -no-prec-div -no-prec-sqrt -mGLOB_default_function_attrs="use_vec_for_imul=on;use_fast_math=on;gather_scatter_loop_jknzd=on;gather_scatter_loop_unroll=2;use_gather_scatter_hint=on;c_lrb_avoid_vector_insts_with_rip=on;c_avoid_bank_conflicts=on;c_sch_nop_insertion=on;c_avoid_movz_and_movs=off;c_avoid_integer_ciscization=on;avoid_stall_between_all_insts=on;avoid_long_vector_ints=on;avoid_loads_with_extend=on;smart_mem_conflicts=on" -mP2OPT_hlo_prefetch=F
-SET RENDCFLAGSISPC=/Qmic -g -debug inline-debug-info -D_MSC_VER=1600 -c -restrict -Wall -fasm-blocks -fPIC -O3 -DNDEBUG -mCG_lrb_num_threads=4 -mCG_lrb_num_threads=4 -fp-model fast -fimf-precision=low -fasm-blocks -no-inline-max-total-size -inline-factor=200 -fPIC  -fma  -restrict -no-prec-div -no-prec-sqrt -mGLOB_default_function_attrs="use_vec_for_imul=on;use_fast_math=on;gather_scatter_loop_jknzd=on;gather_scatter_loop_unroll=2;use_gather_scatter_hint=on;c_lrb_avoid_vector_insts_with_rip=on;c_avoid_bank_conflicts=on;c_sch_nop_insertion=on;c_avoid_movz_and_movs=off;c_avoid_integer_ciscization=on;avoid_stall_between_all_insts=on;avoid_long_vector_ints=on;avoid_loads_with_extend=on;smart_mem_conflicts=on"  -mP2OPT_hlo_prefetch=F  %RENDINCLUDE% -I%RENDDEVDIR% -I%RENDISPCDEVDIR% -I%RISPCDIR%
+SET RENDCFLAGS=/Qmic -c -restrict -Wall -fasm-blocks -fPIC -O3 -DNDEBUG -mCG_lrb_num_threads=4 -mCG_lrb_num_threads=4 -fp-model fast -fimf-precision=low -fasm-blocks -no-inline-max-total-size -inline-factor=200 -fPIC  -fma  -restrict -no-prec-div -no-prec-sqrt -mGLOB_default_function_attrs="use_vec_for_imul=on;use_fast_math=on;gather_scatter_loop_jknzd=on;gather_scatter_loop_unroll=2;use_gather_scatter_hint=on;c_lrb_avoid_vector_insts_with_rip=on;c_avoid_bank_conflicts=on;c_sch_nop_insertion=on;c_avoid_movz_and_movs=off;c_avoid_integer_ciscization=on;avoid_stall_between_all_insts=on;avoid_long_vector_ints=on;avoid_loads_with_extend=on;smart_mem_conflicts=on" -mP2OPT_hlo_prefetch=F
+SET RENDCFLAGSISPC=/Qmic -c -restrict -Wall -fasm-blocks -fPIC -O3 -DNDEBUG -mCG_lrb_num_threads=4 -mCG_lrb_num_threads=4 -fp-model fast -fimf-precision=low -fasm-blocks -no-inline-max-total-size -inline-factor=200 -fPIC  -fma  -restrict -no-prec-div -no-prec-sqrt -mGLOB_default_function_attrs="use_vec_for_imul=on;use_fast_math=on;gather_scatter_loop_jknzd=on;gather_scatter_loop_unroll=2;use_gather_scatter_hint=on;c_lrb_avoid_vector_insts_with_rip=on;c_avoid_bank_conflicts=on;c_sch_nop_insertion=on;c_avoid_movz_and_movs=off;c_avoid_integer_ciscization=on;avoid_stall_between_all_insts=on;avoid_long_vector_ints=on;avoid_loads_with_extend=on;smart_mem_conflicts=on"  -mP2OPT_hlo_prefetch=F  %RENDINCLUDE% -I%RENDDEVDIR% -I%RENDISPCDEVDIR% -I%RISPCDIR%
 			   
-SET RENDISPCFLAGS=-D__MIC__ -O1 --target=generic-16 --emit-c++ --c++-include-file=%ISPCDIR%\examples\intrinsics\knc.h --wno-perf --opt=fast-math --opt=force-aligned-memory 
+SET RENDISPCFLAGS=-D__MIC__ --arch=x86-64  -O1 --target=generic-16 --emit-c++ --c++-include-file=%ISPCDIR%\examples\intrinsics\knc.h --wno-perf --opt=fast-math --opt=force-aligned-memory 
+REM SET RENDISPCFLAGS=-D__MIC__ --arch=x86-64  -O1 --target=generic-16 --emit-c++ --c++-include-file=%ISPCDIR%\examples\intrinsics\knc-i1x16.h --wno-perf --opt=fast-math --opt=force-aligned-memory 
 
 REM
 REM   --- Renderer ISPC builds
 REM
 
-REM -- FOR /R %RENDISPCDEVDIR% %%a IN (*.ispc) DO %ISPC% %RENDISPCFLAGS% %RENDISPCINCLUDE% -h %RISPCDIR%\%%~na_ispc.h -MMM %RISPCDIR%\%%~na.dev.idep -o %RISPCDIR%\%%~na.dev.cpp %%a
+FOR /R %RENDISPCDEVDIR% %%a IN (*.ispc) DO %ISPC% %RENDISPCFLAGS% %RENDISPCINCLUDE% -h %RISPCDIR%\%%~na_ispc.h -MMM %RISPCDIR%\%%~na.dev.idep -o %RISPCDIR%\%%~na.dev.cpp %%a
 
 cd %ROBJDIR%
 
@@ -98,7 +101,8 @@ REM
 REM   --- Renderer C++ file builds
 REM
 
-REM -- %CC% %RISPCDIR%\*.dev.cpp %RENDCFLAGSISPC%
+DEL %RISPCDIR%\framebuffer_rgb8.dev.cpp
+%CC% %RISPCDIR%\*.dev.cpp %RENDCFLAGSISPC%
 
 %CC% %EMBREERENDROOT%\common\simd\mic*.cpp %RENDCFLAGS% %RENDINCLUDE%
 FOR /R %EMBREERENDROOT%\common\sys %%a IN (*.cpp) DO %CC% %%a %RENDCFLAGS% %RENDINCLUDE%
@@ -127,9 +131,69 @@ REM %CC% /Qmic
 
 "C:\Program Files (x86)\Intel\Composer XE 2013 SP1\bin\intel64_mic\icc.exe" -static-intel -rdynamic -fPIC -fPIC -o device_singleray_knc singleray_device.o hdrilight.o trianglemesh_normals.o trianglemesh_full.o sampler.o distribution1d.o distribution2d.o pathtraceintegrator.o filter.o debugrenderer.o integratorrenderer.o progress.o coi_server.o %EOBJDIR%\*.o -lpthread -ldl "C:\Program Files\Intel\MPSS\k1om-mpss-linux\usr\lib64\libcoi_device.so" -Wl,-rpath,"C:\Program Files\Intel\MPSS\k1om-mpss-linux\usr\lib64"  -zmuldefs
 
-REM icpc  -mmic -static-intel -rdynamic -fPIC -fPIC -o ../../device_singleray_knc  CMakeFiles/device_singleray_knc.dir/api/singleray_device.o CMakeFiles/device_singleray_knc.dir/lights/hdrilight.o CMakeFiles/device_singleray_knc.dir/shapes/trianglemesh_normals.o CMakeFiles/device_singleray_knc.dir/shapes/trianglemesh_full.o CMakeFiles/device_singleray_knc.dir/samplers/sampler.o CMakeFiles/device_singleray_knc.dir/samplers/distribution1d.o CMakeFiles/device_singleray_knc.dir/samplers/distribution2d.o CMakeFiles/device_singleray_knc.dir/integrators/pathtraceintegrator.o CMakeFiles/device_singleray_knc.dir/filters/filter.o CMakeFiles/device_singleray_knc.dir/renderers/debugrenderer.o CMakeFiles/device_singleray_knc.dir/renderers/integratorrenderer.o CMakeFiles/device_singleray_knc.dir/renderers/progress.o -rdynamic ../../libsys_knc.a /localdisk/ccongdon/embree-2.2/embree-2.2/build/libembree_xeonphi.so.2.2.0 ../../libcoi_server_knc.a ../../liblexers_knc.a ../../libsys_knc.a ../../libsimd_knc.a -lpthread -ldl /opt/mpss/3.1.2/sysroots/k1om-mpss-linux/usr/lib64/libcoi_device.so -Wl,-rpath,/opt/mpss/3.1.2/sysroots/k1om-mpss-linux/usr/lib64  -zmuldefs
+EXIT /B
 
-REM icpc  -mmic -static-intel -rdynamic -fPIC -fPIC -o ../../device_ispc_knc  CMakeFiles/device_ispc_knc.dir/api/ref.dev.o CMakeFiles/device_ispc_knc.dir/scene/scene.dev.o CMakeFiles/device_ispc_knc.dir/scene/instance.dev.o CMakeFiles/device_ispc_knc.dir/cameras/pinholecamera.dev.o CMakeFiles/device_ispc_knc.dir/cameras/depthoffieldcamera.dev.o CMakeFiles/device_ispc_knc.dir/materials/material.dev.o CMakeFiles/device_ispc_knc.dir/materials/matte.dev.o CMakeFiles/device_ispc_knc.dir/materials/matte_textured.dev.o CMakeFiles/device_ispc_knc.dir/materials/obj.dev.o CMakeFiles/device_ispc_knc.dir/materials/dielectric.dev.o CMakeFiles/device_ispc_knc.dir/materials/thindielectric.dev.o CMakeFiles/device_ispc_knc.dir/materials/mirror.dev.o CMakeFiles/device_ispc_knc.dir/materials/metal.dev.o CMakeFiles/device_ispc_knc.dir/materials/velvet.dev.o CMakeFiles/device_ispc_knc.dir/materials/metallicpaint.dev.o CMakeFiles/device_ispc_knc.dir/materials/plastic.dev.o CMakeFiles/device_ispc_knc.dir/lights/light.dev.o CMakeFiles/device_ispc_knc.dir/lights/ambientlight.dev.o CMakeFiles/device_ispc_knc.dir/lights/pointlight.dev.o CMakeFiles/device_ispc_knc.dir/lights/directionallight.dev.o CMakeFiles/device_ispc_knc.dir/lights/distantlight.dev.o CMakeFiles/device_ispc_knc.dir/lights/spotlight.dev.o CMakeFiles/device_ispc_knc.dir/lights/trianglelight.dev.o CMakeFiles/device_ispc_knc.dir/lights/hdrilight.dev.o CMakeFiles/device_ispc_knc.dir/shapes/shape.dev.o CMakeFiles/device_ispc_knc.dir/shapes/trianglemesh.dev.o CMakeFiles/device_ispc_knc.dir/tonemappers/defaulttonemapper.dev.o CMakeFiles/device_ispc_knc.dir/textures/nearestneighbor.dev.o CMakeFiles/device_ispc_knc.dir/textures/image3c.dev.o CMakeFiles/device_ispc_knc.dir/textures/image3ca.dev.o CMakeFiles/device_ispc_knc.dir/textures/image3f.dev.o CMakeFiles/device_ispc_knc.dir/textures/image3fa.dev.o CMakeFiles/device_ispc_knc.dir/renderers/renderer.dev.o CMakeFiles/device_ispc_knc.dir/renderers/debugrenderer.dev.o CMakeFiles/device_ispc_knc.dir/renderers/pathtracer.dev.o CMakeFiles/device_ispc_knc.dir/framebuffers/swapchain.dev.o CMakeFiles/device_ispc_knc.dir/framebuffers/accubuffer.dev.o CMakeFiles/device_ispc_knc.dir/framebuffers/framebuffer.dev.o CMakeFiles/device_ispc_knc.dir/framebuffers/framebuffer_rgb_float32.dev.o CMakeFiles/device_ispc_knc.dir/framebuffers/framebuffer_rgba8.dev.o CMakeFiles/device_ispc_knc.dir/samplers/distribution2d.dev.o CMakeFiles/device_ispc_knc.dir/api/ispc_device.o CMakeFiles/device_ispc_knc.dir/shapes/trianglemesh.o CMakeFiles/device_ispc_knc.dir/shapes/sphere.o -rdynamic ../../libsys_knc.a /localdisk/ccongdon/embree-2.2/embree-2.2/build/libembree_xeonphi.so.2.2.0 ../../libcoi_server_knc.a ../../liblexers_knc.a ../../libsys_knc.a ../../libsimd_knc.a -lpthread -ldl /opt/mpss/3.1.2/sysroots/k1om-mpss-linux/usr/lib64/libcoi_device.so -Wl,-rpath,/opt/mpss/3.1.2/sysroots/k1om-mpss-linux/usr/lib64  -zmuldefs
+REM icpc  -mmic -static-intel -rdynamic -fPIC -fPIC -o ../../device_singleray_knc  
+CMakeFiles/device_singleray_knc.dir/api/singleray_device.o 
+CMakeFiles/device_singleray_knc.dir/lights/hdrilight.o 
+CMakeFiles/device_singleray_knc.dir/shapes/trianglemesh_normals.o
+ CMakeFiles/device_singleray_knc.dir/shapes/trianglemesh_full.o 
+ CMakeFiles/device_singleray_knc.dir/samplers/sampler.o 
+ CMakeFiles/device_singleray_knc.dir/samplers/distribution1d.o 
+ CMakeFiles/device_singleray_knc.dir/samplers/distribution2d.o 
+ CMakeFiles/device_singleray_knc.dir/integrators/pathtraceintegrator.o 
+ CMakeFiles/device_singleray_knc.dir/filters/filter.o 
+ CMakeFiles/device_singleray_knc.dir/renderers/debugrenderer.o 
+ CMakeFiles/device_singleray_knc.dir/renderers/integratorrenderer.o 
+ CMakeFiles/device_singleray_knc.dir/renderers/progress.o 
+ -rdynamic ../../libsys_knc.a /localdisk/ccongdon/embree-2.2/embree-2.2/build/libembree_xeonphi.so.2.2.0 ../../libcoi_server_knc.a ../../liblexers_knc.a ../../libsys_knc.a ../../libsimd_knc.a -lpthread -ldl /opt/mpss/3.1.2/sysroots/k1om-mpss-linux/usr/lib64/libcoi_device.so -Wl,-rpath,/opt/mpss/3.1.2/sysroots/k1om-mpss-linux/usr/lib64  -zmuldefs
+
+REM icpc  -mmic -static-intel -rdynamic -fPIC -fPIC -o ../../device_ispc_knc  
+ref.dev.o 
+scene.dev.o 
+instance.dev.o 
+pinholecamera.dev.o 
+depthoffieldcamera.dev.o 
+material.dev.o 
+matte.dev.o 
+matte_textured.dev.o 
+obj.dev.o 
+dielectric.dev.o 
+materials/thindielectric.dev.o 
+mirror.dev.o 
+metal.dev.o 
+velvet.dev.o 
+metallicpaint.dev.o 
+plastic.dev.o 
+light.dev.o 
+ambientlight.dev.o 
+pointlight.dev.o 
+directionallight.dev.o 
+distantlight.dev.o C
+spotlight.dev.o 
+trianglelight.dev.o 
+hdrilight.dev.o 
+shape.dev.o 
+trianglemesh.dev.o 
+defaulttonemapper.dev.o 
+nearestneighbor.dev.o 
+image3c.dev.o 
+image3ca.dev.o 
+image3f.dev.o 
+image3fa.dev.o 
+renderer.dev.o 
+debugrenderer.dev.o 
+pathtracer.dev.o 
+swapchain.dev.o 
+accubuffer.dev.o 
+framebuffer.dev.o 
+framebuffer_rgb_float32.dev.o 
+framebuffer_rgba8.dev.o 
+distribution2d.dev.o 
+ispc_device.o 
+trianglemesh.o 
+sphere.o 
+-rdynamic ../../libsys_knc.a /localdisk/ccongdon/embree-2.2/embree-2.2/build/libembree_xeonphi.so.2.2.0 ../../libcoi_server_knc.a ../../liblexers_knc.a ../../libsys_knc.a ../../libsimd_knc.a -lpthread -ldl /opt/mpss/3.1.2/sysroots/k1om-mpss-linux/usr/lib64/libcoi_device.so -Wl,-rpath,/opt/mpss/3.1.2/sysroots/k1om-mpss-linux/usr/lib64  -zmuldefs
 
 REM icpc  -fPIC -Wall -fPIC -static-intel -fvisibility-inlines-hidden -fvisibility=hidden -DNDEBUG -O3 -no-ansi-alias -restrict -fp-model fast -fimf-precision=low -no-prec-div -no-prec-sqrt  -shared -Wl,-soname,libdevice_coi.so -o ../../libdevice_coi.so CMakeFiles/device_coi.dir/coi_device.o ../../libsys.a ../../libimage.a /opt/intel/mic/coi/host-linux-release/lib/libcoi_host.so ../../libsys.a -lpthread -ldl -Wl,-rpath,/opt/intel/mic/coi/host-linux-release/lib
 
