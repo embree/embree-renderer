@@ -122,4 +122,4 @@ ADD_SUBDIRECTORY(common)
 ADD_SUBDIRECTORY(devices)
 ADD_SUBDIRECTORY(tools/obj2xml)
 ADD_SUBDIRECTORY(tools/xml2obj)
- 
+ADD_SUBDIRECTORY(EmbreeViewportRenderer) 

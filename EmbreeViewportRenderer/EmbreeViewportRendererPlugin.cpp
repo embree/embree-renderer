@@ -29,12 +29,11 @@
 static EmbreeViewportRendererXeonSingle		*g_EmbreeViewportRendererXeonSingle = 0;
 static EmbreeViewportRendererXeonISPC		*g_EmbreeViewportRendererXeonISPC = 0;
 static EmbreeViewportRendererXeonPhiSingle	*g_EmbreeViewportRendererXeonPhiSingle = 0;
+static EmbreeViewportRendererXeonPhiISPC	*g_EmbreeViewportRendererXeonPhiISPC = 0;
 
 MStatus initializePlugin( MObject obj )
 {
 	MStatus   status = MStatus::kFailure;
-
-//	MFnPlugin plugin( obj, "Intel", "2014", "Any");
 
 #ifdef SINGLEXEON
 	//
@@ -86,6 +85,23 @@ MStatus initializePlugin( MObject obj )
 		}
 	}
 #endif
+
+#ifdef ISPCXEONPHI
+	//
+	// Register the Xeon Phi ISPC renderer
+	//
+	MFnPlugin plugin( obj, "IntelIXP", "2014", "Any");
+	g_EmbreeViewportRendererXeonPhiISPC = new EmbreeViewportRendererXeonPhiISPC();
+	if (g_EmbreeViewportRendererXeonPhiISPC)
+	{
+		g_EmbreeViewportRendererXeonPhiISPC->createRenderDevice();
+		status = g_EmbreeViewportRendererXeonPhiISPC->registerRenderer();
+		if (status != MStatus::kSuccess)
+		{
+			status.perror("Failed to register ISPC Embree Renderer for Xeon Phi properly.");
+		}
+	}
+#endif
 	return status;
 }
 
@@ -107,7 +123,7 @@ MStatus uninitializePlugin( MObject obj )
 		}
 	}
 	g_EmbreeViewportRendererXeonSingle = 0;
-//
+
 	//
 	// Deregister the Xeon ISPC renderer
 	//
@@ -120,7 +136,7 @@ MStatus uninitializePlugin( MObject obj )
 		}
 	}
 	g_EmbreeViewportRendererXeonISPC = 0;
-//
+
 	//
 	// Deregister the Xeon Phi Single-ray renderer
 	//
@@ -133,7 +149,20 @@ MStatus uninitializePlugin( MObject obj )
 		}
 	}
 	g_EmbreeViewportRendererXeonPhiSingle = 0;
-//
+
+	//
+	// Deregister the Xeon Phi ISPC renderer
+	//
+	if (g_EmbreeViewportRendererXeonPhiISPC)
+	{
+		status = g_EmbreeViewportRendererXeonPhiISPC->deregisterRenderer();
+		if (status != MStatus::kSuccess)
+		{
+			status.perror("Failed to deregister ISPC Embree Renderer for Xeon Phi properly.");
+		}
+	}
+	g_EmbreeViewportRendererXeonPhiISPC = 0;
+
 	return status;
 }
 

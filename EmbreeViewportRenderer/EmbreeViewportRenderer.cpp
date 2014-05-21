@@ -70,7 +70,7 @@ ostream &operator<<(ostream &output, const SceneData &aaa)
    output << aaa.numPrimitives << ' ' << aaa.numIndices << ' ' << aaa.numPositions << endl;
    output << aaa.boundBox.center() << ' ' << aaa.boundBox.width() << ' ' << aaa.boundBox.height() << ' ' << aaa.boundBox.depth() << endl;
    output << aaa.transform << endl;
-   output << aaa.color << ' ' << aaa.intensity << '  ' << aaa.lightDirection << endl;
+   output << aaa.color << ' ' << aaa.intensity << ' ' << aaa.lightDirection << endl;
    output << aaa.coneAngle << ' ' << aaa.penumbraAngle << ' ' << aaa.decayRate << endl;
    output << "Embree Index " << aaa.eindex << "  List Index " << aaa.lindex << endl;
    if (aaa.haveTexture)
@@ -204,8 +204,24 @@ void EmbreeViewportRendererXeonPhiSingle::createRenderDevice()
 {
 	if (m_device == NULL) 
 	{
-//      m_device = embree::Device::rtCreateDevice("ispc_knc",   // COI
-      m_device = embree::Device::rtCreateDevice("singleray_knc",   // COI
+      m_device = embree::Device::rtCreateDevice("singleray_knc",   // single-ray over COI
+	          m_numThreads,m_rtcore_cfg.c_str());
+	}
+}
+
+// ------------------------------------------------------------------
+EmbreeViewportRendererXeonPhiISPC::EmbreeViewportRendererXeonPhiISPC( )
+	: EmbreeViewportRenderer("EmbreeViewportRendererXeonPhiISPC")
+{
+	// Set the ui name
+	fUIName.set( "ISPC Embree Renderer for Xeon Phi");
+}
+
+void EmbreeViewportRendererXeonPhiISPC::createRenderDevice()
+{
+	if (m_device == NULL) 
+	{
+      m_device = embree::Device::rtCreateDevice("ispc_knc",   // ispc_device over COI
 	          m_numThreads,m_rtcore_cfg.c_str());
 	}
 }
@@ -304,14 +320,14 @@ MGlobal::displayInfo(buffer);
 	else
 		embree::g_device = m_device;  // WARNING WARNING - yes, the renderer needs this global set
 
-sprintf(buffer, "2 - device=%lp", m_device );
-MGlobal::displayInfo(buffer);
+//sprintf(buffer, "2 - device=%lp", m_device );
+//MGlobal::displayInfo(buffer);
 
     /* create global objects */
 	m_renderer = m_device->rtNewRenderer("pathtracer");
 
-sprintf(buffer, "renderer=%lp", m_renderer );
-MGlobal::displayInfo(buffer);
+//sprintf(buffer, "renderer=%lp", m_renderer );
+//MGlobal::displayInfo(buffer);
 
     if (m_depth >= 0) m_device->rtSetInt1(m_renderer, "maxDepth", m_depth);
     m_device->rtSetInt1(m_renderer, "sampler.spp", m_spp);
@@ -464,7 +480,7 @@ embree::Handle<embree::Device::RTData>
 bool
 EmbreeViewportRenderer::convertLight(const MDagPath &dagPath)
 {
-	char buffer[1024];
+	//char buffer[1024];
 
 	MStatus status;
 	MString pname = dagPath.fullPathName() ;
@@ -475,13 +491,6 @@ EmbreeViewportRenderer::convertLight(const MDagPath &dagPath)
 #endif
 	// Get the light's transform node
 	MMatrix  matrix = dagPath.inclusiveMatrix();
-
-	float primXform[12] = {
-		(float)matrix.matrix[0][0], -(float)matrix.matrix[1][0], -(float)matrix.matrix[2][0],
-		-(float)matrix.matrix[0][1], (float)matrix.matrix[1][1], -(float)matrix.matrix[2][1],
-		-(float)matrix.matrix[0][2], -(float)matrix.matrix[1][2], (float)matrix.matrix[2][2],
-		(float)matrix.matrix[3][0], (float)matrix.matrix[3][1], (float)matrix.matrix[3][2]
-	};
 
 	// Get its attributes
 	MFnLight thislight(dagPath, &status);
@@ -958,12 +967,12 @@ bool EmbreeViewportRenderer::convertSurface( const MDagPath &dagPath)
 //				unsigned int *idx = (unsigned int *) prim.data();
 				int *idx = (int *) prim.data();
 
-				if (elemType != MGeometryData::ElementType::kInt32) 
+				if (elemType != MGeometryData::kInt32) 
 				{
 					sprintf(buffer, "%s: Error!  Data type %d (kInt32=%d, kUnsignedInt32 =%d):  0=%d, 1=%d, 2=%d", 
 							ccname.asChar(), elemType, 
-							MGeometryData::ElementType::kInt32,
-							MGeometryData::ElementType::kUnsignedInt32,
+							MGeometryData::kInt32,
+							MGeometryData::kUnsignedInt32,
 							idx[0], idx[1], idx[2]);
 					MGlobal::displayInfo(buffer);
 				}
@@ -976,13 +985,13 @@ bool EmbreeViewportRenderer::convertSurface( const MDagPath &dagPath)
 
 				MGeometryPrimitive::DrawPrimitiveType primType = prim.drawPrimitiveType();
 
-				if (primType != MGeometryPrimitive::DrawPrimitiveType::kTriangles)
+				if (primType != MGeometryPrimitive::kTriangles)
 				{
 					MString pname = dagPath.fullPathName() ;
 					sprintf(buffer, "%s: Error!  Primitive type: %d (Invalid=%d, Triangles=%d)", 
 							pname.asChar(), primType,
-							MGeometryPrimitive::DrawPrimitiveType::kInvalidIndexType,
-							MGeometryPrimitive::DrawPrimitiveType::kTriangles);
+							MGeometryPrimitive::kInvalidIndexType,
+							MGeometryPrimitive::kTriangles);
 					MGlobal::displayInfo(buffer);
 					haveData = false;
 				}
@@ -1005,7 +1014,7 @@ bool EmbreeViewportRenderer::convertSurface( const MDagPath &dagPath)
 					uvPtr = (float *)uvs.data();
 				}
 
-				unsigned int numColorComponents = 4;
+				//unsigned int numColorComponents = 4;
 				float *clrPtr = NULL;
 				if (haveColors)
 				{
@@ -1126,7 +1135,7 @@ class MsurfaceDrawTraversal : public MDrawTraversal
 	virtual bool		filterNode( const MDagPath &traversalItem )
 	{
 		bool prune = false;
-		char buffer[1024];
+		//char buffer[1024];
 
 		//
 		// Check to only prune shapes, not transforms.
@@ -1190,8 +1199,8 @@ void EmbreeViewportRenderer::getObjectData(MDagPath &currObject, SceneData &obje
 	MFnDagNode dagNode(currObject, &status);
 	MBoundingBox box = dagNode.boundingBox();
 	unsigned int numPrims = geom.primitiveArrayCount();
-	unsigned int numIndices;
-	unsigned int numPos;
+	unsigned int numIndices = 0;
+	unsigned int numPos = 0;
 	MBoundingBox bbox(box.min(), box.max());
 	bool haveTexture = false;
 
@@ -1431,7 +1440,7 @@ int	 EmbreeViewportRenderer::convertMayaObjectsToEmbree(std::vector<MDagPath> &c
 	int numObjects = currentObjects.size();
 	int replacementNeeded = objectReplacementNeeded;
 	std::string currObjectName;
-	char buffer[1024];
+	//char buffer[1024];
 
 	// If "replacement needed" is already true, just rebuild 
 	// everything rather than trying to find if there were changes
@@ -1570,9 +1579,7 @@ int	EmbreeViewportRenderer::convertMayaLightsToEmbree(std::vector<MDagPath> &cur
 bool EmbreeViewportRenderer::collectSceneObjects (const MRenderingInfo &renderInfo, 
 		std::vector<MDagPath> &currentObjects, std::vector<MDagPath> &currentLights)
 {
-	const MRenderTarget &renderTarget = renderInfo.renderTarget();
-	const MDagPath &cameraPath = renderInfo.cameraPath();
-	char buffer[1024];
+	//char buffer[1024];
 
 //#define _DEBUG_TRAVERSAL_PRUNING
 	// ------
@@ -1711,13 +1718,9 @@ void EmbreeViewportRenderer::createCamera(const embree::AffineSpace3f& space,
 MStatus EmbreeViewportRenderer::updateCamera(const MRenderingInfo &renderInfo, 
 	viewPortInfo *vpInfo, int newCamera)
 {
-	char buffer[1024];
+	//char buffer[1024];
 	MStatus status;
 	const MDagPath &cameraPath = renderInfo.cameraPath();
-	const MRenderTarget &renderTarget = renderInfo.renderTarget();
-	//const MMatrix & view = renderInfo.viewMatrix(); 
-	int width = renderTarget.width();
-	int height = renderTarget.height();
 	int needToRebuildCamera = 0;
 
 	// Get the camera
@@ -1866,9 +1869,8 @@ bool EmbreeViewportRenderer::renderToTarget( const MRenderingInfo &renderInfo )
 //		Render directly to current Embree target.
 //
 {
-	char buffer[1024];
+	//char buffer[1024];
 	MStatus status;
-	bool cStatus;
 	const MRenderTarget &renderTarget = renderInfo.renderTarget();
 	int width = renderTarget.width();
 	int height = renderTarget.height();

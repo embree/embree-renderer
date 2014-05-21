@@ -213,21 +213,12 @@ protected:
 
 protected:
 	// Embree state for this instance
-	/* camera settings */
-//	embree::Vector3f m_camPos; 
-//	embree::Vector3f m_camLookAt; 
-//	embree::Vector3f m_camUp;
-//	float m_camFieldOfView;
-//	float m_camRadius;
-
 	/* rendering device and handles */
 	embree::Device* m_device;
 	embree::Handle<embree::Device::RTRenderer> m_renderer;
 	embree::Handle<embree::Device::RTToneMapper> m_tonemapper;
-//	embree::Handle<embree::Device::RTFrameBuffer> m_frameBuffer;
 	embree::Handle<embree::Device::RTImage> m_backplate;
 	embree::Handle<embree::Device::RTScene> m_render_scene;
-//	embree::Handle<embree::Device::RTCamera> m_camera;
 	std::vector<embree::Handle<embree::Device::RTPrimitive> > m_prims;
 	std::vector<embree::Handle<embree::Device::RTPrimitive> > m_lights;
 
@@ -252,11 +243,6 @@ protected:
 	size_t m_numThreads;
 
 	/* Information used for change detection */
-//	int m_oldwidth;
-//	int m_oldheight;
-//	MPoint m_oldeye;
-//	MVector m_oldlookAt;
-//	MVector m_oldeyeUp;
 	int m_oldnumObjects;
 	int m_oldnumLights;
 	viewPortInfo m_viewportArray[VIEWPORTARRAYSIZE];
@@ -287,41 +273,13 @@ public:
 	EmbreeViewportRendererXeonPhiSingle();
 	void createRenderDevice();
 };
-/*
-//
-// Extends the EmbreeViewportRenderer class above
-// with the ability to render the HUD and manipulators
-// as well as the scene geometry.
-//
-class EmbreeViewportRendererHUD : public EmbreeViewportRenderer
-{
-public:
-	EmbreeViewportRendererHUD();
-	virtual unsigned int	overrideThenStandardExclusion() const;
-};
 
-//
-// Extends the EmbreeViewportRenderer class above
-// with the ability to render all Maya UI on top of the
-// scene geometry as rendered by EmbreeViewportRenderer.
-//
-class EmbreeViewportRendererFullUI : public EmbreeViewportRenderer
+class EmbreeViewportRendererXeonPhiISPC : public EmbreeViewportRenderer
 {
 public:
-	EmbreeViewportRendererFullUI();
+        EmbreeViewportRendererXeonPhiISPC();
+        void createRenderDevice();
 };
-*/
 
 #endif /* EmbreeViewportRenderer_h_ */
-
-//-
-// ==========================================================================
-// Copyright 1995,2006,2008 Autodesk, Inc. All rights reserved.
-//
-// Use of this software is subject to the terms of the Autodesk
-// license agreement provided at the time of installation or download,
-// or which otherwise accompanies this software in either electronic
-// or hard copy form.
-// ==========================================================================
-//+
 
