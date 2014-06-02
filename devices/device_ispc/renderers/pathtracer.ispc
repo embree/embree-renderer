@@ -183,7 +183,7 @@ vec3f PathTraceIntegrator_Li(const uniform PathTracer* uniform this,
     /*! Direct lighting. Shoot shadow rays to all light sources. */
     if (useDirectLighting) 
     {
-      uniform int numAllLights = min(MAX_LIGHTS,scene->num_allLights);
+      uniform int numAllLights = min(MAX_LIGHTS,(int)scene->num_allLights);
       for (uniform int i=0; i<numAllLights; i++) 
       {
         uniform Light* uniform light = scene->allLights[i];
@@ -346,7 +346,7 @@ void PathTracer__initSampler(uniform PathTracer* uniform this, const uniform Sce
   PrecomputedSampler__Constructor(&this->sampler,16*16,64); // first argument HAS to be a square number, both have to be a power of two
 
   this->lightSampleID = PrecomputedSampler__request2D(&this->sampler,1);
-  uniform int numAllLights = min(MAX_LIGHTS,scene->num_allLights);
+  uniform int numAllLights = min(MAX_LIGHTS,(int)scene->num_allLights);
   for (uniform int i=0; i<numAllLights; i++) {
     this->precomputedLightSampleID[i] = -1;
     if (scene->allLights[i]->type & TY_PRECOMPUTE_LIGHT_SAMPLES) 

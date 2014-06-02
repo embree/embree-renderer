@@ -255,7 +255,7 @@ namespace embree
       switch (cmd) 
       {
       case EMBREE_FRAME_DATA_NATIVE: {
-        
+
         /*! calculate size of one row in bytes */
         int rowBytes = 0;
         if      (format == "RGB_FLOAT32") rowBytes = 3*width*sizeof(float);
@@ -266,15 +266,15 @@ namespace embree
         /*! store data directly into framebuffer */
         char* dst = (char*) buffer->getData();
         for (size_t y=0; y<height; y++, dst+=rowBytes) {
-          if (((y>>2)+id) % servers.size()) continue;
+          if ((ssize_t)((y>>2)-id) % (ssize_t)servers.size()) continue;
           network::read(servers[id],dst,rowBytes);
-        }
+	}
         break;
       }
 
       case EMBREE_FRAME_DATA_RGB8:
         for (size_t y=0; y<height; y++) {
-          if (((y>>2)+id) % servers.size()) continue;
+          if ((ssize_t)((y>>2)-id) % (ssize_t)servers.size()) continue;
           for (size_t x=0; x<width; x++) { 
 	    float r = float((unsigned char)network::read_char(servers[id]))*rcp255;
 	    float g = float((unsigned char)network::read_char(servers[id]))*rcp255;
@@ -286,7 +286,7 @@ namespace embree
 
       case EMBREE_FRAME_DATA_RGBE8:
         for (size_t y=0; y<height; y++) {
-          if (((y>>2)+id) % servers.size()) continue;
+          if ((ssize_t)((y>>2)-id) % (ssize_t)servers.size()) continue;
           for (size_t x=0; x<width; x++) { 
             Vector3f c = decodeRGBE8(network::read_int(servers[id]));
             buffer->set(x,y,Color(c.x,c.y,c.z));
@@ -296,7 +296,7 @@ namespace embree
 
       case EMBREE_FRAME_DATA_RGB_FLOAT:
         for (size_t y=0; y<height; y++) {
-          if (((y>>2)+id) % servers.size()) continue;
+          if ((ssize_t)((y>>2)-id) % (ssize_t)servers.size()) continue;
           for (size_t x=0; x<width; x++) { 
             float r = network::read_float(servers[id]);
             float g = network::read_float(servers[id]);
