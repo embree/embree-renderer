@@ -15,105 +15,99 @@
 // ======================================================================== //
 
 #include "scene.isph"
+#include "shapes/shape.isph"
 
 void Scene__Destructor(uniform RefCount* uniform _this)
 {
   LOG(print("Scene__Destructor\n"));
   uniform Scene* uniform this = (uniform Scene* uniform) _this;
 
-  for (uniform int i=0; i<this->num_allLights; i++)
-    RefCount__DecRef(&this->allLights[i]->base);
+  for (uniform int i=0; i<this->numInstances; i++)
+    RefCount__DecRef(&this->instances[i]->base);
 
-  for (uniform int i=0; i<this->num_envLights; i++)
-    RefCount__DecRef(&this->envLights[i]->base.base);
+  delete[] this->allLights;
+  delete[] this->envLights;
+  delete[] this->instances;
+  delete[] this->handle2id;
+  delete[] this->id2handle;
 
-  for (uniform int i=0; i<this->num_geometries; i++)
-    RefCount__DecRef(&this->geometry[i]->base);
-
-  rtcDeleteScene(this->accel);
+  rtcDeleteScene(this->handle);
 
   RefCount__Destructor(_this);
 }
 
-void Scene__Constructor(uniform Scene* uniform this,
-                        RTCScene accel,
-                        void* uniform traverserTy,
-                        const uniform int num_allLights,
-                        void** uniform allLights,
-                        const uniform int num_envLights,
-                        void** uniform envLights,
-                        const uniform int num_geometries,
-                        void** uniform geometry)
+typedef uniform Light* UniformLightPtr;
+typedef uniform EnvironmentLight* UniformEnvLightPtr;
+typedef uniform Instance* UniformInstancePtr;
+
+void Scene__Constructor(uniform Scene* uniform this)
 {
   LOG(print("Scene__Constructor\n"));
   RefCount__Constructor(&this->base,Scene__Destructor);
 
-  /*! add list of lights */
-  this->num_allLights = num_allLights;
-  this->allLights = (uniform Light**) allLights;
+  this->numAllLights = 0;
+  this->allLights = uniform new UniformLightPtr[16*1024]; // FIMXE: hardcoded constant
+  for (uniform int i=0; i<16*1024; i++) this->allLights[i] = NULL;
 
-  /*! add list of environment lights */
-  this->num_envLights = num_envLights;
-  this->envLights = (uniform EnvironmentLight**) envLights;
+  this->numEnvLights = 0;
+  this->envLights = uniform new UniformEnvLightPtr[16*1024]; // FIXME: hardcoded constant
+  for (uniform int i=0; i<16*1024; i++) this->envLights[i] = NULL;
 
-  /*! add geometries */
-  this->num_geometries = num_geometries;
-  this->geometry = (uniform Instance**) geometry;
+  this->numInstances = 0;
+  this->instances = uniform new UniformInstancePtr [1024*1024]; // FIXME: hardcoded constant
+  this->handle2id = uniform new uint[1024*1024];
+  this->id2handle = uniform new uint[1024*1024];
+  for (uniform int i=0; i<1024*1024; i++) {
+    this->instances[i] = NULL;
+    this->handle2id[i] = -1;
+    this->id2handle[i] = -1;
+  }
 
-  /*! add acceleration structure */
-  this->accel = accel;
-  //this->intersector = rtcQueryIntersector(this->geom,traverserTy);
+  this->handle = rtcNewScene(RTC_SCENE_STATIC,RTC_INTERSECT_VARYING);
 }
 
-export void* uniform Scene__new(void* uniform accel,
-                                void* uniform traverserTy,
-                                const uniform int num_allLights,
-                                void** uniform allLights,
-                                const uniform int num_envLights,
-                                void** uniform envLights,
-                                const uniform int num_geometries,
-                                void** uniform geometry)
+export void* uniform Scene__new()
 {
   uniform Scene *uniform this = uniform new uniform Scene;
-  Scene__Constructor(this,(RTCScene)accel,traverserTy,num_allLights,allLights,num_envLights,envLights,num_geometries,geometry);
+  Scene__Constructor(this);
   return this;
 }
 
-export void Scene__updateLights(void* uniform scene,
-                                const uniform int num_allLights,
-                                void** uniform allLights,
-                                const uniform int num_envLights,
-				void** uniform envLights) 
+export void Scene__set(void* uniform scene_in, uniform int slot, void* uniform instance_in)
 {
-  uniform Scene* uniform this = (uniform Scene* uniform) scene;
-  /*! free old data */
-  for (uniform int i=0; i<this->num_allLights; i++)
-    RefCount__DecRef(&this->allLights[i]->base);
-
-  for (uniform int i=0; i<this->num_envLights; i++)
-    RefCount__DecRef(&this->envLights[i]->base.base);
-    
-  /*! add list of lights */
-  this->num_allLights = num_allLights;
-  this->allLights = (uniform Light**) allLights;
-
-  /*! add list of environment lights */
-  this->num_envLights = num_envLights;
-  this->envLights = (uniform EnvironmentLight**) envLights;
+  uniform Scene*    uniform scene    = (uniform Scene*    uniform) scene_in;
+  uniform Instance* uniform instance = (uniform Instance* uniform) instance_in;
+  
+  if (scene->instances[slot]) {
+    rtcDeleteGeometry(scene->handle,scene->id2handle[slot]);
+    RefCount__DecRef(&scene->instances[slot]->base);
+  }
+  scene->instances[slot] = instance;
+  if (instance) {
+    RefCount__IncRef(&instance->base);
+    if (instance->shape) {
+      uniform uint handle = instance->shape->add(scene->handle,instance->shape);
+      scene->handle2id[handle] = slot;
+      scene->id2handle[slot] = handle;
+    }
+  }
+  scene->numInstances = max(scene->numInstances,(uniform uint)(slot+1));
 }
 
-export void Scene__updateObjectMaterial(void* uniform scene_i, 
-										void* uniform material_i, 
-										uniform int slot)
+export void Scene__commit(void* uniform scene_in)
 {
-	uniform Scene* uniform this = (uniform Scene* uniform) scene_i;
-	uniform Material*  uniform material	= (uniform Material*  uniform) material_i;
-	uniform Instance* uniform geometry = this->geometry[slot];
-
-	// Drop old material
-	uniform Material*  uniform oldmaterial = (uniform Material*  uniform)geometry->material;
-	RefCount__DecRef(&oldmaterial->base); 
-
-	// Add new
-	RefCount__IncRef(&material->base); geometry->material = material;
+  uniform Scene* uniform scene = (uniform Scene* uniform) scene_in;
+  scene->numAllLights = 0;
+  scene->numEnvLights = 0;
+  for (uniform size_t i=0; i<scene->numInstances; i++) {
+    uniform Instance* uniform instance = scene->instances[i];
+    if (instance == NULL) continue;
+    if (instance->light) {
+      scene->allLights[scene->numAllLights++] = instance->light;
+      if (instance->light->type & ENV_LIGHT) {
+        scene->envLights[scene->numEnvLights++] = (uniform EnvironmentLight* uniform) instance->light;
+      }
+    }
+  }
+  rtcCommit(scene->handle);
 }

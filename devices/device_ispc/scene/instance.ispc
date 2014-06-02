@@ -22,20 +22,20 @@ void Instance__Destructor(uniform RefCount* uniform _this)
   uniform Instance* uniform this = (uniform Instance* uniform) _this;
   RefCount__DecRef(&this->shape   ->base);
   RefCount__DecRef(&this->material->base);
-  RefCount__DecRef(&this->light->base.base);
+  RefCount__DecRef(&this->light->base);
   RefCount__Destructor(_this);
 }
 
 void Instance__Constructor(uniform Instance* uniform this,
                            uniform Shape* uniform shape,
                            uniform Material* uniform material,
-                           uniform AreaLight* uniform light)
+                           uniform Light* uniform light)
 {
   LOG(print("Instance__Constructor\n"));
   RefCount__Constructor(&this->base,Instance__Destructor);
   RefCount__IncRef(&shape   ->base); this->shape    = shape;
   RefCount__IncRef(&material->base); this->material = material;
-  RefCount__IncRef(&light->base.base); this->light  = light;
+  RefCount__IncRef(&light->base); this->light  = light;
 }
 
 export void* uniform Instance__new(void* uniform shape,
@@ -46,6 +46,6 @@ export void* uniform Instance__new(void* uniform shape,
   Instance__Constructor(this,
                         (uniform Shape*     uniform) shape, 
                         (uniform Material*  uniform) material, 
-                        (uniform AreaLight* uniform) light);
+                        (uniform Light*     uniform) light);
   return this;
 }

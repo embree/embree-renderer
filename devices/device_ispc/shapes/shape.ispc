@@ -24,29 +24,15 @@ void Shape__Destructor(uniform RefCount* uniform this)
 
 void Shape__Constructor(uniform Shape* uniform this,
                         uniform DestructorFunc destructor,
-                        uniform GetNumVerticesFunc getNumVertices,
-                        uniform GetNumTrianglesFunc getNumTriangles,
                         uniform PostIntersectFunc postIntersect,
                         uniform ShapeTransformFunc transform,
                         uniform AddFunc add_)
 {
   LOG(print("Shape__Constructor\n"));
   RefCount__Constructor(&this->base,destructor);
-  this->getNumVertices = getNumVertices;
-  this->getNumTriangles = getNumTriangles;
   this->postIntersect = postIntersect;
   this->transform = transform;
   this->add = add_;
-}
-
-export uniform int Shape__getNumVertices(void *uniform _this) {
-  const uniform Shape* uniform this = (const uniform Shape* uniform) _this;
-  return this->getNumVertices(this);
-}
-
-export uniform int Shape__getNumTriangles(void *uniform _this) {
-  const uniform Shape* uniform this = (const uniform Shape* uniform) _this;
-  return this->getNumTriangles(this);
 }
 
 export void* uniform Shape__transform(void* uniform _this,
@@ -60,26 +46,9 @@ export void* uniform Shape__transform(void* uniform _this,
   return this->transform(this,xfm);
 }
 
-#if 0
-export void Shape__extract(void* uniform _this,
-                           const uniform int& id0,
-                           uniform RTCTriangle* uniform triangles,
-                           uniform int& numTriangles,
-                           uniform RTCVertex* uniform vertices,
-                           uniform int& numVertices,
-                           uniform vec3f& lower_o,
-                           uniform vec3f& upper_o)
-{
-  const uniform Shape* uniform this = (const uniform Shape* uniform) _this;
-  this->extract(this,id0,triangles,numTriangles,vertices,numVertices,lower_o,upper_o);
-}
-#endif
-
 export uniform int Shape__add(void* uniform scene,
-                              void* uniform _shape,
-                              uniform vec3f& lower_o,
-                              uniform vec3f& upper_o)
+                              void* uniform _shape)
 {
   const uniform Shape* uniform shape = (const uniform Shape* uniform) _shape;
-  return shape->add((RTCScene)scene,shape,lower_o,upper_o);
+  return shape->add((RTCScene)scene,shape);
 }

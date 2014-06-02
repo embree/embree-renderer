@@ -21,9 +21,6 @@
 
 struct Shape;
 
-typedef uniform int (*GetNumVerticesFunc)(uniform const Shape *uniform this);
-typedef uniform int (*GetNumTrianglesFunc)(uniform const Shape *uniform this);
-
 /*! Performs interpolation of shading vertex parameters. */
 typedef void (*PostIntersectFunc)(uniform const Shape *uniform this,
                                   const varying Ray &ray, 
@@ -31,30 +28,13 @@ typedef void (*PostIntersectFunc)(uniform const Shape *uniform this,
 
 typedef void* uniform (*ShapeTransformFunc)(const uniform Shape* uniform this, const uniform AffineSpace3f& xfm);
 
-#if 0
-typedef void (*ExtractFunc)(const uniform Shape* uniform this,
-                            const uniform int& id0,
-                            uniform RTCTriangle* uniform triangles,
-                            uniform int& numTriangles,
-                            uniform RTCVertex* uniform vertices,
-                            uniform int& numVertices,
-                            uniform vec3f& lower,
-                            uniform vec3f& upper);
-#endif
-
-typedef uniform int (*AddFunc)(RTCScene scene,
-                               const uniform Shape* uniform this,
-                               uniform vec3f& lower,
-                               uniform vec3f& upper);
+typedef uniform int (*AddFunc)(RTCScene scene, const uniform Shape* uniform this);
 
 struct Shape 
 {
   RefCount base;
-  GetNumVerticesFunc getNumVertices;
-  GetNumTrianglesFunc getNumTriangles;
   PostIntersectFunc postIntersect;
   ShapeTransformFunc transform;
-  //ExtractFunc extract;
   AddFunc add;
 };
 
@@ -62,8 +42,6 @@ void Shape__Destructor(uniform RefCount* uniform this);
 
 void Shape__Constructor(uniform Shape* uniform this,
                         uniform DestructorFunc destructor,
-                        uniform GetNumVerticesFunc getNumVertices,
-                        uniform GetNumTrianglesFunc getNumTriangles,
                         uniform PostIntersectFunc postIntersect,
                         uniform ShapeTransformFunc transform,
                         uniform AddFunc add_);

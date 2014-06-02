@@ -14,13 +14,16 @@
 // limitations under the License.                                           //
 // ======================================================================== //
 
+#include "common/image/image.h"
 #include "default.h"
+#include "device/loaders/loaders.h"
 #include "network_common.h"
 #include "network_server.h"
 #include "sys/sysinfo.h"
 
 namespace embree 
 {
+
   NetworkServer::NetworkServer(network::socket_t socket, Device* device, int encoding, bool verbose) 
     : device(device), socket(socket), serverID(0), serverCount(1), encoding(encoding), verbose(verbose)
   {
@@ -52,6 +55,16 @@ namespace embree
     /* delete the device */
     delete device; device = NULL;
   }
+
+  size_t encodeRGBA8_to_RGB8(unsigned char *buffer, unsigned char *pixels, size_t width, size_t height)
+  {
+    for (size_t i=0 ; i < width * height ; i++, buffer +=3, pixels += 4) {
+      buffer[0] = pixels[0];
+      buffer[1] = pixels[1];
+      buffer[2] = pixels[2];
+    } 
+    return(width * height * 3);
+  }   
 
   size_t encodeRGBFloat32_to_RGB8(unsigned char *buffer, Col3f *pixels, size_t width, size_t height) 
   {
@@ -130,12 +143,12 @@ namespace embree
     {
       int id = network::read_int(socket);
       std::string type = network::read_string(socket);
-      std::string fileName = network::read_string(socket);
+      std::string filename = network::read_string(socket);
       size_t offset = network::read_int(socket);
       size_t bytes = network::read_int(socket);
       
-      if (verbose) printf("handle %06d = rtNewDataFromFile(%s, %s, %zu, %zu)\n", id, type.c_str(), fileName.c_str(), offset, bytes);
-      set(id, device->rtNewDataFromFile(type.c_str(), fileName.c_str(), offset, bytes));
+      if (verbose) printf("handle %06d = rtNewDataFromFile(%s, %s, %zu, %zu)\n", id, type.c_str(), filename.c_str(), offset, bytes);
+      set(id, device->rtNewDataFromFile(type.c_str(), filename.c_str(), offset, bytes));
       break;
     } 
 
@@ -149,7 +162,7 @@ namespace embree
       
       if (verbose) printf("handle %06d = rtNewFrameBuffer(%s, %zu, %zu, %zu)\n", id, type.c_str(), width, height, depth);
       Device::RTFrameBuffer fb = device->rtNewFrameBuffer(type.c_str(), width, height, depth);
-      set(id, fb, new SwapChain(this,type,fb,id,width,height,depth,serverID,serverCount));
+      set(id, fb, new SwapChain(this, type, fb, id, width, height, depth, serverID, serverCount));
       break;
     }
 
@@ -171,17 +184,17 @@ namespace embree
       
       if (verbose) printf("handle %06d = rtNewImage(%s, %zu, %zu)\n", id, type.c_str(), width, height);
       set(id, device->rtNewImage(type.c_str(), width, height, data, true));  
-	  free(data);
+      free(data);
       break;
     }
     
     case EMBREE_NEW_IMAGE_FROM_FILE: 
     {
       int id = network::read_int(socket);
-      std::string fileName = network::read_string(socket);
+      std::string filename = network::read_string(socket);
       
-      if (verbose) printf("handle %06d = rtNewImageFromFile(%s)\n", id, fileName.c_str());
-      set(id, device->rtNewImageFromFile(fileName.c_str()));
+      if (verbose) printf("handle %06d = rtNewImageFromFile(%s)\n", id, filename.c_str());
+      set(id, device->rtNewImageFromFile(filename.c_str()));
       break;
     }
       
@@ -236,13 +249,27 @@ namespace embree
       break;
     } 
 
+    case EMBREE_NEW_SCENE_FROM_FILE:
+    {
+      int id = network::read_int(socket);
+      std::string type = network::read_string(socket);
+      std::string filename = network::read_string(socket);
+      if (verbose) printf("handle %06d = rtNewScene(%s, %s)\n", id, type.c_str(), filename.c_str());
+      Device::RTScene scene = device->rtNewScene(type.c_str());  set(id, scene);
+
+      g_device = device;
+      std::vector<Handle<Device::RTPrimitive> > primitives = rtLoadScene(filename);
+      for (size_t i = 0; i < primitives.size(); i++) device->rtSetPrimitive(scene, i, primitives[i]);
+      break;
+    }
+
     case EMBREE_SET_SCENE_PRIMITIVE:
     {
       int sceneID = network::read_int(socket);
       int slot    = network::read_int(socket);
       int primID  = network::read_int(socket);
       if (verbose) printf("rtSetScenePrimitive(%06d, %06d, %06d)\n", sceneID, slot, primID);
-      device->rtSetPrimitive(get<Device::RTScene>(sceneID),slot,get<Device::RTPrimitive>(primID));
+      device->rtSetPrimitive(get<Device::RTScene>(sceneID), slot, get<Device::RTPrimitive>(primID));
       break;
     }
 
@@ -652,56 +679,81 @@ namespace embree
       if (((ssize_t)((y>>2)-serverID) % (ssize_t)serverCount) == 0)
         height1++;
 
-    /*! encode image */
-    size_t bytes = 0;    
-    void* sendbuffer = NULL;
-    switch (server->encoding) 
-    {
-    case EMBREE_FRAME_DATA_NATIVE: {
-      sendbuffer = data;
-      if      (type == "RGB_FLOAT32") bytes = 3*width*height1*sizeof(float);
-      else if (type == "RGBA8"      ) bytes = 4*width*height1;       
-      else if (type == "RGB8"       ) bytes = ((3*width+3)/4*4)*height1;
-      else throw std::runtime_error("unsupported framebuffer format: "+type);
-      break;
-    }
-
-    case EMBREE_FRAME_DATA_RGB8: {
-      sendbuffer = encoded;
-      if (type == "RGB_FLOAT32") 
-        bytes = encodeRGBFloat32_to_RGB8 (encoded, (Col3f*)data, width, height1); 
-      else if (type == "RGBA8"      ) {
-        char* src = (char*)data;
-        char* dst = (char*)encoded;
-        for (size_t i=0; i<width*height1; i++) {
-          dst[0] = src[0];
-          dst[1] = src[1];
-          dst[2] = src[2];
-          dst+=3; src+=4;
-        }
-        bytes = 3*width*height1;
-      }
-      else throw std::runtime_error("unsupported framebuffer format: "+type);
-      break;
-    }
-
-    case EMBREE_FRAME_DATA_RGBE8: {
-      sendbuffer = encoded;
-      if (type == "RGB_FLOAT32") bytes = encodeRGBFloat32_to_RGBE8(encoded, (Col3f*)data, width, height1);
-      else throw std::runtime_error("unsupported framebuffer format: "+type);
-      break;
-    }
-    default: throw std::runtime_error("invalid encoding");
-    }
-
-    /*! send the encoded frame buffer */
+    /*! send the framebuffer meta data */
     network::write(server->socket, (int) magick);
     network::write(server->socket, (int) server->encoding);
     network::write(server->socket, (int) frameBufferID);
     network::write(server->socket, (int) swapID);
     network::write(server->socket, (int) width);  
     network::write(server->socket, (int) height1);  
-    network::write(server->socket, sendbuffer, bytes);  
+
+    /*! encode the framebuffer */
+    switch (server->encoding) 
+    {
+
+    case EMBREE_FRAME_DATA_JPEG:
+    {
+
+#ifdef USE_LIBJPEG
+
+      /*! JPEG encoding path minimizes copy / conversion of pixels and thus only supports RGB8 */
+      if (type != "RGB8") throw std::runtime_error("JPEG encoding is supported for RGB8 framebuffers only: " + type);
+
+      /*! libjpeg may resize the output buffer */
+      size_t bytes = 4 * width * height * sizeof(unsigned char);
+
+      /*! encode */
+      encodeRGB8_to_JPEG((unsigned char *) data, width, height1, &encoded, &bytes);
+
+      /*! write the encoded image to the socket */
+      network::write(server->socket, (int) bytes);
+      network::write(server->socket, encoded, bytes);
+      break;
+
+#else  // USE_LIBJPEG
+
+      throw std::runtime_error("JPEG framebuffer encoding requires LibJPEG 8a or higher (enable USE_LIBJPEG)");
+      break;
+
+#endif // USE_LIBJPEG
+
+    }
+
+    case EMBREE_FRAME_DATA_NATIVE:
+    {
+      size_t bytes = 0;
+      if      (type == "RGB_FLOAT32") bytes = 3 * width * height1 * sizeof(float);
+      else if (type == "RGBA8"      ) bytes = 4 * width * height1;
+      else if (type == "RGB8"       ) bytes = ((3 * width + 3) / 4 * 4) * height1;
+      else throw std::runtime_error("unsupported framebuffer format: " + type);
+      network::write(server->socket, data, bytes);
+      break;
+    }
+
+    case EMBREE_FRAME_DATA_RGB8:
+    {
+      size_t bytes = 0;   
+      if      (type == "RGB_FLOAT32") bytes = encodeRGBFloat32_to_RGB8(encoded, (Col3f *) data, width, height1);
+      else if (type == "RGBA8")       bytes = encodeRGBA8_to_RGB8(encoded, (unsigned char *) data, width, height1);
+      else if (type == "RGB8")        bytes = width * height1 * 3;
+      else throw std::runtime_error("unsupported framebuffer format: " + type);
+      network::write(server->socket, (type == "RGB8") ? data : encoded, bytes);
+      break;
+    }
+
+    case EMBREE_FRAME_DATA_RGBE8:
+    {
+      size_t bytes = 0;
+      if (type == "RGB_FLOAT32") bytes = encodeRGBFloat32_to_RGBE8(encoded, (Col3f *) data, width, height1);
+      else throw std::runtime_error("unsupported framebuffer format: " + type);
+      network::write(server->socket, encoded, bytes);
+      break;
+    }
+
+    default: throw std::runtime_error("invalid framebuffer encoding");
+    }
+
+    /*! flush the socket */
     network::flush(server->socket);  
 
     /*! unmap framebuffer data */
@@ -709,6 +761,7 @@ namespace embree
 
     /*! goto next read buffer */
     nextReadBuffer();
+
   }
 
   /*! NetworkServer bookkeeping methods ================================== */

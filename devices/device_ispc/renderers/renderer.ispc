@@ -51,7 +51,7 @@ export uniform bool Renderer__pick(void* uniform _camera,
   
   Ray ray;
   camera->initRay(camera, ray,make_vec2f(x,y), make_vec2f(0.0f,0.0f));
-  rtcIntersect(scene->accel,ray);
+  rtcIntersect(scene->handle,ray);
 
   const vec3f hit_p = add(ray.org,mul(ray.dir,ray.tfar));
   p = make_vec3f(extract(hit_p.x,0),extract(hit_p.y,0),extract(hit_p.z,0));

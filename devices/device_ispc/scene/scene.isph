@@ -28,20 +28,25 @@ struct Scene
   RefCount base;
 
   uniform Light            **allLights;   //!< All lights of the scene
-  uint                       num_allLights;
+  uint                       numAllLights;
   uniform EnvironmentLight **envLights;   //!< Environment lights of the scene
-  uint                       num_envLights;
-  uniform Instance         **geometry;    //!< Geometries of the scene
-  uint                       num_geometries;
-  RTCScene accel;
-  //Intersector* intersector;
+  uint                       numEnvLights;
+  uniform Instance         **instances;    //!< Geometries of the scene
+  uint                       numInstances;
+  uint*                      handle2id;   //!< maps Embree handle to ID
+  uint*                      id2handle;   //!< maps ID to Embree handle
+
+  RTCScene handle;
 };
 
 inline void postIntersect(const uniform Scene *uniform scene,
                           const varying Ray ray, 
                           varying DifferentialGeometry &dg)
 {
-  if (hadHit(ray))
-    foreach_unique(geomID in ray.id0)
-      scene->geometry[geomID]->shape->postIntersect(scene->geometry[geomID]->shape,ray,dg);
+  if (hadHit(ray)) {
+    foreach_unique(geomID in ray.id0) {
+      uniform int id = scene->handle2id[geomID];
+      scene->instances[id]->shape->postIntersect(scene->instances[id]->shape,ray,dg);
+    }
+  }
 }

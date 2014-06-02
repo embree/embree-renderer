@@ -21,11 +21,11 @@
 
 /* include SSE wrapper classes */
 #if defined(__SSE__)
-#  include "simd/sse.h"
+#include "simd/sse.h"
 #endif
 
 #if defined (__MIC__)
-#include "simd/sse_mic.h"
+//#include "simd/sse_mic.h"
 #endif
 
 /* include AVX wrapper classes */

@@ -14,29 +14,11 @@
 ## limitations under the License.                                           ##
 ## ======================================================================== ##
 
-SET(LIBRARY_PATHS
-  /usr/lib /usr/local/lib /opt/local/lib)
-
-FIND_PATH(IMAGEMAGICK_INCLUDE_PATH Magick++.h
-  /usr/include       /usr/include/ImageMagick
-  /usr/local/include /usr/local/include/ImageMagick
-  /opt/local/include /opt/local/include/ImageMagick
+ADD_EXECUTABLE(vrml2xml
+  vrml_loader.cpp
+  ../obj2xml/xmlWriter.cpp
+  vrml2xml.cpp
 )
 
-FIND_LIBRARY(IMAGEMAGICK_CXX_LIBRARY NAMES Magick++          PATHS ${LIBRARY_PATHS} )
-FIND_LIBRARY(IMAGEMAGICK_C_LIBRARY   NAMES Magick MagickCore PATHS ${LIBRARY_PATHS} )
+TARGET_LINK_LIBRARIES(vrml2xml sys lexers image)
 
-IF (IMAGEMAGICK_INCLUDE_PATH AND IMAGEMAGICK_CXX_LIBRARY AND IMAGEMAGICK_C_LIBRARY)
-  SET(IMAGEMAGICK_FOUND TRUE)
-  SET(IMAGEMAGICK_INCLUDE_PATHS ${IMAGEMAGICK_INCLUDE_PATH} CACHE STRING "ImageMagick include paths")
-  SET(IMAGEMAGICK_LIBRARIES ${IMAGEMAGICK_CXX_LIBRARY} ${IMAGEMAGICK_C_LIBRARY} CACHE STRING "ImageMagick Libraries")
-ENDIF (IMAGEMAGICK_INCLUDE_PATH AND IMAGEMAGICK_CXX_LIBRARY AND IMAGEMAGICK_C_LIBRARY)
-
-MARK_AS_ADVANCED(
-  IMAGEMAGICK_FOUND
-  IMAGEMAGICK_INCLUDE_PATHS
-  IMAGEMAGICK_LIBRARIES
-  IMAGEMAGICK_CXX_LIBRARY
-  IMAGEMAGICK_C_LIBRARY
-  IMAGEMAGICK_INCLUDE_PATH
-)

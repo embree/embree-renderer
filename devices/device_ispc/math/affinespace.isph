@@ -89,4 +89,12 @@ inline varying bool eq(const varying AffineSpace3f a, const varying AffineSpace3
 inline uniform bool ne(const uniform AffineSpace3f a, const uniform AffineSpace3f b) { return ne(a.l,b.l) | ne(a.p,b.p); }
 inline varying bool ne(const varying AffineSpace3f a, const varying AffineSpace3f b) { return ne(a.l,b.l) | ne(a.p,b.p); }
 
+inline uniform bool similar(const uniform AffineSpace3f a, const uniform AffineSpace3f b) { 
+  if (max(max(abs(a.   p.x-b.   p.x),abs(a.   p.y-b.   p.y)),abs(a.   p.z-b.   p.z)) > 0.001f) return false;
+  if (max(max(abs(a.l.vx.x-b.l.vx.x),abs(a.l.vx.y-b.l.vx.y)),abs(a.l.vx.z-b.l.vx.z)) > 0.001f) return false;
+  if (max(max(abs(a.l.vy.x-b.l.vy.x),abs(a.l.vy.y-b.l.vy.y)),abs(a.l.vy.z-b.l.vy.z)) > 0.001f) return false;
+  if (max(max(abs(a.l.vz.x-b.l.vz.x),abs(a.l.vz.y-b.l.vz.y)),abs(a.l.vz.z-b.l.vz.z)) > 0.001f) return false;
+  return true;
+}
+
 #endif
