@@ -39,7 +39,7 @@ MStatus initializePlugin( MObject obj )
 	//
 	// Register the Xeon Single-ray renderer
 	//
-	MFnPlugin plugin( obj, "IntelSX", "2014", "Any");
+        MFnPlugin plugin( obj, "IntelSX", "2014", "Any");
 	g_EmbreeViewportRendererXeonSingle = new EmbreeViewportRendererXeonSingle();
 	if (g_EmbreeViewportRendererXeonSingle)
 	{

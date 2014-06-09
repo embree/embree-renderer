@@ -63,13 +63,16 @@ namespace embree
   /* opens a shared library */
   lib_t openLibrary(const std::string& file)
   {
+    char fname[4096];
 #if defined(__MACOSX__)
     std::string fullName = "lib"+file+".dylib";
 #else
     std::string fullName = "lib"+file+".so";
 #endif
     FileName executable = getExecutableFileName();
-    void* lib = dlopen((executable.path() + fullName).c_str(),RTLD_NOW);
+    strcpy(fname, (executable.path() + fullName).c_str());
+//    void* lib = dlopen((executable.path() + fullName).c_str(),RTLD_NOW);
+    void* lib = dlopen(&fname[0],RTLD_NOW);
     if (lib == NULL) throw std::runtime_error(dlerror());
     return lib_t(lib);
   }

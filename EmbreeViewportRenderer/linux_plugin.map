@@ -1,0 +1,38 @@
+/****************************************************************************
+ * Copyright (c) 2011 Autodesk, Inc.
+ * All rights reserved.
+ * 
+ * These coded instructions, statements, and computer programs contain
+ * unpublished proprietary information written by Autodesk, Inc., and are
+ * protected by Federal copyright law. They may not be disclosed to third
+ * parties or copied or duplicated in any form, in whole or in part, without
+ * the prior written consent of Autodesk, Inc.
+ ****************************************************************************/
+
+/*
+ * When compiling plug-ins for Maya, we make sure to export only the
+ * symbols for the initializePlugin(MObject) and
+ * uninitializePlugin(MObject) functions. In particular, this
+ * prevents the plug-ins from exporting symbols coming from static
+ * libaries against which the plug-ins is linked.
+ *
+ * Here's why:
+ *
+ * Plug-ins are written by separate developers. Each of them might
+ * want to use various libraries to implement their plug-ins. At
+ * times, it occurs that plug-ins written by different developers are
+ * using different and "incompatible" versions of the same library. To
+ * support this, we recommend that plug-ins be linked against static
+ * versions of these libraries. And, by hidding the symbols of these
+ * libraries, we prevent the two incompatible versions of the library
+ * from interferring with each others.
+ */
+
+{
+    global: 
+        _Z16initializePlugin7MObject ;
+        _Z18uninitializePlugin7MObject ;
+		MApiVersion ;
+    local: 
+        *;
+};

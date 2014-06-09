@@ -168,10 +168,15 @@ EmbreeViewportRendererXeonSingle::EmbreeViewportRendererXeonSingle( )
 
 void EmbreeViewportRendererXeonSingle::createRenderDevice()
 {
+MStatus status;
+status.perror("EmbreeViewportRendererXeonSingle::createRenderDevice");
+
 	if (m_device == NULL) 
 	{
+status.perror("Before create device");
       m_device = embree::Device::rtCreateDevice("default",   // single ray device
 	          m_numThreads,m_rtcore_cfg.c_str());
+status.perror("After create device");
 	}
 }
 
@@ -269,7 +274,17 @@ EmbreeViewportRenderer::EmbreeViewportRenderer( const MString & name )
 	m_height = 512;
 	m_format = "RGBA8";
 	m_rtcore_cfg = "";   // used in rtcInit for the device - lotsa possible tweaks
-	m_numThreads = 16;
+ 
+        int numThreads = 1;
+#if defined(_WIN32)
+        SYSTEM_INFO sysinfo;
+        GetSystemInfo( &sysinfo );
+
+        numThreads = sysinfo.dwNumberOfProcessors; 
+#else
+        numThreads = sysconf( _SC_NPROCESSORS_ONLN );
+#endif
+	m_numThreads = numThreads; // 16;
 
 	// Change detection
 	for (int i = 0; i < VIEWPORTARRAYSIZE; i++)
@@ -310,24 +325,13 @@ EmbreeViewportRenderer::~EmbreeViewportRenderer()
 MStatus
 EmbreeViewportRenderer::initialize()
 {
-	char buffer[256];
-
-sprintf(buffer, "EmbreeViewportRenderer::initialize");
-MGlobal::displayInfo(buffer);
-
-	if (NULL == m_device)
-		return MStatus::kFailure;  // Device not created successfully
-	else
-		embree::g_device = m_device;  // WARNING WARNING - yes, the renderer needs this global set
-
-//sprintf(buffer, "2 - device=%lp", m_device );
-//MGlobal::displayInfo(buffer);
+    if (NULL == m_device)
+        return MStatus::kFailure;  // Device not created successfully
+    else
+        embree::g_device = m_device;  // WARNING WARNING - yes, the renderer needs this global set
 
     /* create global objects */
-	m_renderer = m_device->rtNewRenderer("pathtracer");
-
-//sprintf(buffer, "renderer=%lp", m_renderer );
-//MGlobal::displayInfo(buffer);
+    m_renderer = m_device->rtNewRenderer("pathtracer");
 
     if (m_depth >= 0) m_device->rtSetInt1(m_renderer, "maxDepth", m_depth);
     m_device->rtSetInt1(m_renderer, "sampler.spp", m_spp);
@@ -338,7 +342,7 @@ MGlobal::displayInfo(buffer);
     m_device->rtSetBool1(m_tonemapper, "vignetting", m_vignetting);
     m_device->rtCommit(m_tonemapper);
 
-	return MStatus::kSuccess;
+    return MStatus::kSuccess;
 }
 
 /* virtual */
@@ -1895,6 +1899,9 @@ bool EmbreeViewportRenderer::renderToTarget( const MRenderingInfo &renderInfo )
 		m_oldnumObjects = currentObjects.size();
 		objectReplacementNeeded = 1; //BVH rebuild flag
 	}
+        else
+            if (0 == currentObjects.size())
+                return true;   // Nothing to render - pretend success
 
 	if (currentLights.size() != m_oldnumLights) {
 		accumulate = 0;
