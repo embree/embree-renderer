@@ -371,6 +371,12 @@ namespace embree
     void create() {
       ispc::Scene__commit(instance.ptr);
     }
+    
+    void updateMaterial(size_t slot, const ISPCRef& material)
+    {
+        // Reach into the ISPC scene and update the material
+        ispc::Scene__updateObjectMaterial(instance.ptr, material.ptr, slot);
+    }
 
   public:
     ISPCRef instance;
@@ -391,7 +397,9 @@ namespace embree
 
   void ISPCDevice::rtUpdateObjectMaterial(RTScene scene_i, RTMaterial material_i, size_t slot)
   {
-//TBD
+    SceneHandle* scene = castHandle<SceneHandle>(scene_i,"scene");
+    ISPCRef material = castHandle<ISPCNormalHandle>(material_i,"material")->instance;
+    scene->updateMaterial(slot, material);
   }
 
   Device::RTToneMapper ISPCDevice::rtNewToneMapper(const char* type)
