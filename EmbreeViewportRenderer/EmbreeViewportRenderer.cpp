@@ -168,15 +168,10 @@ EmbreeViewportRendererXeonSingle::EmbreeViewportRendererXeonSingle( )
 
 void EmbreeViewportRendererXeonSingle::createRenderDevice()
 {
-MStatus status;
-status.perror("EmbreeViewportRendererXeonSingle::createRenderDevice");
-
 	if (m_device == NULL) 
 	{
-status.perror("Before create device");
       m_device = embree::Device::rtCreateDevice("default",   // single ray device
 	          m_numThreads,m_rtcore_cfg.c_str());
-status.perror("After create device");
 	}
 }
 
@@ -1444,7 +1439,6 @@ int	 EmbreeViewportRenderer::convertMayaObjectsToEmbree(std::vector<MDagPath> &c
 	int numObjects = currentObjects.size();
 	int replacementNeeded = objectReplacementNeeded;
 	std::string currObjectName;
-	//char buffer[1024];
 
 	// If "replacement needed" is already true, just rebuild 
 	// everything rather than trying to find if there were changes
@@ -1473,11 +1467,13 @@ int	 EmbreeViewportRenderer::convertMayaObjectsToEmbree(std::vector<MDagPath> &c
 				// Seen this object before - let's make sure it hasn't changed
 				oldSceneInfo = oldInfoIter->second;
 
-				replacementNeeded = checkObjectProperities(currObject, oldSceneInfo, i, 
+				int needReplacement = checkObjectProperities(currObject, oldSceneInfo, i, 
 														   materialUpdated);
 
-				if (replacementNeeded == 1)
+				if (needReplacement == 1) {
+                                        replacementNeeded = 1;
 					break;   // There was a change - no point in checking further
+                                }
 			} // check object
 		}  // all objects
 	}  // Check if objects changed
@@ -1501,8 +1497,8 @@ int	 EmbreeViewportRenderer::convertMayaObjectsToEmbree(std::vector<MDagPath> &c
 		convertSurface(currObject);
 
 		// Record the object's properties for change detection
-		// Objects are loaded before lights, so that object's list and embree indexes
-		// are the same
+		// Objects are loaded before lights, so that an object's list 
+		// and embree indexes are the same
 		recordObjectProperties(currObject, i, i);
 	}  // retranslate all objects
 
@@ -1519,7 +1515,8 @@ int	EmbreeViewportRenderer::convertMayaLightsToEmbree(std::vector<MDagPath> &cur
 	int replacementNeeded = lightReplacementNeeded;
 	std::string currLightName;
 
-	// If "replacement needed" is already true, flush the database and do a full rebuild
+	// If "replacement needed" is already true, flush the database and do 
+        // a full rebuild
 	if (0 == lightReplacementNeeded) 
 	{
 		// Now look through all the lights and see if any changed
@@ -1536,22 +1533,25 @@ int	EmbreeViewportRenderer::convertMayaLightsToEmbree(std::vector<MDagPath> &cur
 			oldInfoIter = m_lightDatabase.find(currLightName);
 			if (oldInfoIter == m_lightDatabase.end())
 			{
-				// Never seen this light before
-				replacementNeeded = 1;
-				break;  // No point checking further
+                            // Never seen this light before
+                            replacementNeeded = 1;
+                            break;  // No point checking further
 			}
 			else
 			{
-				// Look for changes in this light
-				oldSceneInfo = oldInfoIter->second;
+                            // Look for changes in this light
+                            oldSceneInfo = oldInfoIter->second;
 
-				replacementNeeded = checkLightProperities(currLight, oldSceneInfo, i);
+                            int needReplacement = checkLightProperities(currLight, oldSceneInfo, i);
 
-				if (replacementNeeded == 1)
-					break;  // There was a change - no point in checking further
+                            if (needReplacement == 1)
+                            {
+                                replacementNeeded = 1;
+                                break;  // There was a change - no point in checking further
+                            }
 			} // seen the light before
 		} // for all lights
-	} // Check for changes
+	} // Check for light changes
 
 	// If nothing changed, we are done
 	if (0 == replacementNeeded)

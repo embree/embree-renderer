@@ -63,7 +63,7 @@ void Scene__Constructor(uniform Scene* uniform this)
     this->id2handle[i] = -1;
   }
 
-  this->handle = rtcNewScene(RTC_SCENE_STATIC,RTC_INTERSECT_VARYING);
+  this->handle = rtcNewScene(RTC_SCENE_DYNAMIC,RTC_INTERSECT_VARYING);
 }
 
 export void* uniform Scene__new()
@@ -77,8 +77,8 @@ export void Scene__set(void* uniform scene_in, uniform int slot, void* uniform i
 {
   uniform Scene*    uniform scene    = (uniform Scene*    uniform) scene_in;
   uniform Instance* uniform instance = (uniform Instance* uniform) instance_in;
-  
-  if (scene->instances[slot]) {
+
+  if ((scene->instances[slot]) && !(scene->instances[slot]->light)) {
     rtcDeleteGeometry(scene->handle,scene->id2handle[slot]);
     RefCount__DecRef(&scene->instances[slot]->base);
   }
@@ -91,6 +91,7 @@ export void Scene__set(void* uniform scene_in, uniform int slot, void* uniform i
       scene->id2handle[slot] = handle;
     }
   }
+
   scene->numInstances = max(scene->numInstances,(uniform uint)(slot+1));
 }
 
