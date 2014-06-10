@@ -82,6 +82,9 @@ export void Scene__set(void* uniform scene_in, uniform int slot, void* uniform i
     rtcDeleteGeometry(scene->handle,scene->id2handle[slot]);
     RefCount__DecRef(&scene->instances[slot]->base);
   }
+  if ((scene->instances[slot]) && (scene->instances[slot]->light)) {
+    RefCount__DecRef(&scene->instances[slot]->base);
+  }
   scene->instances[slot] = instance;
   if (instance) {
     RefCount__IncRef(&instance->base);
