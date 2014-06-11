@@ -129,10 +129,13 @@ namespace embree
         /*! Decompress the image into an output buffer and get the image dimensions. */
         unsigned char *rgb = decompress(&cinfo);  size_t width = cinfo.output_width;  size_t height = cinfo.output_height;
 
+#if 0
         /*! Allocate the Embree image. */
         Ref<Image> image = new Image4c(width, height, filename);
 
         /*! Convert the image from unsigned char RGB to unsigned char RGBA. */
+
+        // Original code
         for (size_t y=0, i=0 ; y < height ; y++) {
           for (size_t x=0 ; x < width ; x++) {
             const float r = (float) rgb[i++] / 255.0f;
@@ -141,6 +144,24 @@ namespace embree
             image->set(x, y, Color4(r,g,b,1.0f));
           }
         }
+#else
+        // Image order that looks the same as ImageMagick/Maya - flip
+        // on both axes, plus exchange R and B.
+        /*! Allocate the Embree image. */
+        Ref<Image> image = new Image4c(height, width, filename);
+
+        /*! Convert the image from unsigned char RGB to unsigned char RGBA. */
+
+        // Original code
+        for (size_t y=0, i=0 ; y < width ; y++) {
+          for (size_t x=0 ; x < height ; x++) {
+            const float b = (float) rgb[i++] / 255.0f;
+            const float g = (float) rgb[i++] / 255.0f;
+            const float r = (float) rgb[i++] / 255.0f;
+            image->set(x, width-1-y, Color4(r,g,b,1.0f));
+          }
+        }
+#endif
 
         /*! Clean up. */
         jpeg_destroy_decompress(&cinfo);  free(rgb);  fclose(file);  return(image);

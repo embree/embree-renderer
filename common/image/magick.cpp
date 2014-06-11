@@ -28,6 +28,7 @@ namespace embree
   Ref<Image> loadMagick(const FileName& fileName)
   {
     Magick::Image image(fileName.c_str());
+#if 0
     Image* out = new Image4c(image.columns(),image.rows(),fileName);
     float rcpMaxRGB = 1.0f/float(MaxRGB);
     Magick::Pixels pixel_cache(image);
@@ -43,6 +44,25 @@ namespace embree
         out->set(x,y,c);
       }
     }
+#else
+    // Image order that looks the same as ImageMagick/Maya  - flip
+    // on both axes, plus exchange R and B.
+    Image* out = new Image4c(image.rows(),image.columns(),fileName);
+    float rcpMaxRGB = 1.0f/float(MaxRGB);
+    Magick::Pixels pixel_cache(image);
+    Magick::PixelPacket* pixels = pixel_cache.get(0,0,out->height,out->width);
+    
+    for (size_t y=0; y<out->height; y++) {
+      for (size_t x=0; x<out->width; x++) {
+        Color4 c;
+        c.b = float(pixels[y*out->width+x].red    )*rcpMaxRGB;
+        c.g = float(pixels[y*out->width+x].green  )*rcpMaxRGB;
+        c.r = float(pixels[y*out->width+x].blue   )*rcpMaxRGB;
+        c.a = float(pixels[y*out->width+x].opacity)*rcpMaxRGB;
+        out->set(x,out->height-1-y,c);
+      }
+    }
+#endif
 
     return out;
   }

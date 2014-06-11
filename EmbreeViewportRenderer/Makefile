@@ -79,7 +79,7 @@ depend_EmbreeViewportRenderer:     INCLUDES := $(INCLUDES) $(EmbreeViewportRende
 LFLAGS   := $(LFLAGS) -L$(DSTDIR) -L$(MAYALIBS) $(EmbreeViewportRenderer_EXTRA_LFLAGS) 
 LIBS     := $(LIBS)   -lOpenMayaRender -lOpenMaya -lOpenMayaUI -lFoundation $(DSTDIR)/libsys.a $(DSTDIR)/liblexers.a $(DSTDIR)/libloaders.a $(DSTDIR)/libimage.a $(DSTDIR)/libdevice.a $(DSTDIR)/liblexers.a $(DSTDIR)/libsys.a -lpthread -ldl $(EmbreeViewportRenderer_EXTRA_LIBS) 
 # If you build the sample renderer code with ICC, you need to link against the following libraries
-LIBS     := $(LIBS) $(INTELCOMPILERLIBS)/libimf.a $(INTELCOMPILERLIBS)/libirc.a
+LIBS     := $(LIBS) $(INTELCOMPILERLIBS)/libimf.a $(INTELCOMPILERLIBS)/libirc.a 
 
 #
 # Rules definitions
