@@ -96,6 +96,14 @@ $(EmbreeViewportRendererIX_PLUGIN): $(DSTDIR)/EmbreeViewportRenderer.o $(DSTDIR)
 	-rm -f $@
 	$(LD) -o $@ $(LFLAGS) $^ $(LIBS)
 
+$(EmbreeViewportRendererSXP_PLUGIN): $(DSTDIR)/EmbreeViewportRenderer.o $(DSTDIR)/EmbreeViewportRendererPluginSXP.o 
+	-rm -f $@
+	$(LD) -o $@ $(LFLAGS) $^ $(LIBS)
+	
+$(EmbreeViewportRendererIXP_PLUGIN): $(DSTDIR)/EmbreeViewportRenderer.o $(DSTDIR)/EmbreeViewportRendererPluginIXP.o 
+	-rm -f $@
+	$(LD) -o $@ $(LFLAGS) $^ $(LIBS)
+
 $(DSTDIR)/EmbreeViewportRenderer.o :  $(SRCDIR)/EmbreeViewportRenderer.cpp
 	$(CC) -c $(INCLUDES) $(CFLAGS) $< -o $@
 
@@ -104,6 +112,12 @@ $(DSTDIR)/EmbreeViewportRendererPluginSX.o :  $(SRCDIR)/EmbreeViewportRendererPl
 	
 $(DSTDIR)/EmbreeViewportRendererPluginIX.o :  $(SRCDIR)/EmbreeViewportRendererPlugin.cpp
 	$(CC) -c $(INCLUDES) $(CFLAGS) -DISPCXEON $< -o $@
+
+$(DSTDIR)/EmbreeViewportRendererPluginSXP.o :  $(SRCDIR)/EmbreeViewportRendererPlugin.cpp
+	$(CC) -c $(INCLUDES) $(CFLAGS) -DSINGLEXEONPHI $< -o $@
+
+$(DSTDIR)/EmbreeViewportRendererPluginIXP.o :  $(SRCDIR)/EmbreeViewportRendererPlugin.cpp
+	$(CC) -c $(INCLUDES) $(CFLAGS) -DISPCXEONPHI $< -o $@
 
 depend_EmbreeViewportRenderer :
 	makedepend $(INCLUDES) $(MDFLAGS) -f$(DSTDIR)/Makefile $(EmbreeViewportRenderer_SOURCES)
@@ -115,7 +129,7 @@ Clean_EmbreeViewportRenderer:
 	-rm -f $(EmbreeViewportRenderer_MAKEFILE).bak $(EmbreeViewportRenderer_OBJECTS) $(EmbreeViewportRendererSX_PLUGIN) $(EmbreeViewportRendererSXP_PLUGIN) $(EmbreeViewportRendererIXP_PLUGIN) $(EmbreeViewportRendererIXP_PLUGIN)
 
 
-plugins: $(EmbreeViewportRendererSX_PLUGIN) $(EmbreeViewportRendererIX_PLUGIN)
+plugins: $(EmbreeViewportRendererSX_PLUGIN) $(EmbreeViewportRendererIX_PLUGIN) $(EmbreeViewportRendererSXP_PLUGIN) $(EmbreeViewportRendererIXP_PLUGIN)
 depend:	 depend_EmbreeViewportRenderer
 clean:	 clean_EmbreeViewportRenderer
 Clean:	 Clean_EmbreeViewportRenderer

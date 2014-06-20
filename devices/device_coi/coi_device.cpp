@@ -66,9 +66,7 @@ namespace embree
        false, NULL,      // Environment variables to set for the sink process.
        true, NULL,       // Enable the proxy but don't specify a proxy root path.
        0,                // The amount of memory to reserve for COIBuffers.
-       "C:\\Users\\cwcongdo\\Documents\\maya\\plug-ins", 
-//	   "C:/Users/cwcongdo/Documents/maya/plug-ins", 
-//		NULL,             // Path to search for dependencies
+		NULL,             // Path to search for dependencies
        &process          // The resulting process handle.
        );
     // if fail check loading by name
@@ -81,15 +79,19 @@ namespace embree
          false, NULL,      // Environment variables to set for the sink process.
          true, NULL,       // Enable the proxy but don't specify a proxy root path.
          0,                // The amount of memory to reserve for COIBuffers.
-         "C:\\Users\\cwcongdo\\Documents\\maya\\plug-ins", 
-//         "C:/Users/cwcongdo/Documents/maya/plug-ins", 
-//			NULL,             // Path to search for dependencies
+			NULL,             // Path to search for dependencies
 		 &process          // The resulting process handle.
          );
     }
     
-    if (result != COI_SUCCESS) 
-      throw std::runtime_error("Failed to create process " + std::string(executable) +": " + COIResultGetName(result));
+    if (result != COI_SUCCESS) {
+        fprintf(stderr, "Failed to create process: %s - error code \"%s\" - did you set SINK_LD_LIBRARY_PATH?\n", executable, COIResultGetName(result));
+#if !defined(__WIN32__)
+        fprintf(stderr, "   SINK_LD_LIBRARY_PATH has the following value:  %s\n", getenv("SINK_LD_LIBRARY_PATH"));
+#endif
+        fflush(stderr);
+        throw std::runtime_error("Failed to create process " + std::string(executable) +": " + COIResultGetName(result));
+    }
  
     /* create pipeline */
     COI_CPU_MASK cpuMask;

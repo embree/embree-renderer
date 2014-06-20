@@ -866,8 +866,9 @@ void EmbreeViewportRenderer::convertSurfaceMaterial(const MDagPath &dagPath,
 	if ((1 == haveTexture) && (!materialInfo.texturefile.empty())) {  // need texture coordinates *and* a file
 		// Load and assign the texture file
 		// WARNING!!!
-		// Note:  only ppm and pfm supported unless you build with USE_IMAGEMAGICK
-		m_device->rtSetTexture(material, "diffTexture", embree::rtLoadTexture(materialInfo.texturefile));
+		// Note:  only ppm, pfm, and jpeg supported unless you build with USE_IMAGEMAGICK
+        embree::Handle<embree::Device::RTTexture> texture = embree::rtLoadTexture(materialInfo.texturefile);
+		m_device->rtSetTexture(material, "diffTexture", texture);
 	}
 }
 
@@ -945,11 +946,11 @@ bool EmbreeViewportRenderer::convertSurface( const MDagPath &dagPath)
 
 		if (numPrims)
 		{
-			/*   MGeometryPrimitive is a class describes the topology used for
+			/*  "MGeometryPrimitive is a class describes the topology used for
 				accessing MGeometryData.
 				Topology is specified as a set of index values which references into
 				data elements in an MGeometryData. Index values can be assumed to be
-				stored in contiguous memory.*/
+				stored in contiguous memory." */
 			const MGeometryPrimitive prim = geom.primitiveArray(0);
 			unsigned int numElem = prim.elementCount();
 #if 0
