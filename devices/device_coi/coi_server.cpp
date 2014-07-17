@@ -29,7 +29,7 @@ extern "C" embree::Device* create(const char* parms, size_t numThreads, const ch
 namespace embree 
 {
   Device* g_device = NULL;
-  int g_verbose = 0;
+  int coi_verbose = 0;
 
   /*! handle management =========================== */
   std::vector<Device::RTHandle> g_handles;
@@ -57,7 +57,7 @@ namespace embree
 
   extern "C" void rtNewCamera(uint32_t numBuffers, void** buffers, uint64_t* bufferBytes, parmsNewCamera* parms, uint16_t parmBytes, void* ret, uint16_t retBytes)
   {
-    if (g_verbose) {
+    if (coi_verbose) {
       printf("handle %06d = rtNewCamera(%s)\n", parms->id, parms->type);
       fflush(stdout);
     }
@@ -66,7 +66,7 @@ namespace embree
 
   extern "C" void rtNewData(uint32_t numBuffers, void** buffers, uint64_t* bufferBytes, parmsNewData* parms, uint16_t parmBytes, void* ret, uint16_t retBytess)
   {
-    if (g_verbose) {
+    if (coi_verbose) {
       printf("handle %06d = rtNewData(%zu)\n", parms->id, parms->bytes);
       fflush(stdout);
     }
@@ -77,7 +77,7 @@ namespace embree
 
   extern "C" void rtNewDataStart(uint32_t numBuffers, void** buffers, uint64_t* bufferBytes, parmsNewDataStart* parms, uint16_t parmBytes, void* ret, uint16_t retBytess)
   {
-    if (g_verbose) {
+    if (coi_verbose) {
       printf("handle %06d = rtNewDataStart(%zu)\n", parms->id, parms->bytes);
       fflush(stdout);
     }
@@ -86,7 +86,7 @@ namespace embree
 
   extern "C" void rtNewDataSet(uint32_t numBuffers, void** buffers, uint64_t* bufferBytes, parmsNewDataSet* parms, uint16_t parmBytes, void* ret, uint16_t retBytess)
   {
-    if (g_verbose) {
+    if (coi_verbose) {
       printf("  rtNewDataSet(%zu,%zu)\n", parms->offset, parms->bytes);
       fflush(stdout);
     }
@@ -95,7 +95,7 @@ namespace embree
 
   extern "C" void rtNewDataEnd(uint32_t numBuffers, void** buffers, uint64_t* bufferBytes, parmsNewDataStart* parms, uint16_t parmBytes, void* ret, uint16_t retBytess)
   {
-    if (g_verbose) {
+    if (coi_verbose) {
       printf("handle %06d = rtNewDataEnd(%zu)\n", parms->id, parms->bytes);
       fflush(stdout);
     }
@@ -105,7 +105,7 @@ namespace embree
 
   extern "C" void rtNewImage(uint32_t numBuffers, void** buffers, uint64_t* bufferBytes, parmsNewImage* parms, uint16_t parmBytes, void* ret, uint16_t retBytes)
   {
-    if (g_verbose) {
+    if (coi_verbose) {
       printf("handle %06d = rtNewImage(%s, %zu, %zu)\n", parms->id, parms->type, parms->width, parms->height);
       fflush(stdout);
     }
@@ -114,7 +114,7 @@ namespace embree
 
   extern "C" void rtNewTexture(uint32_t numBuffers, void** buffers, uint64_t* bufferBytes, parmsNewTexture* parms, uint16_t parmBytes, void* ret, uint16_t retBytes)
   {
-    if (g_verbose) {
+    if (coi_verbose) {
       printf("handle %06d = rtNewTexture(%s)\n", parms->id, parms->type);
       fflush(stdout);
     }
@@ -123,7 +123,7 @@ namespace embree
 
   extern "C" void rtNewMaterial(uint32_t numBuffers, void** buffers, uint64_t* bufferBytes, parmsNewMaterial* parms, uint16_t parmBytes, void* ret, uint16_t retBytes)
   {
-    if (g_verbose) {
+    if (coi_verbose) {
       printf("handle %06d = rtNewMaterial(%s)\n", parms->id, parms->type);
       fflush(stdout);
     }
@@ -132,7 +132,7 @@ namespace embree
 
   extern "C" void rtNewShape(uint32_t numBuffers, void** buffers, uint64_t* bufferBytes, parmsNewShape* parms, uint16_t parmBytes, void* ret, uint16_t retBytes)
   {
-    if (g_verbose) {
+    if (coi_verbose) {
       printf("handle %06d = rtNewShape(%s)\n", parms->id, parms->type);
       fflush(stdout);
     }
@@ -141,14 +141,14 @@ namespace embree
 
   extern "C" void rtNewLight(uint32_t numBuffers, void** buffers, uint64_t* bufferBytes, parmsNewLight* parms, uint16_t parmBytes, void* ret, uint16_t retBytes)
   {
-    if (g_verbose) printf("handle %06d = rtNewLight(%s)\n", parms->id, parms->type);
+    if (coi_verbose) printf("handle %06d = rtNewLight(%s)\n", parms->id, parms->type);
     set(parms->id, g_device->rtNewLight(parms->type));
   }
 
   extern "C" void rtNewShapePrimitive(uint32_t numBuffers, void** buffers, uint64_t* bufferBytes, 
                                       parmsNewShapePrimitive* parms, uint16_t parmBytes, void* ret, uint16_t retBytes)
   {
-    if (g_verbose) { 
+    if (coi_verbose) { 
       printf("handle %06d = rtNewShapePrimitive(%06d, %06d, %s)\n", 
              parms->id, parms->shape, parms->material, std::stringOf(copyFromArray(parms->transform)).c_str());
       fflush(stdout);
@@ -159,7 +159,7 @@ namespace embree
   extern "C" void rtNewLightPrimitive(uint32_t numBuffers, void** buffers, uint64_t* bufferBytes, 
                                       parmsNewLightPrimitive* parms, uint16_t parmBytes, void* ret, uint16_t retBytes)
   {
-    if (g_verbose) {
+    if (coi_verbose) {
       printf("handle %06d = rtNewLightPrimitive(%06d, %06d, %s)\n", 
              parms->id, parms->light, parms->material, std::stringOf(copyFromArray(parms->transform)).c_str());
       fflush(stdout);
@@ -170,7 +170,7 @@ namespace embree
   extern "C" void rtTransformPrimitive(uint32_t numBuffers, void** buffers, uint64_t* bufferBytes, 
                                        parmsTransformPrimitive* parms, uint16_t parmBytes, void* ret, uint16_t retBytes)
   {
-    if (g_verbose) {
+    if (coi_verbose) {
       printf("handle %06d = rtTransformPrimitive(%06d,%s)\n", 
              parms->id, parms->primitive, std::stringOf(copyFromArray(parms->transform)).c_str());
       fflush(stdout);
@@ -180,7 +180,7 @@ namespace embree
 
   extern "C" void rtNewScene(uint32_t numBuffers, void** buffers, uint64_t* bufferBytes, parmsNewScene* parms, uint16_t parmBytes, void* ret, uint16_t retBytes)
   {
-    if (g_verbose) {
+    if (coi_verbose) {
       printf("handle %06d = rtNewScene(%s)\n", parms->id, parms->type);
       fflush(stdout);
     }
@@ -189,7 +189,7 @@ namespace embree
 
   extern "C" void rtSetPrimitive(uint32_t numBuffers, void** buffers, uint64_t* bufferBytes, parmsSetPrimitive* parms, uint16_t parmBytes, void* ret, uint16_t retBytes)
   {
-    if (g_verbose) {
+    if (coi_verbose) {
       printf("rtSetPrimitive(%06d, %06d, %06d)\n", parms->scene, parms->slot, parms->prim);
       fflush(stdout);
     }
@@ -198,7 +198,7 @@ namespace embree
 
   extern "C" void rtNewToneMapper(uint32_t numBuffers, void** buffers, uint64_t* bufferBytes, parmsNewToneMapper* parms, uint16_t parmBytes, void* ret, uint16_t retBytes)
   {
-    if (g_verbose) {
+    if (coi_verbose) {
       printf("handle %06d = rtNewToneMapper(%s)\n", parms->id, parms->type);
       fflush(stdout);
     }
@@ -207,13 +207,13 @@ namespace embree
 
   extern "C" void rtNewRenderer(uint32_t numBuffers, void** buffers, uint64_t* bufferBytes, parmsNewRenderer* parms, uint16_t parmBytes, void* ret, uint16_t retBytes)
   {
-    if (g_verbose) printf("handle %06d = rtNewRenderer(%s)\n", parms->id, parms->type);
+    if (coi_verbose) printf("handle %06d = rtNewRenderer(%s)\n", parms->id, parms->type);
     set(parms->id, g_device->rtNewRenderer(parms->type));
   }
 
   extern "C" void rtNewFrameBuffer(uint32_t numBuffers, void** buffers, uint64_t* bufferBytes, parmsNewFrameBuffer* parms, uint16_t parmBytes, void* ret, uint16_t retBytes)
   {
-    if (g_verbose) {
+    if (coi_verbose) {
       printf("handle %06d = rtNewFrameBuffer(%s, %zu, %zu, %zu)\n", parms->id, parms->type, parms->width, parms->height, parms->depth);
       fflush(stdout);
     }                                         
@@ -222,7 +222,7 @@ namespace embree
 
   extern "C" void rtSwapBuffers(uint32_t numBuffers, void** buffers, uint64_t* bufferBytes, parmsSwapBuffers* parms, uint16_t parmBytes, void* ret, uint16_t retBytes)
   {
-    if (g_verbose) {
+    if (coi_verbose) {
       printf("rtSwapBuffers(%06d)\n", parms->framebuffer);
       fflush(stdout);
     }
@@ -231,7 +231,7 @@ namespace embree
 
   extern "C" void rtIncRef(uint32_t numBuffers, void** buffers, uint64_t* bufferBytes, parmsIncRef* parms, uint16_t parmBytes, void* ret, uint16_t retBytes)
   {
-    if (g_verbose) {
+    if (coi_verbose) {
       printf("rtIncRef(%06d)\n", parms->handle);
       fflush(stdout);
     }
@@ -240,7 +240,7 @@ namespace embree
 
   extern "C" void rtDecRef(uint32_t numBuffers, void** buffers, uint64_t* bufferBytes, parmsDecRef* parms, uint16_t parmBytes, void* ret, uint16_t retBytes)
   {
-    if (g_verbose) {
+    if (coi_verbose) {
       printf("rtDecRef(%06d)\n", parms->handle);
       fflush(stdout);
     }
@@ -249,7 +249,7 @@ namespace embree
 
   extern "C" void rtSetBool1(uint32_t numBuffers, void** buffers, uint64_t* bufferBytes, parmsSetBoolN* parms, uint16_t parmBytes, void* ret, uint16_t retBytes)
   {
-    if (g_verbose) {
+    if (coi_verbose) {
       printf("rtSetBool1(%06d, %s, [%d])\n", parms->handle, parms->property, parms->x);
       fflush(stdout);
     }
@@ -258,7 +258,7 @@ namespace embree
 
   extern "C" void rtSetBool2(uint32_t numBuffers, void** buffers, uint64_t* bufferBytes, parmsSetBoolN* parms, uint16_t parmBytes, void* ret, uint16_t retBytes)
   {
-    if (g_verbose) {
+    if (coi_verbose) {
       printf("rtSetBool2(%06d, %s, [%d, %d])\n", parms->handle, parms->property, parms->x, parms->y);
       fflush(stdout);
     }
@@ -267,7 +267,7 @@ namespace embree
 
   extern "C" void rtSetBool3(uint32_t numBuffers, void** buffers, uint64_t* bufferBytes, parmsSetBoolN* parms, uint16_t parmBytes, void* ret, uint16_t retBytes)
   {
-    if (g_verbose) {
+    if (coi_verbose) {
       printf("rtSetBool3(%06d, %s, [%d, %d, %d])\n", parms->handle, parms->property, parms->x, parms->y, parms->z);
       fflush(stdout);
     }
@@ -276,7 +276,7 @@ namespace embree
 
   extern "C" void rtSetBool4(uint32_t numBuffers, void** buffers, uint64_t* bufferBytes, parmsSetBoolN* parms, uint16_t parmBytes, void* ret, uint16_t retBytes)
   {
-    if (g_verbose) {
+    if (coi_verbose) {
       printf("rtSetBool4(%06d, %s, [%d, %d, %d, %d])\n", parms->handle, parms->property, parms->x, parms->y, parms->z, parms->w);
       fflush(stdout);
     }
@@ -285,7 +285,7 @@ namespace embree
 
   extern "C" void rtSetInt1(uint32_t numBuffers, void** buffers, uint64_t* bufferBytes, parmsSetIntN* parms, uint16_t parmBytes, void* ret, uint16_t retBytes)
   {
-    if (g_verbose) {
+    if (coi_verbose) {
       printf("rtSetInt1(%06d, %s, [%d])\n", parms->handle, parms->property, parms->x);
       fflush(stdout);
     }
@@ -294,13 +294,13 @@ namespace embree
 
   extern "C" void rtSetInt2(uint32_t numBuffers, void** buffers, uint64_t* bufferBytes, parmsSetIntN* parms, uint16_t parmBytes, void* ret, uint16_t retBytes)
   {
-    if (g_verbose) printf("rtSetInt2(%06d, %s, [%d, %d])\n", parms->handle, parms->property, parms->x, parms->y);
+    if (coi_verbose) printf("rtSetInt2(%06d, %s, [%d, %d])\n", parms->handle, parms->property, parms->x, parms->y);
     g_device->rtSetInt2(get<Device::RTHandle>(parms->handle),parms->property,parms->x,parms->y);
   }
 
   extern "C" void rtSetInt3(uint32_t numBuffers, void** buffers, uint64_t* bufferBytes, parmsSetIntN* parms, uint16_t parmBytes, void* ret, uint16_t retBytes)
   {
-    if (g_verbose) {
+    if (coi_verbose) {
       printf("rtSetInt3(%06d, %s, [%d, %d, %d])\n", parms->handle, parms->property, parms->x, parms->y, parms->z);
       fflush(stdout);
     }
@@ -309,7 +309,7 @@ namespace embree
 
   extern "C" void rtSetInt4(uint32_t numBuffers, void** buffers, uint64_t* bufferBytes, parmsSetIntN* parms, uint16_t parmBytes, void* ret, uint16_t retBytes)
   {
-    if (g_verbose) {
+    if (coi_verbose) {
       printf("rtSetInt4(%06d, %s, [%d, %d, %d, %d])\n", parms->handle, parms->property, parms->x, parms->y, parms->z, parms->w);
       fflush(stdout);
     }
@@ -318,7 +318,7 @@ namespace embree
 
   extern "C" void rtSetFloat1(uint32_t numBuffers, void** buffers, uint64_t* bufferBytes, parmsSetFloatN* parms, uint16_t parmBytes, void* ret, uint16_t retBytes)
   {
-    if (g_verbose) {
+    if (coi_verbose) {
       printf("rtSetFloat1(%06d, %s, [%f])\n", parms->handle, parms->property, parms->x);
       fflush(stdout);
     }
@@ -327,7 +327,7 @@ namespace embree
 
   extern "C" void rtSetFloat2(uint32_t numBuffers, void** buffers, uint64_t* bufferBytes, parmsSetFloatN* parms, uint16_t parmBytes, void* ret, uint16_t retBytes)
   {
-    if (g_verbose) {
+    if (coi_verbose) {
       printf("rtSetFloat2(%06d, %s, [%f, %f])\n", parms->handle, parms->property, parms->x, parms->y);
       fflush(stdout);
     }
@@ -336,7 +336,7 @@ namespace embree
 
   extern "C" void rtSetFloat3(uint32_t numBuffers, void** buffers, uint64_t* bufferBytes, parmsSetFloatN* parms, uint16_t parmBytes, void* ret, uint16_t retBytes)
   {
-    if (g_verbose) {
+    if (coi_verbose) {
       printf("rtSetFloat3(%06d, %s, [%f, %f, %f])\n", parms->handle, parms->property, parms->x, parms->y, parms->z);
       fflush(stdout);
     }
@@ -345,7 +345,7 @@ namespace embree
 
   extern "C" void rtSetFloat4(uint32_t numBuffers, void** buffers, uint64_t* bufferBytes, parmsSetFloatN* parms, uint16_t parmBytes, void* ret, uint16_t retBytes)
   {
-    if (g_verbose) {
+    if (coi_verbose) {
       printf("rtSetFloat4(%06d, %s, [%f, %f, %f, %f])\n", parms->handle, parms->property, parms->x, parms->y, parms->z, parms->w);
       fflush(stdout);
     }
@@ -354,7 +354,7 @@ namespace embree
 
   extern "C" void rtSetArray(uint32_t numBuffers, void** buffers, uint64_t* bufferBytes, parmsSetArray* parms, uint16_t parmBytes, void* ret, uint16_t retBytes)
   {
-    if (g_verbose) {
+    if (coi_verbose) {
       printf("rtSetArray(%06d, %s, %s, %06d, %zu, %zu, %zu)\n", parms->handle, parms->property, parms->type, parms->data, parms->size, parms->stride, parms->ofs);
       fflush(stdout);
     }
@@ -363,7 +363,7 @@ namespace embree
 
   extern "C" void rtSetString(uint32_t numBuffers, void** buffers, uint64_t* bufferBytes, parmsSetString* parms, uint16_t parmBytes, void* ret, uint16_t retBytes)
   {
-    if (g_verbose) {
+    if (coi_verbose) {
       printf("rtSetString(%06d, %s, %s)\n", parms->handle, parms->property, parms->str);
       fflush(stdout);
     }
@@ -372,7 +372,7 @@ namespace embree
 
   extern "C" void rtSetImage(uint32_t numBuffers, void** buffers, uint64_t* bufferBytes, parmsSetImage* parms, uint16_t parmBytes, void* ret, uint16_t retBytes)
   {
-    if (g_verbose) {\
+    if (coi_verbose) {\
       printf("rtSetImage(%06d, %s, %06d)\n", parms->handle, parms->property, parms->image);
       fflush(stdout);
     }
@@ -381,7 +381,7 @@ namespace embree
 
   extern "C" void rtSetTexture(uint32_t numBuffers, void** buffers, uint64_t* bufferBytes, parmsSetTexture* parms, uint16_t parmBytes, void* ret, uint16_t retBytes)
   {
-    if (g_verbose) {
+    if (coi_verbose) {
       printf("rtSetTexture(%06d, %s, %06d)\n", parms->handle, parms->property, parms->texture);
       fflush(stdout);
     }
@@ -390,7 +390,7 @@ namespace embree
 
   extern "C" void rtSetTransform(uint32_t numBuffers, void** buffers, uint64_t* bufferBytes, parmsSetTransform* parms, uint16_t parmBytes, void* ret, uint16_t retBytes)
   {
-    if (g_verbose) {
+    if (coi_verbose) {
       printf("rtSetTransform(%06d, %s, %s)\n", parms->handle, parms->property, std::stringOf(copyFromArray(parms->transform)).c_str());
       fflush(stdout);
     }
@@ -399,7 +399,7 @@ namespace embree
 
   extern "C" void rtClear(uint32_t numBuffers, void** buffers, uint64_t* bufferBytes, parmsClear* parms, uint16_t parmBytes, void* ret, uint16_t retBytes)
   {
-    if (g_verbose) {
+    if (coi_verbose) {
       printf("rtClear(%06d)\n", parms->handle);
       fflush(stdout);
     }
@@ -408,7 +408,7 @@ namespace embree
 
   extern "C" void rtCommit(uint32_t numBuffers, void** buffers, uint64_t* bufferBytes, parmsCommit* parms, uint16_t parmBytes, void* ret, uint16_t retBytes)
   {
-    if (g_verbose) {
+    if (coi_verbose) {
       printf("rtCommit(%06d)\n", parms->handle);
       fflush(stdout);
     }
@@ -417,7 +417,7 @@ namespace embree
 
   extern "C" void rtRenderFrame(uint32_t numBuffers, void** buffers, uint64_t* bufferBytes, parmsRenderFrame* parms, uint16_t parmBytes, void* ret, uint16_t retBytes)
   {
-    if (g_verbose) {
+    if (coi_verbose) {
       printf("rtRenderFrame(%06d, %06d, %06d, %06d, %06d, %d)\n", 
              parms->renderer, parms->camera, parms->scene, parms->toneMapper, parms->frameBuffer, parms->accumulate);
       fflush(stdout);
@@ -433,14 +433,14 @@ namespace embree
 
   extern "C" void rtPick(uint32_t numBuffers, void** buffers, uint64_t* bufferBytes, parmsPick* parms, uint16_t parmBytes, returnPick* ret, uint16_t retBytes)
   {
-    if (g_verbose) {
+    if (coi_verbose) {
       printf("rtPick([%f, %f], %06d, %06d)\n", parms->x, parms->y, parms->camera, parms->scene);
       fflush(stdout);
     }
 
     float px, py, pz;
     bool isHit = g_device->rtPick(get<Device::RTCamera>(parms->camera), parms->x, parms->y, get<Device::RTScene>(parms->scene), px, py, pz);
-    if (g_verbose) {
+    if (coi_verbose) {
       printf("  returning %s, [%f, %f, %f]\n", (isHit ? "TRUE" : "FALSE"), px, py, pz);
       fflush(stdout);
     }
@@ -456,7 +456,7 @@ namespace embree
     /* get number of threads to use */
     size_t numThreads = 0;
     if (argc >= 2) numThreads = atoi(argv[1]);
-    //if (argc >= 3) g_verbose = atoi(argv[2]);
+    //if (argc >= 3) coi_verbose = atoi(argv[2]);
     const char* rtcore_cfg = "";
     if (argc >= 3) rtcore_cfg=argv[2];
     
@@ -477,7 +477,7 @@ namespace embree
 #endif
 
     /*! create device */
-    g_device = create("",numThreads,rtcore_cfg); //g_verbose);
+    g_device = create("",numThreads,rtcore_cfg); //coi_verbose);
   }
 }
 
