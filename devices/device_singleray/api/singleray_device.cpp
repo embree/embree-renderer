@@ -150,9 +150,9 @@ namespace embree
     // On Windows:  for the Xeon we need to "create" threads twice, once in rtcInit, once here
     //              on the Xeon Phi, we should only "create" them once in rtcInit
     // On Linux:  it's OK/necessary to "create" them twice on the Xeon and Xeon Phi
-//#if !defined (__MIC__)  // At least in Windows, we need to create threads twice, once in rtcInit, once here
+#if !defined (__WINDOWS_MIC__)  
     TaskScheduler::create(numThreads);
-//#endif
+#endif
   }
 
   SingleRayDevice::~SingleRayDevice() 

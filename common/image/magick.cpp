@@ -23,6 +23,10 @@
 #include <Magick++.h>
 using namespace Magick;
 
+#if defined(_WIN32) || defined(_WIN64)
+#define MaxRGB  QuantumRange  /* deprecated */
+#endif
+
 namespace embree
 {
   Ref<Image> loadMagick(const FileName& fileName)

@@ -985,8 +985,9 @@ namespace embree
   { 
     /*! load image locally */
     Ref<Image> image = loadImage(fileName);
-    if (!image) throw std::runtime_error("cannot load image: "+std::string(fileName));
-    else if (Ref<Image3c> cimg = image.dynamicCast<Image3c>())
+    if (!image) 
+		image = new Image3c(1,1,Col3c(255,255,255));  // Fail gracefully rather than:  throw std::runtime_error("cannot load image: "+std::string(fileName));
+    if (Ref<Image3c> cimg = image.dynamicCast<Image3c>())
       return rtNewImage("RGB8",cimg->width,cimg->height,cimg->steal_ptr(),false);
     else if (Ref<Image4c> cimg = image.dynamicCast<Image4c>())
       return rtNewImage("RGBA8",cimg->width,cimg->height,cimg->steal_ptr(),false);

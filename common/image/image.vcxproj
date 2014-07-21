@@ -212,8 +212,8 @@
     <ClCompile>
       <Optimization>MaxSpeed</Optimization>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <AdditionalIncludeDirectories>$(ProjectDir);$(SolutionDir);$(SolutionDir)/common;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_LIB;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(SolutionDir);$(SolutionDir)/common;C:\jpeg-9a;C:\ImageMagick-6.8.9\Magick++\lib;C:\ImageMagick-6.8.9;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_LIB;_CRT_SECURE_NO_WARNINGS;USE_LIBJPEG;USE_IMAGEMAGICK;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <EnableEnhancedInstructionSet>NotSet</EnableEnhancedInstructionSet>
@@ -222,6 +222,12 @@
       <WarningLevel>Level3</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
     </ClCompile>
+    <Lib>
+      <AdditionalDependencies>jpeg.lib;CORE_RL_Magick++_.lib</AdditionalDependencies>
+    </Lib>
+    <Lib>
+      <AdditionalLibraryDirectories>C:\jpeg-9a\x64\Release;C:\ImageMagick-6.8.9\VisualMagick\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+    </Lib>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseAVX|Win32'">
     <ClCompile>

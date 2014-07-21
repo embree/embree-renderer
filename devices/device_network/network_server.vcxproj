@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -367,6 +367,9 @@
     <ClCompile Include="network_server_main.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\common\lexers\lexers.vcxproj">
+      <Project>{47a3a15e-ae35-41e9-824a-c542f8ba226e}</Project>
+    </ProjectReference>
     <ProjectReference Include="..\..\common\sys\sys.vcxproj">
       <Project>{b118ab3d-ab5b-4d86-90c2-8e91e8457710}</Project>
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
