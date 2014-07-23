@@ -214,12 +214,6 @@ namespace embree
 
   void COIDevice::COIProcess::rtNewData(Device::RTData id, const char* type, size_t bytes, const void* data) 
   {
-    static size_t g_bytes = 0;
-    g_bytes += bytes;
-    while (g_bytes > 100000000) {
-      std::cout << "." << std::flush;
-      g_bytes -= 100000000;
-    }
 #if 0
 
     parmsNewData parms;
@@ -1273,7 +1267,7 @@ namespace embree
   void COIDevice::rtRenderFrame(Device::RTRenderer renderer, Device::RTCamera camera, Device::RTScene scene, 
                                     Device::RTToneMapper toneMapper, Device::RTFrameBuffer frameBuffer, int accumulate)
   { 
-    for (size_t i=0; i<devices.size(); i++)
+    for (size_t i=0; i<devices.size(); i++) 
       devices[i]->rtRenderFrame(renderer,camera,scene,toneMapper,frameBuffer,accumulate);
   }
 

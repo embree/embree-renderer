@@ -43,7 +43,7 @@ namespace embree
     Handle<Device::RTPrimitive> loadTriangleLight(const Ref<XML>& xml);
     Handle<Device::RTPrimitive> loadHDRILight(const Ref<XML>& xml);
     void                loadMaterialParms(Handle<Device::RTMaterial> material, const Ref<XML>& parms);
-    Handle<Device::RTMaterial>  loadMaterial(const Ref<XML>& xml);
+    Handle<Device::RTMaterial>  loadMaterial(const Ref<XML>& xml, std::string* name = NULL);
     Handle<Device::RTPrimitive> loadTriangleMesh(const Ref<XML>& xml);
     Handle<Device::RTPrimitive> loadSphere(const Ref<XML>& xml);
     Handle<Device::RTPrimitive> loadDisk(const Ref<XML>& xml);
@@ -59,6 +59,10 @@ namespace embree
     Handle<Device::RTData> loadVec2fArray(const Ref<XML>& xml, size_t& size);
     Handle<Device::RTData> loadVec3fArray(const Ref<XML>& xml, size_t& size);
     Handle<Device::RTData> loadVector3iArray(const Ref<XML>& xml, size_t& size);
+
+    std::vector<Vec2f> loadVec2fArray(const Ref<XML>& xml);
+    std::vector<Vec3f> loadVec3fArray(const Ref<XML>& xml);
+    std::vector<Vec3i> loadVector3iArray(const Ref<XML>& xml);
 
   private:
     FileName path;         //!< path to XML file
@@ -260,6 +264,78 @@ namespace embree
     return g_device->rtNewData("immutable_managed",size*sizeof(Vec3i),data);
   }
 
+
+  std::vector<Vec2f> XMLLoader::loadVec2fArray(const Ref<XML>& xml)
+  {
+    /*! do not fail of array does not exist */
+    if (!xml) { return std::vector<Vec2f>(); }
+
+    size_t size = 0;
+    Vec2f* data = NULL;
+    if (xml->parm("ofs") != "") {
+      data = (Vec2f*)loadBinary(xml,2*sizeof(float),size);
+    } else {
+      size_t elts = xml->body.size();
+      if (elts % 2 != 0) throw std::runtime_error(xml->loc.str()+": wrong vector<float2> body");
+      size = elts/2;
+      data = (Vec2f*) alignedMalloc(size*sizeof(Vec2f));
+      for (size_t i=0; i<size; i++) 
+        data[i] = Vec2f(xml->body[2*i+0].Float(),xml->body[2*i+1].Float());
+    }
+    std::vector<Vec2f> res;
+    for (size_t i=0; i<size; i++) res.push_back(data[i]);
+    alignedFree(data);
+    return res;
+  }
+
+  std::vector<Vec3f> XMLLoader::loadVec3fArray(const Ref<XML>& xml)
+  {
+    /*! do not fail of array does not exist */
+    if (!xml) { return std::vector<Vec3f>(); }
+
+    size_t size = 0;
+    Vec3f* data = NULL;
+    if (xml->parm("ofs") != "") {
+      data = (Vec3f*) loadBinary(xml,3*sizeof(float),size);
+    }
+    else {
+      size_t elts = xml->body.size();
+      if (elts % 3 != 0) throw std::runtime_error(xml->loc.str()+": wrong vector<float3> body");
+      size = elts/3;
+      data = (Vec3f*) alignedMalloc(size*sizeof(Vec3f));
+      for (size_t i=0; i<size; i++) 
+        data[i] = Vec3f(xml->body[3*i+0].Float(),xml->body[3*i+1].Float(),xml->body[3*i+2].Float());
+    }
+    std::vector<Vec3f> res;
+    for (size_t i=0; i<size; i++) res.push_back(data[i]);
+    alignedFree(data);
+    return res;
+  }
+
+  std::vector<Vec3i> XMLLoader::loadVector3iArray(const Ref<XML>& xml)
+  {
+    /*! do not fail of array does not exist */
+    if (!xml) { return std::vector<Vec3i>(); }
+    
+    size_t size = 0;
+    Vec3i* data = NULL;
+    if (xml->parm("ofs") != "") {
+      data = (Vec3i*) loadBinary(xml,3*sizeof(int),size);
+    }
+    else {
+      size_t elts = xml->body.size();
+      if (elts % 3 != 0) throw std::runtime_error(xml->loc.str()+": wrong vector<int3> body");
+      size = elts/3;
+      data = (Vec3i*) alignedMalloc(size*sizeof(Vec3i));
+      for (size_t i=0; i<size; i++) 
+        data[i] = Vec3i(xml->body[3*i+0].Int(),xml->body[3*i+1].Int(),xml->body[3*i+2].Int());
+    }
+    std::vector<Vec3i> res;
+    for (size_t i=0; i<size; i++) res.push_back(data[i]);
+    alignedFree(data);
+    return res;
+  }
+
   //////////////////////////////////////////////////////////////////////////////
   //// Loading of objects from XML file
   //////////////////////////////////////////////////////////////////////////////
@@ -407,7 +483,7 @@ namespace embree
     g_device->rtCommit(material);
   }
 
-  Handle<Device::RTMaterial> XMLLoader::loadMaterial(const Ref<XML>& xml) 
+  Handle<Device::RTMaterial> XMLLoader::loadMaterial(const Ref<XML>& xml, std::string* name) 
   {
     if (xml->parm("file") != "") 
     {
@@ -422,8 +498,10 @@ namespace embree
       return material;
     }
     
-    if (xml->parm("id") != "")
+    if (xml->parm("id") != "") {
+      if (name) *name = xml->parm("id");
       return materialMap[xml->parm("id")];
+    }
 
     Ref<XML> parms = xml->child("parameters");
     if (materialCache.find(parms) != materialCache.end()) {
@@ -436,14 +514,99 @@ namespace embree
     return material;
   }
 
+  struct Mesh
+  {
+    std::string material;
+    std::vector<Vec3f> positions;
+    std::vector<Vec3f> normals;
+    std::vector<Vec2f> texcoords;
+    std::vector<Vec3i> triangles;
+
+    Mesh (std::string material) : material(material) {}
+
+    void add (const std::vector<Vec3f>& positions_i,
+	      const std::vector<Vec3f>& normals_i,
+	      const std::vector<Vec2f>& texcoords_i,
+	      const std::vector<Vec3i>& triangles_i)
+    {
+      size_t base = positions.size();
+      //if (normals.size() && base != normals.size())
+      //std::cout << "normal conversion error" << std::endl;
+      //if (texcoords.size() && base != texcoords.size())
+      //std::cout << "texcoords conversion error" << std::endl;
+
+      for (size_t i=0; i<triangles_i.size(); i++) 
+	triangles.push_back(Vec3i(triangles_i[i].x+base,triangles_i[i].y+base,triangles_i[i].z+base));
+      
+      for (size_t i=0; i<positions_i.size(); i++) 
+      {
+	positions.push_back(positions_i[i]);
+	if (i < texcoords_i.size()) texcoords.push_back(texcoords_i[i]);
+	else                        texcoords.push_back(Vec2f(0.0f,0.0f));
+	if (i < normals_i.size()) normals.push_back(normals_i[i]);
+	else                      normals.push_back(Vec3f(0.0f,0.0f,0.0f));
+      }
+
+      //for (size_t i=0; i<normals_i.size(); i++)
+      //normals.push_back(normals_i[i]);
+
+      //for (size_t i=0; i<texcoords_i.size(); i++)
+      //texcoords.push_back(texcoords_i[i]);
+    }
+
+    size_t write2(FILE* bin, void* ptr, size_t bytes)
+    {
+      size_t offset = ftell(bin);
+      fwrite(ptr,bytes,1,bin);
+      return offset;
+    }
+
+    void write(FILE* xml, FILE* bin, int i)
+    {
+      fprintf(xml,"  <TriangleMesh id=\"%i\" name=\"mesh%i\">\n",i,i);
+      fprintf(xml,"     <material id=\"%s\"/>\n",material.c_str());
+      fprintf(xml,"     <positions ofs=\"%llu\" size=\"%llu\"/>\n",write2(bin,&positions[0],positions.size()*sizeof(Vec3f)),positions.size());
+      fprintf(xml,"     <normals   ofs=\"%llu\" size=\"%llu\"/>\n",write2(bin,&normals[0],normals.size()*sizeof(Vec3f)),normals.size());
+      fprintf(xml,"     <texcoords ofs=\"%llu\" size=\"%llu\"/>\n",write2(bin,&texcoords[0],texcoords.size()*sizeof(Vec2f)),texcoords.size());
+      fprintf(xml,"     <triangles ofs=\"%llu\" size=\"%llu\"/>\n",write2(bin,&triangles[0],triangles.size()*sizeof(Vec3i)),triangles.size());
+      fprintf(xml,"  </TriangleMesh>\n");
+    }
+  };
+
+  std::vector<Mesh*> meshes;
+  std::map<std::string,Mesh*> material2mesh;
+
+  void write_scene()
+  {
+    FILE* xmlFile = fopen("model.xml","wt");
+    FILE* binFile = fopen("model.bin","wb");
+    for (size_t i=0; i<meshes.size(); i++)
+      meshes[i]->write(xmlFile,binFile,i);
+    fclose(xmlFile);
+    fclose(binFile);
+  }
+
   Handle<Device::RTPrimitive> XMLLoader::loadTriangleMesh(const Ref<XML>& xml) 
   {
-    Handle<Device::RTMaterial> material = loadMaterial(xml->child("material"));
+    std::string materialName;
+    Handle<Device::RTMaterial> material = loadMaterial(xml->child("material"),&materialName);
     size_t numPositions = 0;  Handle<Device::RTData> positions = loadVec3fArray(xml->childOpt("positions"), numPositions);
     size_t numMotions   = 0;  Handle<Device::RTData> motions   = loadVec3fArray(xml->childOpt("motions"  ), numMotions);
     size_t numNormals   = 0;  Handle<Device::RTData> normals   = loadVec3fArray(xml->childOpt("normals"  ), numNormals);
     size_t numTexCoords = 0;  Handle<Device::RTData> texcoords = loadVec2fArray(xml->childOpt("texcoords"), numTexCoords);
     size_t numTriangles = 0;  Handle<Device::RTData> triangles = loadVector3iArray(xml->childOpt("triangles"), numTriangles);
+
+#if 0
+    std::vector<Vec3f> positions2 = loadVec3fArray(xml->childOpt("positions"));
+    std::vector<Vec3f> motions2   = loadVec3fArray(xml->childOpt("motions"  ));
+    std::vector<Vec3f> normals2   = loadVec3fArray(xml->childOpt("normals"  ));
+    std::vector<Vec2f> texcoords2 = loadVec2fArray(xml->childOpt("texcoords"));
+    std::vector<Vec3i> triangles2 = loadVector3iArray(xml->childOpt("triangles"));
+    Mesh* mesh2 = NULL;
+    if (material2mesh.find(materialName) != material2mesh.end()) mesh2 = material2mesh[materialName];
+    else { material2mesh[materialName] = mesh2 = new Mesh(materialName); meshes.push_back(mesh2); }
+    mesh2->add(positions2,normals2,texcoords2,triangles2);
+#endif
 
     Handle<Device::RTShape> mesh = g_device->rtNewShape("trianglemesh");
     if (numPositions) g_device->rtSetArray(mesh, "positions", "float3", positions, numPositions, sizeof(Vec3f), 0);
@@ -603,6 +766,8 @@ namespace embree
       std::vector<Handle<Device::RTPrimitive> > prims = loadScene(xml->children[i]);
       model.insert(model.end(), prims.begin(), prims.end());
     }
+
+    //write_scene();
   }
 
   XMLLoader::~XMLLoader() {

@@ -29,7 +29,7 @@
 
 #include <map>
 
-#define STREAM_BUFFER_SIZE (1024*1024)
+#define STREAM_BUFFER_SIZE (16*1024*1024)
 
 namespace embree
 {
