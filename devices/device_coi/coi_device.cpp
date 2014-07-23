@@ -214,6 +214,12 @@ namespace embree
 
   void COIDevice::COIProcess::rtNewData(Device::RTData id, const char* type, size_t bytes, const void* data) 
   {
+    static size_t g_bytes = 0;
+    g_bytes += bytes;
+    while (g_bytes > 100000000) {
+      std::cout << "." << std::flush;
+      g_bytes -= 100000000;
+    }
 #if 0
 
     parmsNewData parms;
