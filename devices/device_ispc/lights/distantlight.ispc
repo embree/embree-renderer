@@ -41,7 +41,7 @@ uniform Light* uniform DistantLight__transform(const uniform Light *uniform _thi
 varying vec3f DistantLight__Le(const uniform EnvironmentLight *uniform _this, varying const vec3f &wo) 
 {
   const uniform DistantLight *uniform this = (const uniform DistantLight *uniform)_this;
-  if (dot(wo,this->D) >= this->cosHalfAngle) return this->L;
+  //if (dot(wo,this->D) >= this->cosHalfAngle) return this->L;
   return make_vec3f(0.0f);
 }
 
