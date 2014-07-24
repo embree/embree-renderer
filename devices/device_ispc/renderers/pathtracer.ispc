@@ -97,6 +97,7 @@ struct PathTracer
   uniform int spp;
   uniform int iteration;
   uniform Image* uniform backplate;
+  uniform bool sampleLightForGlossy;
 
   /*! Random variables. */
   uniform int lightSampleID;            //!< 2D random variable to sample the light source.
@@ -113,10 +114,13 @@ vec3f PathTraceIntegrator_Li(const uniform PathTracer* uniform this,
                              const uniform PrecomputedSample* uniform sample_,
                              uint &numRays)
 {
-  //uniform uint/*BRDFType*/ directLightingBRDFTypes = (uniform uint)(DIFFUSE|GLOSSY);
   uniform uint/*BRDFType*/ directLightingBRDFTypes = (uniform uint)(DIFFUSE);
   uniform uint/*BRDFType*/ giBRDFTypes = (uniform uint)(ALL);
-  
+  if (this->sampleLightForGlossy) {
+    directLightingBRDFTypes = (uniform uint)(DIFFUSE|GLOSSY);
+    giBRDFTypes = (uniform uint)(SPECULAR);
+  }
+ 
   vec3f L = make_vec3f(0.f);
   vec3f Lw = make_vec3f(1.f);
 
@@ -403,7 +407,8 @@ void PathTracer__Constructor(uniform PathTracer* uniform this,
                              const uniform float& minContribution,
                              const uniform float& epsilon,
                              const uniform int& spp,
-                             uniform Image* uniform backplate)
+                             uniform Image* uniform backplate,
+                             const uniform int& sampleLightForGlossy)
 {
   Renderer__Constructor(&this->base,PathTracer__Destructor,PathTracer_renderFrameInit,PathTracer_renderFrame);
 
@@ -420,6 +425,7 @@ void PathTracer__Constructor(uniform PathTracer* uniform this,
   this->iteration = 0;
   RefCount__IncRef(&backplate->base);
   this->backplate = backplate;
+  this->sampleLightForGlossy = sampleLightForGlossy;
 
   this->lightSampleID = 0;
   this->firstScatterSampleID = 0;
@@ -431,9 +437,10 @@ export void* uniform PathTracer__new(const uniform int& maxDepth,
                                      const uniform float& minContribution,
                                      const uniform float& epsilon,
                                      const uniform int& spp,
-                                     void* uniform backplate)
+                                     void* uniform backplate,
+                                     const uniform int& sampleLightForGlossy)
 {
   uniform PathTracer *uniform this = uniform new uniform PathTracer;
-  PathTracer__Constructor(this,maxDepth,minContribution,epsilon,spp,(uniform Image* uniform) backplate);
+  PathTracer__Constructor(this,maxDepth,minContribution,epsilon,spp,(uniform Image* uniform) backplate, sampleLightForGlossy);
   return this;
 }

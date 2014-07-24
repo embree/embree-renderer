@@ -52,7 +52,7 @@ inline void MatteTextured__Constructor(uniform MatteTextured *uniform this,
                                        const uniform vec2f& s0,
                                        const uniform vec2f& ds)
 {
-  Material__Constructor(&this->base,MatteTextured__Destructor,MatteTextured__shade,NULL);
+  Material__Constructor(&this->base,MatteTextured__Destructor,MatteTextured__shade,NULL,false);
   RefCount__IncRef(&Kd->base);
   this->Kd = Kd;
   this->s0 = s0;

@@ -39,7 +39,7 @@ void Mirror__shade(const uniform Material *uniform _this,
 inline void Mirror__Constructor(uniform Mirror *uniform this,
                                const uniform vec3f& reflectance)
 {
-  Material__Constructor(&this->base,Material__Destructor,Mirror__shade,NULL);
+  Material__Constructor(&this->base,Material__Destructor,Mirror__shade,NULL,false);
   Reflection__Constructor(&this->reflection, reflectance);
 }
 

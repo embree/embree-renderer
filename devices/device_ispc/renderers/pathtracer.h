@@ -29,8 +29,9 @@ namespace embree
       const float minContribution = parms.getFloat("minContribution",0.01f);
       const float epsilon = parms.getFloat("epsilon",32.0f)*float(ulp);
       const int spp = max(1,parms.getInt("sampler.spp",1));
+      const int sampleLightForGlossy = parms.getInt("sampleLightForGlossy",0);
       ISPCRef backplate = parms.getImage("backplate");
-      return ispc::PathTracer__new(maxDepth,minContribution,epsilon,spp,backplate.ptr);
+      return ispc::PathTracer__new(maxDepth,minContribution,epsilon,spp,backplate.ptr,sampleLightForGlossy);
     }
   };
 }

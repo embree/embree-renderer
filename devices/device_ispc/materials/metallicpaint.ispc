@@ -49,7 +49,7 @@ inline void MetallicPaint__Constructor(uniform MetallicPaint *uniform this,
                                        const uniform float glitterSpread,
                                        const uniform float eta)
 {
-  Material__Constructor(&this->base,Material__Destructor,MetallicPaint__shade,NULL);
+  Material__Constructor(&this->base,Material__Destructor,MetallicPaint__shade,NULL,false);
   DielectricReflection__Constructor(&this->reflection, 1.0f, eta);
   DielectricLayerLambertian__Constructor(&this->paint, make_vec3f(1.0f), 1.0f, eta, make_Lambertian(shadeColor));
 

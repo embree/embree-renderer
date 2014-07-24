@@ -68,7 +68,7 @@ void Dielectric__Constructor(uniform Dielectric* uniform this,
                              const uniform float etaInside,
                              const uniform vec3f& transmissionInside) 
 {
-  Material__Constructor(&this->base,Material__Destructor,Dielectric__shade,Dielectric__selectNextMedium);
+  Material__Constructor(&this->base,Material__Destructor,Dielectric__shade,Dielectric__selectNextMedium,true);
   this->mediumOutside.eta          = etaOutside;
   this->mediumOutside.transmission = transmissionOutside;
   this->mediumInside.eta           = etaInside;

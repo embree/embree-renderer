@@ -61,7 +61,7 @@ void Velvet__Constructor(uniform Velvet *uniform this,
                         const uniform float horizonScatteringFallOff,
                         const uniform float backScattering)
 {
-  Material__Constructor(&this->base,Material__Destructor,Velvet__shade,NULL);
+  Material__Constructor(&this->base,Material__Destructor,Velvet__shade,NULL,false);
   this->reflectance = reflectance;
   this->horizonScatteringColor = horizonScatteringColor;
   this->horizonScatteringFallOff = horizonScatteringFallOff;

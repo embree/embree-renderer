@@ -19,12 +19,13 @@
 namespace embree
 {
   PathTraceIntegrator::PathTraceIntegrator(const Parms& parms)
-    : lightSampleID(-1), firstScatterSampleID(-1), firstScatterTypeSampleID(-1)
+    : lightSampleID(-1), firstScatterSampleID(-1), firstScatterTypeSampleID(-1), sampleLightForGlossy(false)
   {
     maxDepth        = parms.getInt  ("maxDepth"       ,10    );
     minContribution = parms.getFloat("minContribution",0.01f );
     epsilon         = parms.getFloat("epsilon"        ,32.0f)*float(ulp);
     backplate       = parms.getImage("backplate");
+    sampleLightForGlossy = parms.getInt  ("sampleLightForGlossy",0);
   }
   
   void PathTraceIntegrator::requestSamples(Ref<SamplerFactory>& samplerFactory, const Ref<BackendScene>& scene)
@@ -53,16 +54,15 @@ namespace embree
     rtcIntersect(scene->scene,(RTCRay&)lightPath.lastRay);
     scene->postIntersect(lightPath.lastRay,dg);
     state.numRays++;
-    
+
     Color L = zero;
     const Vector3f wo = -lightPath.lastRay.dir;
-#if 0
-    BRDFType directLightingBRDFTypes = (BRDFType)(DIFFUSE|GLOSSY); 
-    BRDFType giBRDFTypes = (BRDFType)(SPECULAR);
-#else
     BRDFType directLightingBRDFTypes = (BRDFType)(DIFFUSE); 
     BRDFType giBRDFTypes = (BRDFType)(ALL);
-#endif
+    if (sampleLightForGlossy) {
+      directLightingBRDFTypes = (BRDFType)(DIFFUSE|GLOSSY); 
+      giBRDFTypes = (BRDFType)(SPECULAR);
+    }
 
     /*! Environment shading when nothing hit. */
     if (!lightPath.lastRay)
@@ -149,7 +149,6 @@ namespace embree
 
         /*! Test for shadows. */
         Ray shadowRay(dg.P, ls.wi, dg.error*epsilon, ls.tMax-dg.error*epsilon, lightPath.lastRay.time,dg.shadowMask);
-        //bool inShadow = scene->intersector->occluded(shadowRay);
         rtcOccluded(scene->scene,(RTCRay&)shadowRay);
         state.numRays++;
         if (shadowRay) continue;

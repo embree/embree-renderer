@@ -40,6 +40,7 @@ struct Material
   RefCount base;
   Material__shade shade;
   Material__selectNextMediumFunc selectNextMedium;
+  bool isTransparentForShadowRays;
 };
 
 void Material__Destructor(uniform RefCount *uniform this);
@@ -47,4 +48,5 @@ void Material__Destructor(uniform RefCount *uniform this);
 void Material__Constructor(uniform Material *uniform this,
                            uniform DestructorFunc destructor,
                            uniform Material__shade shade,
-                           uniform Material__selectNextMediumFunc selectNextMedium);
+                           uniform Material__selectNextMediumFunc selectNextMedium,
+                           uniform bool isTransparentForShadowRays);

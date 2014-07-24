@@ -80,7 +80,7 @@ void Obj__Constructor(uniform Obj* uniform this,
                       uniform Texture* uniform map_Ns, const uniform float Ns,
                       uniform Texture* uniform map_Bump)
 {
-  Material__Constructor(&this->base,Obj__Destructor,Obj__shade,NULL);
+  Material__Constructor(&this->base,Obj__Destructor,Obj__shade,NULL,false);
   this->map_d  = map_d;  this->d  = d;  if (this->map_d ) RefCount__IncRef(&map_d->base);
   this->map_Kd = map_Kd; this->Kd = Kd; if (this->map_Kd) RefCount__IncRef(&map_Kd->base);
   this->map_Ks = map_Ks; this->Ks = Ks; if (this->map_Ks) RefCount__IncRef(&map_Ks->base);

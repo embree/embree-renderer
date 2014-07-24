@@ -194,7 +194,8 @@ namespace embree
       else if (tag == "spp"            ) g_device->rtSetInt1  (g_renderer, "sampler.spp"    , cin->getInt()  );
       else if (tag == "minContribution") g_device->rtSetFloat1(g_renderer, "minContribution", cin->getFloat());
       else if (tag == "backplate"      ) g_device->rtSetImage (g_renderer, "backplate", rtLoadImage(path + cin->getFileName()));
-      else std::cout << "unknown tag \"" << tag << "\" in debug renderer parsing" << std::endl;
+      else if (tag == "sampleLightForGlossy") g_device->rtSetInt1  (g_renderer, "sampleLightForGlossy"    , cin->getInt()  );
+      else std::cout << "unknown tag \"" << tag << "\" in pathtracer parsing" << std::endl;
     }
     cin->drop();
 

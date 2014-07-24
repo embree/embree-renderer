@@ -73,6 +73,10 @@ export void* uniform Scene__new()
   return this;
 }
 
+void occlusionFilter(void* uniform ptr, RTCRay& ray) {
+  ray.id0 = RTC_INVALID_GEOMETRY_ID;
+}
+
 export void Scene__set(void* uniform scene_in, uniform int slot, void* uniform instance_in)
 {
   uniform Scene*    uniform scene    = (uniform Scene*    uniform) scene_in;
@@ -87,6 +91,8 @@ export void Scene__set(void* uniform scene_in, uniform int slot, void* uniform i
     RefCount__IncRef(&instance->base);
     if (instance->shape) {
       uniform uint handle = instance->shape->add(scene->handle,instance->shape);
+      if (instance->material->isTransparentForShadowRays)
+        rtcSetOcclusionFilterFunction(scene->handle,handle,(RTCFilterFuncVarying)&occlusionFilter);
       scene->handle2id[handle] = slot;
       scene->id2handle[slot] = handle;
     }

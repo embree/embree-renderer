@@ -48,7 +48,7 @@ void Plastic__Constructor(uniform Plastic *uniform this,
                           const uniform float eta,
                           const uniform float roughness)
 {
-  Material__Constructor(&this->base,Material__Destructor,Plastic__shade,NULL);
+  Material__Constructor(&this->base,Material__Destructor,Plastic__shade,NULL,false);
   this->roughness = roughness;
 
   DielectricLayerLambertian__Constructor(&this->substrate,

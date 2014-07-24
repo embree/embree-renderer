@@ -63,6 +63,9 @@ namespace embree
     /*! Registers samples we need tom the sampler. */
     void requestSamples(Ref<SamplerFactory>& samplerFactory, const Ref<BackendScene>& scene);
 
+    /*! Test for occlusion. */
+    bool occluded(LightPath& lightPath, const Ref<BackendScene>& scene);
+
     /*! Function that is recursively called to compute the path. */
     Color Li(LightPath& lightPath, const Ref<BackendScene>& scene, IntegratorState& state);
 
@@ -71,6 +74,7 @@ namespace embree
 
     /* Configuration. */
   private:
+    bool sampleLightForGlossy;
     size_t maxDepth;               //!< Maximal recursion depth (1=primary ray only)
     float minContribution;         //!< Minimal contribution of a path to the pixel.
     float epsilon;                 //!< Epsilon to avoid self intersections.

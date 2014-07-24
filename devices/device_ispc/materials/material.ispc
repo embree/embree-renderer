@@ -30,11 +30,13 @@ void Material__Destructor(uniform RefCount *uniform this)
 void Material__Constructor(uniform Material *uniform this,
                            uniform DestructorFunc destructor,
                            uniform Material__shade shade,
-                           uniform Material__selectNextMediumFunc selectNextMedium)
+                           uniform Material__selectNextMediumFunc selectNextMedium,
+                           uniform bool isTransparentForShadowRays)
 {
   LOG(print("Material__Constructor\n"));
   RefCount__Constructor(&this->base,destructor);
   this->shade = shade;
   if (selectNextMedium) this->selectNextMedium = selectNextMedium; 
   else                  this->selectNextMedium = Material__selectNextMedium;
+  this->isTransparentForShadowRays = isTransparentForShadowRays;
 }

@@ -34,6 +34,7 @@ namespace embree
       transmission = parms.getColor("transmission",one);
       eta          = parms.getFloat("eta",1.4f);
       thickness    = parms.getFloat("thickness",0.1f);
+      isTransparentForShadowRays = true;
     }
 
     void shade(const Ray& ray, const Medium& currentMedium, const DifferentialGeometry& dg, CompositedBRDF& brdfs) const {

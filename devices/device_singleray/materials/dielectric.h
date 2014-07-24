@@ -36,6 +36,7 @@ namespace embree
       mediumOutside.transmission = parms.getColor("transmissionOutside",one);
       mediumInside.transmission  = parms.getColor("transmission",one);
       isMediaInterface           = true;
+      isTransparentForShadowRays = true;
 
       /*! precompute BRDF components for more efficient shading */
       reflection_io   = new DielectricReflection  (mediumInside.eta, mediumOutside.eta);

@@ -33,7 +33,8 @@ namespace embree
     /*! Material constructor. */
     Material (const Medium& mediumOutside = Medium::Vacuum(), /*!< The medium the geometry normal points into. */
               const Medium& mediumInside = Medium::Vacuum(),  /*!< The medium on the opposite side. */
-              bool isMediaInterface = false)                  /*!< True if the surface is an interface between two different media. */
+              bool isMediaInterface = false,                  /*!< True if the surface is an interface between two different media. */
+              bool isTransparentForShadowRays = false)
       : mediumOutside(mediumOutside), mediumInside(mediumInside), isMediaInterface(isMediaInterface) {}
 
     /*! Virtual destructor for materials */
@@ -55,6 +56,7 @@ namespace embree
     Medium mediumOutside;   //!< Outside medium.
     Medium mediumInside;    //!< Inside medium.
     bool isMediaInterface;  //!< True if the surface is an interface between two different media.
+    bool isTransparentForShadowRays; //!< determines whether the material should block shadow rays or not
   };
 }
 

@@ -128,7 +128,7 @@ namespace embree
               hit.Ng = normalize(hit.Ng);
               framebuffer->set(ix,iy,Color(abs(hit.Ng.x),abs(hit.Ng.y),abs(hit.Ng.z)));
               }*/
-	    //else      framebuffer->set(ix,iy,Color(clamp(dot(ray.dir,normalize(hit.Ng))),0,0));
+	    //else      framebuffer->set(ix,iy,Color(clamp(dot(ray.dir,normalize(ray.Ng))),0,0));
 	    //else      framebuffer->set(ix,iy,Color(hit.u,hit.v,1.0f-hit.u-hit.v));
 	    //else      framebuffer->get(ix,iy) = Vec4f(hit.st.x,hit.st.y,1.0f-hit.st.x-hit.st.y,1.0f);
 	    //else      framebuffer->get(ix,iy) = Vec4f(hit.st.x,0,0,1.0f);

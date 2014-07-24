@@ -39,7 +39,7 @@ void Matte__shade(const uniform Material *uniform _this,
 inline void Matte__Constructor(uniform Matte *uniform this,
                                const uniform vec3f& reflectance)
 {
-  Material__Constructor(&this->base,Material__Destructor,Matte__shade,NULL);
+  Material__Constructor(&this->base,Material__Destructor,Matte__shade,NULL,false);
   this->lambertian = make_Lambertian(reflectance);
 }
 

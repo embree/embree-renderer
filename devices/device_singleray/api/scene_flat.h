@@ -22,6 +22,10 @@
 
 namespace embree
 {
+  void occlusionFilter(void* ptr, Ray& ray) {
+    ray.id0 = RTC_INVALID_GEOMETRY_ID;
+  }
+
   /*! Flat scene, no support for instancing, best render performance. */
   class BackendSceneFlat : public BackendScene
   {
@@ -75,8 +79,11 @@ namespace embree
       {
         RTCScene scene = rtcNewScene(RTC_SCENE_STATIC,RTC_INTERSECT1);
         for (size_t i=0; i<prims.size(); i++) {
-          if (prims[i] && prims[i]->shape)
+          if (prims[i] && prims[i]->shape) {
             prims[i]->shape->extract(scene,i);
+            if (prims[i]->material->isTransparentForShadowRays)
+              rtcSetOcclusionFilterFunction(scene,i,(RTCFilterFunc)&occlusionFilter);
+          }
         }
         rtcCommit(scene);
         
