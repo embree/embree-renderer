@@ -22,15 +22,16 @@ struct PointLight
   uniform Light base;
   uniform vec3f P;
   uniform vec3f I;
+  uniform int decayRate;
 };
 
-PointLight* uniform PointLight__New(const uniform vec3f& P, const uniform vec3f& I);
+PointLight* uniform PointLight__New(const uniform vec3f& P, const uniform vec3f& I, const uniform int decayRate);
 
 uniform Light* uniform PointLight__transform(const uniform Light *uniform _this, 
                                              const uniform AffineSpace3f& xfm) 
 {
   const uniform PointLight *uniform this = (const uniform PointLight *uniform)_this;
-  return (uniform Light* uniform) PointLight__New(xfmPoint(xfm,this->P),this->I);
+  return (uniform Light* uniform) PointLight__New(xfmPoint(xfm,this->P),this->I, this->decayRate);
 }
 
 varying vec3f PointLight__eval(const uniform Light *uniform _this, 
@@ -49,26 +50,35 @@ varying vec3f PointLight__sample(const uniform Light *uniform _this,
   const uniform PointLight *uniform this = (const uniform PointLight *uniform)_this;
   vec3f d = sub(this->P, dg.P);
   float distance = length(d);
-  wi = make_Sample3f(mul(d,rcp(distance)), distance*distance);
+  if (2 == this->decayRate)
+	  wi = make_Sample3f(mul(d,rcp(distance)), distance*distance);  // 1/r^2 light
+  else if (1 == this->decayRate)
+	  wi = make_Sample3f(mul(d,rcp(distance)), distance);  // 1/r light
+  else
+	  wi = make_Sample3f(mul(d,rcp(distance)), 1.0f); // constant intensity light
   tMax = distance;
   return this->I;
 }
 
-void PointLight__Constructor(uniform PointLight* uniform this, const uniform vec3f& P, const uniform vec3f& I)
+void PointLight__Constructor(uniform PointLight* uniform this, const uniform vec3f& P, const uniform vec3f& I,
+	const uniform int decayRate)
 {
   Light__Constructor(&this->base,Light__Destructor,NORMAL_LIGHT,
                      PointLight__transform,NULL,PointLight__eval,PointLight__sample);
   this->P = P; 
   this->I = I;
+  this->decayRate = decayRate;
 }
 
-PointLight* uniform PointLight__New(const uniform vec3f& P, const uniform vec3f& I)
+PointLight* uniform PointLight__New(const uniform vec3f& P, const uniform vec3f& I,
+	const uniform int decayRate)
 {
   uniform PointLight *uniform this = uniform new uniform PointLight;
-  PointLight__Constructor(this,P,I);
+  PointLight__Constructor(this,P,I,decayRate);
   return this;
 }
 
-export void* uniform PointLight__new(const uniform vec3f& P, const uniform vec3f& I) {
-  return PointLight__New(P, I);
+export void* uniform PointLight__new(const uniform vec3f& P, const uniform vec3f& I, 
+	const uniform int decayRate) {
+  return PointLight__New(P, I, decayRate);
 }

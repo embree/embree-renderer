@@ -38,6 +38,7 @@ SET (ISPC_SOURCES
   materials/velvet.ispc
   materials/metallicpaint.ispc
   materials/plastic.ispc
+  materials/uber.ispc
   lights/light.ispc
   lights/ambientlight.ispc
   lights/pointlight.ispc

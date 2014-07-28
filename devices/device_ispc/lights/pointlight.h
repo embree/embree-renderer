@@ -27,7 +27,8 @@ namespace embree
     {
       const Vector3f P = parms.getVector3f("P",zero);
       const Color I = parms.getColor("I",zero);
-      return ispc::PointLight__new((ispc::vec3f&)P,(ispc::vec3f&)I);
+	  const int decayRate = parms.getInt("decayRate", zero);
+      return ispc::PointLight__new((ispc::vec3f&)P,(ispc::vec3f&)I, decayRate);
     }
   };
 }

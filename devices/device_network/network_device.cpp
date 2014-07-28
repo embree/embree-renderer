@@ -592,6 +592,16 @@ namespace embree
     flush();
   }
 
+  void NetworkDevice::rtUpdateObjectMaterial(Device::RTScene scene_i, 
+											 Device::RTMaterial material_i, 
+											 size_t slot)
+  {
+	broadcast((int)(size_t)scene_i);
+	broadcast((int)(size_t)material_i);
+	broadcast((int)slot);
+	flush();
+  }
+
   Device::RTToneMapper NetworkDevice::rtNewToneMapper(const char* type)
   {
     int id = allocHandle();

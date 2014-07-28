@@ -55,6 +55,7 @@
 #include "materials/matte_textured.h"
 #include "materials/obj.h"
 #include "materials/velvet.h"
+#include "materials/uber.h"
 
 /* include all shapes */
 #include "shapes/triangle.h"
@@ -146,13 +147,20 @@ namespace embree
     rtcInit(cfg);
     //rtcSetVerbose(verbose);
     //rtcStartThreads(numThreads);
+    // On Windows:  for the Xeon we need to "create" threads twice, once in rtcInit, once here
+    //              on the Xeon Phi, we should only "create" them once in rtcInit
+    // On Linux:  it's OK/necessary to "create" them twice on the Xeon and Xeon Phi
+#if !defined (__WINDOWS_MIC__)  
     TaskScheduler::create(numThreads);
+#endif
   }
 
   SingleRayDevice::~SingleRayDevice() 
   {
     //rtcStopThreads();
+#if !defined (__MIC__)
     TaskScheduler::destroy();
+#endif
     rtcExit();
   }
 
@@ -252,6 +260,7 @@ namespace embree
     else if (!strcasecmp(type,"MatteTextured") ) return (Device::RTMaterial) new ConstructorHandle<MatteTextured,Material>;
     else if (!strcasecmp(type,"Obj")           ) return (Device::RTMaterial) new ConstructorHandle<Obj,Material>;
     else if (!strcasecmp(type,"Velvet")        ) return (Device::RTMaterial) new ConstructorHandle<Velvet,Material>;
+	else if (!strcasecmp(type,"Uber")          ) return (Device::RTMaterial) new ConstructorHandle<Uber,Material>;
     else throw std::runtime_error("unknown material type: "+std::string(type));
   }
 
@@ -324,6 +333,15 @@ namespace embree
     if (hprim == NULL) { scene->setPrimitive(slot,NULL); return; }
     Ref<PrimitiveHandle> prim = dynamic_cast<PrimitiveHandle*>((_RTHandle*)hprim);
     scene->setPrimitive(slot,prim);
+  }
+
+  void SingleRayDevice::rtUpdateObjectMaterial(RTScene scene_i, RTMaterial material_i, size_t slot)
+  {
+    RT_COMMAND_HEADER;
+    Ref<BackendScene::Handle> scene = castHandle<BackendScene::Handle>(scene_i,"scene");
+	Ref<InstanceHandle<Material> > material = castHandle<InstanceHandle<Material> >(material_i,"material");
+	Ref<BackendSceneFlat>& besf = (Ref<BackendSceneFlat>&)scene->instance;
+	besf->updateObjectMaterial(slot, material);
   }
 
   Device::RTToneMapper SingleRayDevice::rtNewToneMapper(const char* type)

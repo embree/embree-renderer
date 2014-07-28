@@ -98,7 +98,7 @@ namespace embree
 
      /*! print fps, render time, and rays per second */
     std::ostringstream stream;
-    stream << "render  ";
+    stream << "Integrator render  ";
     stream.setf(std::ios::fixed, std::ios::floatfield);
     stream.precision(2);
     stream << 1.0f/dt << " fps, ";

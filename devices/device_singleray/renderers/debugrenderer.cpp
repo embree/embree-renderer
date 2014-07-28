@@ -58,7 +58,7 @@ namespace embree
   {
     double dt = getSeconds()-t0;
     std::cout.precision(3);
-    std::cout << "render  " << rcp(dt) << " fps, " << dt*1000.0f << " ms, " << atomicNumRays/dt*1E-6 << " Mrps" << std::endl;
+    std::cout << "debug render  " << rcp(dt) << " fps, " << dt*1000.0f << " ms, " << atomicNumRays/dt*1E-6 << " Mrps" << std::endl;
     rtcDebug();
     delete this;
   }

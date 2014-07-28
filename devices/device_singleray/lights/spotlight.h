@@ -25,12 +25,12 @@ namespace embree
   class SpotLight : public Light
   {
     /*! Construction from position, direction, intensity and opening angles. */
-    SpotLight(const Vector3f& P, const Vector3f& _D, const Color& I, 
+    SpotLight(const Vector3f& P, const Vector3f& _D, const Color& I, const int dRate,
               float cosAngleMin, float cosAngleMax,
               light_mask_t illumMask=-1,
               light_mask_t shadowMask=-1)
       : Light(illumMask,shadowMask), 
-        P(P), _D(_D), I(I), cosAngleMin(cosAngleMin), cosAngleMax(cosAngleMax) 
+        P(P), _D(_D), I(I), decayRate(dRate), cosAngleMin(cosAngleMin), cosAngleMax(cosAngleMax) 
     {}
 
   public:
@@ -40,6 +40,7 @@ namespace embree
       P           = parms.getVector3f("P");
       _D          = -normalize(parms.getVector3f("D"));
       I           = parms.getColor("I");
+	  decayRate = parms.getInt("decayRate", zero);
       cosAngleMin = cosf(0.5f*deg2rad(parms.getFloat("angleMin")));
       cosAngleMax = cosf(0.5f*deg2rad(parms.getFloat("angleMax")));
     }
@@ -47,7 +48,7 @@ namespace embree
     Ref<Light> transform(const AffineSpace3f& xfm,
                          light_mask_t illumMask,
                          light_mask_t shadowMask) const {
-      return new SpotLight(xfmPoint(xfm,P),xfmVector(xfm,_D),I,
+      return new SpotLight(xfmPoint(xfm,P),xfmVector(xfm,_D),I,decayRate,
                            cosAngleMin,cosAngleMax,
                            illumMask,shadowMask);
     }
@@ -56,7 +57,12 @@ namespace embree
     {
       Vector3f d = P - dg.P;
       float distance = length(d);
-      wi = Sample3f(d * rcp(distance), distance*distance);
+	  if (2 == decayRate)
+		  wi = Sample3f(d / distance, distance*distance);  // 1/r^2 lights
+	  else if (1 == decayRate)
+		  wi = Sample3f(d / distance, distance);  // 1/^r lighting
+	  else
+		  wi = Sample3f(d / distance);  // ?? constant intensity point lights
       tMax = distance;
       float cosAngle = dot(wi.value,_D);
       if (cosAngleMin != cosAngleMax)
@@ -75,6 +81,7 @@ namespace embree
     Vector3f P;                        //!< Position of the spot light
     Vector3f _D;                       //!< Negative light direction of the spot light
     Color I;                        //!< Radiant intensity (W/sr)
+	int decayRate; //!< Light falloff exponent
     float cosAngleMin, cosAngleMax; //!< Linear falloff region
   };
 }

@@ -20,6 +20,20 @@
 #include "sys/filename.h"
 #include "image/image.h"
 
+#ifdef WIN32
+// VS 2010 doesn't seem to come with strings.h
+int strcasecmp( const char *s1, const char *s2 )
+{
+	while (1)
+	{
+		int c1 = tolower( (unsigned char) *s1++ );
+		int c2 = tolower( (unsigned char) *s2++ );
+		if (c1 == 0 || c1 != c2) return c1 - c2;
+	}
+}
+#endif
+
+
 namespace embree
 {
   COIDevice::COIProcess::COIProcess (int cardID, const char* executable, size_t numThreads, const char* rtcore_cfg)
@@ -43,7 +57,7 @@ namespace embree
     std::string strNumThreads = std::stringOf(numThreads);
     //std::string strVerbose = std::stringOf(verbose);
     const char* argv[2] = { strNumThreads.c_str(), rtcore_cfg }; 
-
+	std::cout << "Running MIC binary " << fname.c_str() << std::endl;
     /* create process */
     result = COIProcessCreateFromFile
       (engine,
@@ -52,7 +66,7 @@ namespace embree
        false, NULL,      // Environment variables to set for the sink process.
        true, NULL,       // Enable the proxy but don't specify a proxy root path.
        0,                // The amount of memory to reserve for COIBuffers.
-       NULL,             // Path to search for dependencies
+		NULL,             // Path to search for dependencies
        &process          // The resulting process handle.
        );
     // if fail check loading by name
@@ -65,13 +79,19 @@ namespace embree
          false, NULL,      // Environment variables to set for the sink process.
          true, NULL,       // Enable the proxy but don't specify a proxy root path.
          0,                // The amount of memory to reserve for COIBuffers.
-         NULL,             // Path to search for dependencies
-         &process          // The resulting process handle.
+			NULL,             // Path to search for dependencies
+		 &process          // The resulting process handle.
          );
     }
     
-    if (result != COI_SUCCESS) 
-      throw std::runtime_error("Failed to create process " + std::string(executable) +": " + COIResultGetName(result));
+    if (result != COI_SUCCESS) {
+        fprintf(stderr, "Failed to create process: %s - error code \"%s\" - did you set SINK_LD_LIBRARY_PATH?\n", executable, COIResultGetName(result));
+#if !defined(__WIN32__)
+        fprintf(stderr, "   SINK_LD_LIBRARY_PATH has the following value:  %s\n", getenv("SINK_LD_LIBRARY_PATH"));
+#endif
+        fflush(stderr);
+        throw std::runtime_error("Failed to create process " + std::string(executable) +": " + COIResultGetName(result));
+    }
  
     /* create pipeline */
     COI_CPU_MASK cpuMask;
@@ -127,7 +147,8 @@ namespace embree
       "rtPick",
       "rtNewDataStart",
       "rtNewDataSet",
-      "rtNewDataEnd"
+      "rtNewDataEnd",
+	  "rtUpdateObjectMaterial"
     };
 
     result = COIProcessGetFunctionHandles (process, sizeof(fctNameArray)/sizeof(char*), fctNameArray, &runNewCamera);
@@ -143,7 +164,12 @@ namespace embree
     std::cout << "Loading library from file \"" << library << "\"" << std::endl;
 
     COILIBRARY lib;
+#ifdef WIN32
+	// Actually, this is the new MPSS 3.x syntax
+	COIRESULT result = COIProcessLoadLibraryFromFile(process,library,library,NULL,0, &lib);
+#else
     COIRESULT result = COIProcessLoadLibraryFromFile(process,library,library,NULL,&lib);
+#endif
     if (result != COI_SUCCESS) 
       throw std::runtime_error(std::string("Failed to load libary: ") + COIResultGetName(result));
     
@@ -417,6 +443,19 @@ namespace embree
     parms.prim = (int) (long) prim;
 
     COIRESULT result = COIPipelineRunFunction (pipeline, runSetPrimitive, 0, NULL, NULL, 0, NULL, &parms, sizeof(parms), NULL, 0, NULL);
+    if (result != COI_SUCCESS) throw std::runtime_error("COIPipelineRunFunction failed: "+std::string(COIResultGetName(result)));
+  }
+
+  void COIDevice::COIProcess::rtUpdateObjectMaterial(Device::RTScene scene_i, 
+													 Device::RTMaterial material_i, 
+													 size_t slot)
+  {
+    parmsUpdateObjectMaterial parms;
+	parms.material = (int) (long) material_i;
+	parms.scene = (int) (long) scene_i;
+	parms.slot = slot;
+
+    COIRESULT result = COIPipelineRunFunction (pipeline, runUpdateObjectMaterial, 0, NULL, NULL, 0, NULL, &parms, sizeof(parms), NULL, 0, NULL);
     if (result != COI_SUCCESS) throw std::runtime_error("COIPipelineRunFunction failed: "+std::string(COIResultGetName(result)));
   }
 
@@ -946,8 +985,9 @@ namespace embree
   { 
     /*! load image locally */
     Ref<Image> image = loadImage(fileName);
-    if (!image) throw std::runtime_error("cannot load image: "+std::string(fileName));
-    else if (Ref<Image3c> cimg = image.dynamicCast<Image3c>())
+    if (!image) 
+		image = new Image3c(1,1,Col3c(255,255,255));  // Fail gracefully rather than:  throw std::runtime_error("cannot load image: "+std::string(fileName));
+    if (Ref<Image3c> cimg = image.dynamicCast<Image3c>())
       return rtNewImage("RGB8",cimg->width,cimg->height,cimg->steal_ptr(),false);
     else if (Ref<Image4c> cimg = image.dynamicCast<Image4c>())
       return rtNewImage("RGBA8",cimg->width,cimg->height,cimg->steal_ptr(),false);
@@ -1027,6 +1067,12 @@ namespace embree
   { 
     for (size_t i=0; i<devices.size(); i++)
       devices[i]->rtSetPrimitive(scene,slot,prim);
+  }
+
+  void COIDevice::rtUpdateObjectMaterial(Device::RTScene scene_i, Device::RTMaterial material_i, size_t slot)
+  {
+	for (size_t i=0; i<devices.size(); i++)
+	  devices[i]->rtUpdateObjectMaterial(scene_i, material_i, slot);
   }
 
   Device::RTToneMapper COIDevice::rtNewToneMapper(const char* type)

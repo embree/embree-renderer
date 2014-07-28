@@ -255,6 +255,7 @@
     </ClCompile>
     <Link>
       <AdditionalDependencies>$(EMBREE_INSTALL_DIR)\$(Platform)\$(Configuration)\embree.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseAVX|Win32'">
@@ -410,6 +411,7 @@
     <ClInclude Include="materials\plastic.h" />
     <ClInclude Include="materials\satin.h" />
     <ClInclude Include="materials\thindielectric.h" />
+    <ClInclude Include="materials\uber.h" />
     <ClInclude Include="materials\velvet.h" />
     <ClInclude Include="renderers\debugrenderer.h" />
     <ClInclude Include="renderers\integratorrenderer.h" />

@@ -53,6 +53,7 @@
 #include "materials/matte_textured.h"
 #include "materials/obj.h"
 #include "materials/velvet.h"
+#include "materials/uber.h"
 
 /* include all shapes */
 #include "shape_ispc.h"
@@ -214,6 +215,7 @@ namespace embree
     else if (!strcasecmp(type,"MatteTextured") ) return (Device::RTMaterial) new ISPCCreateHandle<MatteTextured>;
     else if (!strcasecmp(type,"Obj")           ) return (Device::RTMaterial) new ISPCCreateHandle<Obj>;
     else if (!strcasecmp(type,"Velvet")        ) return (Device::RTMaterial) new ISPCCreateHandle<Velvet>;
+    else if (!strcasecmp(type,"Uber")          ) return (Device::RTMaterial) new ISPCCreateHandle<Uber>;
     //else if (!strcasecmp(type,"Velvet2")       ) return (Device::RTMaterial) new ISPCCreateHandle<Velvet2>;
     //else if (!strcasecmp(type,"Satin")         ) return (Device::RTMaterial) new ISPCCreateHandle<Satin>;
     //else if (!strcasecmp(type,"Skin")          ) return (Device::RTMaterial) new ISPCCreateHandle<Skin>;
@@ -369,6 +371,12 @@ namespace embree
     void create() {
       ispc::Scene__commit(instance.ptr);
     }
+    
+    void updateMaterial(size_t slot, const ISPCRef& material)
+    {
+        // Reach into the ISPC scene and update the material
+        ispc::Scene__updateObjectMaterial(instance.ptr, material.ptr, slot);
+    }
 
   public:
     ISPCRef instance;
@@ -385,6 +393,13 @@ namespace embree
     if (hprim == NULL) { scene->set(slot,NULL); return; }
     PrimitiveHandle* prim = dynamic_cast<PrimitiveHandle*>((_RTHandle*)hprim);
     scene->set(slot,prim);
+  }
+
+  void ISPCDevice::rtUpdateObjectMaterial(RTScene scene_i, RTMaterial material_i, size_t slot)
+  {
+    SceneHandle* scene = castHandle<SceneHandle>(scene_i,"scene");
+    ISPCRef material = castHandle<ISPCNormalHandle>(material_i,"material")->instance;
+    scene->updateMaterial(slot, material);
   }
 
   Device::RTToneMapper ISPCDevice::rtNewToneMapper(const char* type)
@@ -617,7 +632,7 @@ namespace embree
     double t0 = getSeconds();
     int numRays = ispc::Renderer__renderFrame(renderer->instance.ptr,camera->instance.ptr,scene->instance.ptr,toneMapper->instance.ptr,swapchain->instance.ptr,accumulate);
     double dt = getSeconds() - t0;
-    printf("render %3.2f fps, %.2f ms,  %3.3f mrps\n",1.0f/dt,dt*1000.0f,numRays/dt*1E-6); flush(std::cout);
+    printf("ispc render %3.2f fps %.2f ms,  %3.3f mrps\n",1.0f/dt,dt*1000.0f,numRays/dt*1E-6); flush(std::cout);
   }
 
   bool ISPCDevice::rtPick(Device::RTCamera camera_i, float x, float y, Device::RTScene scene_i, float& px, float& py, float& pz)

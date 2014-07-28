@@ -100,22 +100,23 @@ namespace embree
 
 namespace embree
 {
-  static int DLLLocator = 0;  // A hook to let us locate this DLL
+  static int DLLLocator = 0;
 
   std::string getExecutableFileName() {
     char filename[1024];
-    HMODULE hModule = NULL;
-    
-    // Look for the file in the same location as the DLL asking for this file
-    GetModuleHandleEx(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
-                    (LPCTSTR)&DLLLocator, &hModule);
-    // If that didn't work, look in the location of the executable running 
-    // all this
-    if (!GetModuleFileName(hModule, filename, sizeof(filename))) 
-        if (!GetModuleFileName(NULL, filename, sizeof(filename))) 
-            return std::string();  // Give up - return null
+	HMODULE hModule = NULL;
+//   Original - only works if DLLs in same directory as executable
+//   if (!GetModuleFileName(NULL, filename, sizeof(filename))) return std::string();
+#if 0
+    if (!GetModuleFileName(GetModuleHandle("EmbreeViewportRenderer.mll"), filename, sizeof(filename))) return std::string();
+	static int i = 0; if (i == 0) {printf("Name = %s\n", filename); i = 1; }
+#else
+	// Find the file name including this source in case this is in a DLL, not of the calling program
+	GetModuleHandleEx(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+		    (LPCTSTR)&DLLLocator, &hModule);
+    if (!GetModuleFileName(hModule, filename, sizeof(filename))) return std::string();
+#endif
 
-    // Return what we got
     return std::string(filename);
   }
 
@@ -151,34 +152,16 @@ namespace embree
 
 #ifdef __LINUX__
 
-#include <dlfcn.h>
 #include <stdio.h>
 #include <unistd.h>
 
 namespace embree
 {
-//__attribute__((constructor))
   std::string getExecutableFileName() 
   {
+    char pid[32]; sprintf(pid, "/proc/%d/exe", getpid());
     char buf[1024];
-    Dl_info dl_info;
-    int status = 0;
-    int bytes = 0;
-    
-    // Look for the file in the same location as the DLL asking for this file 
-    status = dladdr((void *)getExecutableFileName, &dl_info);
-    if (status != 0)
-    {
-        strcpy(buf, dl_info.dli_fname);
-        bytes = strlen(buf);
-    }
-    else
-    {
-        // If that didn't work, look in the location of the executable running 
-        // all this
-        char pid[32]; sprintf(pid, "/proc/%d/exe", getpid());
-        bytes = readlink(pid, buf, sizeof(buf)-1);
-    }
+    int bytes = readlink(pid, buf, sizeof(buf)-1);
     if (bytes != -1) buf[bytes] = '\0';
     return std::string(buf);
   }

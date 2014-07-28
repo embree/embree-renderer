@@ -125,6 +125,7 @@ namespace embree
       void rtTransformPrimitive(RTPrimitive id, RTPrimitive prim, const float* transform);
       void rtNewScene(RTScene id, const char* type);
       void rtSetPrimitive(RTScene scene, size_t slot, RTPrimitive prim);
+	  void rtUpdateObjectMaterial(RTScene scene_i, RTMaterial material_i, size_t slot);
       void rtNewToneMapper(RTToneMapper id, const char* type);
       void rtNewRenderer(RTRenderer id, const char* type);
       void rtNewFrameBuffer(RTFrameBuffer id, const char* type, size_t width, size_t height, size_t buffers);
@@ -218,7 +219,8 @@ namespace embree
       COIFUNCTION runNewDataStart;
       COIFUNCTION runNewDataSet;
       COIFUNCTION runNewDataEnd;
-    };
+	  COIFUNCTION runUpdateObjectMaterial;
+    };  // class COIProcess
     
   public:
     COIDevice(const char* executable, size_t numThreads, const char* rtcore_cfg);
@@ -242,6 +244,7 @@ namespace embree
     RTPrimitive rtTransformPrimitive(RTPrimitive prim, const float* transform);
     RTScene rtNewScene(const char* type);
     void rtSetPrimitive(RTScene scene, size_t slot, RTPrimitive prim);
+	void rtUpdateObjectMaterial(RTScene scene_i, RTMaterial material_i, size_t slot);
     RTToneMapper rtNewToneMapper(const char* type);
     RTRenderer rtNewRenderer(const char* type);
     RTFrameBuffer rtNewFrameBuffer(const char* type, size_t width, size_t height, size_t buffers, void** ptrs);
@@ -306,7 +309,7 @@ namespace embree
      
   private:
     std::vector<COIProcess*> devices;
-  };
-}
+  };  // class COIDevice
+}  // namespace embree
 
 #endif

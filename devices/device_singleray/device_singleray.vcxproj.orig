@@ -35,8 +35,8 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{EE858C9A-C161-4036-8DF7-EB169BCB81BC}</ProjectGuid>
-    <RootNamespace>device_ispc</RootNamespace>
+    <ProjectGuid>{ED848C9A-C161-4036-8DF7-EB169BCB81BC}</ProjectGuid>
+    <RootNamespace>renderer</RootNamespace>
     <Keyword>Win32Proj</Keyword>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -44,51 +44,42 @@
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <CharacterSet>NotSet</CharacterSet>
     <WholeProgramOptimization>true</WholeProgramOptimization>
-    <PlatformToolset>Intel C++ Compiler XE 14.0</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseAVX|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <CharacterSet>NotSet</CharacterSet>
     <WholeProgramOptimization>true</WholeProgramOptimization>
-    <PlatformToolset>Intel C++ Compiler XE 14.0</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <CharacterSet>NotSet</CharacterSet>
     <WholeProgramOptimization>true</WholeProgramOptimization>
-    <PlatformToolset>Intel C++ Compiler XE 14.0</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <CharacterSet>NotSet</CharacterSet>
-    <PlatformToolset>Intel C++ Compiler XE 14.0</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseAVX2|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <CharacterSet>NotSet</CharacterSet>
     <WholeProgramOptimization>true</WholeProgramOptimization>
-    <PlatformToolset>Intel C++ Compiler XE 14.0</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseAVX|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <CharacterSet>NotSet</CharacterSet>
     <WholeProgramOptimization>true</WholeProgramOptimization>
-    <PlatformToolset>Intel C++ Compiler XE 14.0</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <CharacterSet>NotSet</CharacterSet>
     <WholeProgramOptimization>true</WholeProgramOptimization>
-    <PlatformToolset>Intel C++ Compiler XE 14.0</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <CharacterSet>NotSet</CharacterSet>
-    <PlatformToolset>Intel C++ Compiler XE 14.0</PlatformToolset>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
-    <Import Project="..\..\common\cmake\ispc.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseAVX2|Win32'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
@@ -157,25 +148,12 @@
     <CodeAnalysisRuleSet Condition="'$(Configuration)|$(Platform)'=='Release|x64'">AllRules.ruleset</CodeAnalysisRuleSet>
     <CodeAnalysisRules Condition="'$(Configuration)|$(Platform)'=='Release|x64'" />
     <CodeAnalysisRuleAssemblies Condition="'$(Configuration)|$(Platform)'=='Release|x64'" />
-    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</LinkIncremental>
-    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='ReleaseAVX2|Win32'">false</LinkIncremental>
-    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='ReleaseAVX|Win32'">false</LinkIncremental>
-    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</LinkIncremental>
-    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkIncremental>
-    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='ReleaseAVX2|x64'">false</LinkIncremental>
-    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='ReleaseAVX|x64'">false</LinkIncremental>
-    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkIncremental>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <ISPC>
-      <Architecture>0</Architecture>
-      <TargetISA>5</TargetISA>
-      <IncludePaths>$(SolutionDir)\devices\device_ispc;$(EMBREE_INSTALL_DIR)/include</IncludePaths>
-    </ISPC>
     <ClCompile>
       <Optimization>Disabled</Optimization>
       <WholeProgramOptimization>false</WholeProgramOptimization>
-      <AdditionalIncludeDirectories>$(IntDir);$(ProjectDir);$(ProjectDir)/std;$(SolutionDir);$(SolutionDir)/common;$(SolutionDir)/devices;$(EMBREE_INSTALL_DIR)/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(SolutionDir);$(SolutionDir)/common;$(SolutionDir)/devices;$(EMBREE_INSTALL_DIR)/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MinimalRebuild>true</MinimalRebuild>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
@@ -191,22 +169,16 @@
     <Link>
       <AdditionalDependencies>$(EMBREE_INSTALL_DIR)\$(Platform)\$(Configuration)\embree.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
-      <IgnoreSpecificDefaultLibraries>libcpmt.lib</IgnoreSpecificDefaultLibraries>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <ISPC>
-      <TargetISA>5</TargetISA>
-      <IncludePaths>$(SolutionDir)\devices\device_ispc;$(EMBREE_INSTALL_DIR)/include</IncludePaths>
-    </ISPC>
     <Midl>
       <TargetEnvironment>X64</TargetEnvironment>
     </Midl>
     <ClCompile>
       <Optimization>Disabled</Optimization>
       <WholeProgramOptimization>false</WholeProgramOptimization>
-      <AdditionalIncludeDirectories>$(IntDir);$(ProjectDir);$(ProjectDir)/std;$(SolutionDir);$(SolutionDir)/common;$(SolutionDir)/devices;$(EMBREE_INSTALL_DIR)/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(SolutionDir);$(SolutionDir)/common;$(SolutionDir)/devices;$(EMBREE_INSTALL_DIR)/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MinimalRebuild>true</MinimalRebuild>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
@@ -222,21 +194,14 @@
     <Link>
       <AdditionalDependencies>$(EMBREE_INSTALL_DIR)\$(Platform)\$(Configuration)\embree.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
-      <IgnoreSpecificDefaultLibraries>libcpmt.lib</IgnoreSpecificDefaultLibraries>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <ISPC>
-      <Architecture>0</Architecture>
-      <TargetISA>5</TargetISA>
-      <IncludePaths>$(SolutionDir)\devices\device_ispc;$(EMBREE_INSTALL_DIR)/include</IncludePaths>
-    </ISPC>
     <ClCompile>
       <Optimization>Full</Optimization>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <WholeProgramOptimization>false</WholeProgramOptimization>
-      <AdditionalIncludeDirectories>$(IntDir);$(ProjectDir);$(ProjectDir)/std;$(SolutionDir);$(SolutionDir)/common;$(SolutionDir)/devices;$(EMBREE_INSTALL_DIR)/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(SolutionDir);$(SolutionDir)/common;$(SolutionDir)/devices;$(EMBREE_INSTALL_DIR)/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <StructMemberAlignment>Default</StructMemberAlignment>
@@ -250,15 +215,9 @@
     </ClCompile>
     <Link>
       <AdditionalDependencies>$(EMBREE_INSTALL_DIR)\$(Platform)\$(Configuration)\embree.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
-      <IgnoreSpecificDefaultLibraries>libcpmt.lib</IgnoreSpecificDefaultLibraries>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <ISPC>
-      <TargetISA>5</TargetISA>
-      <IncludePaths>$(SolutionDir)\devices\device_ispc;$(EMBREE_INSTALL_DIR)/include</IncludePaths>
-    </ISPC>
     <Midl>
       <TargetEnvironment>X64</TargetEnvironment>
     </Midl>
@@ -266,7 +225,7 @@
       <Optimization>Full</Optimization>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <WholeProgramOptimization>false</WholeProgramOptimization>
-      <AdditionalIncludeDirectories>$(IntDir);$(ProjectDir);$(ProjectDir)/std;$(SolutionDir);$(SolutionDir)/common;$(SolutionDir)/devices;$(EMBREE_INSTALL_DIR)/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(SolutionDir);$(SolutionDir)/common;$(SolutionDir)/devices;$(EMBREE_INSTALL_DIR)/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_CRT_SECURE_NO_WARNINGS;INTEL_SUITE_VERSION=PE120_196;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <StructMemberAlignment>Default</StructMemberAlignment>
@@ -280,21 +239,14 @@
     </ClCompile>
     <Link>
       <AdditionalDependencies>$(EMBREE_INSTALL_DIR)\$(Platform)\$(Configuration)\embree.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
-      <IgnoreSpecificDefaultLibraries>libcpmt.lib</IgnoreSpecificDefaultLibraries>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseAVX|Win32'">
-    <ISPC>
-      <Architecture>0</Architecture>
-      <TargetISA>6</TargetISA>
-      <IncludePaths>$(SolutionDir)\devices\device_ispc;$(EMBREE_INSTALL_DIR)/include</IncludePaths>
-    </ISPC>
     <ClCompile>
       <Optimization>Full</Optimization>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <WholeProgramOptimization>false</WholeProgramOptimization>
-      <AdditionalIncludeDirectories>$(IntDir);$(ProjectDir);$(ProjectDir)/std;$(SolutionDir);$(SolutionDir)/common;$(SolutionDir)/devices;$(EMBREE_INSTALL_DIR)/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(SolutionDir);$(SolutionDir)/common;$(SolutionDir)/devices;$(EMBREE_INSTALL_DIR)/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <StructMemberAlignment>Default</StructMemberAlignment>
@@ -308,15 +260,9 @@
     </ClCompile>
     <Link>
       <AdditionalDependencies>$(EMBREE_INSTALL_DIR)\$(Platform)\$(Configuration)\embree.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
-      <IgnoreSpecificDefaultLibraries>libcpmt.lib</IgnoreSpecificDefaultLibraries>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseAVX|x64'">
-    <ISPC>
-      <TargetISA>6</TargetISA>
-      <IncludePaths>$(SolutionDir)\devices\device_ispc;$(EMBREE_INSTALL_DIR)/include</IncludePaths>
-    </ISPC>
     <Midl>
       <TargetEnvironment>X64</TargetEnvironment>
     </Midl>
@@ -324,7 +270,7 @@
       <Optimization>Full</Optimization>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <WholeProgramOptimization>false</WholeProgramOptimization>
-      <AdditionalIncludeDirectories>$(IntDir);$(ProjectDir);$(ProjectDir)/std;$(SolutionDir);$(SolutionDir)/common;$(SolutionDir)/devices;$(EMBREE_INSTALL_DIR)/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(SolutionDir);$(SolutionDir)/common;$(SolutionDir)/devices;$(EMBREE_INSTALL_DIR)/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_CRT_SECURE_NO_WARNINGS;INTEL_SUITE_VERSION=PE120_196;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <StructMemberAlignment>Default</StructMemberAlignment>
@@ -339,21 +285,14 @@
     <Link>
       <AdditionalDependencies>$(EMBREE_INSTALL_DIR)\$(Platform)\$(Configuration)\embree.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <TargetMachine>MachineX64</TargetMachine>
-      <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
-      <IgnoreSpecificDefaultLibraries>libcpmt.lib</IgnoreSpecificDefaultLibraries>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseAVX2|Win32'">
-    <ISPC>
-      <Architecture>0</Architecture>
-      <TargetISA>7</TargetISA>
-      <IncludePaths>$(SolutionDir)\devices\device_ispc;$(EMBREE_INSTALL_DIR)/include</IncludePaths>
-    </ISPC>
     <ClCompile>
       <Optimization>Full</Optimization>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <WholeProgramOptimization>false</WholeProgramOptimization>
-      <AdditionalIncludeDirectories>$(IntDir);$(ProjectDir);$(ProjectDir)/std;$(SolutionDir);$(SolutionDir)/common;$(SolutionDir)/devices;$(EMBREE_INSTALL_DIR)/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(SolutionDir);$(SolutionDir)/common;$(SolutionDir)/devices;$(EMBREE_INSTALL_DIR)/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <StructMemberAlignment>Default</StructMemberAlignment>
@@ -367,15 +306,9 @@
     </ClCompile>
     <Link>
       <AdditionalDependencies>$(EMBREE_INSTALL_DIR)\$(Platform)\$(Configuration)\embree.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
-      <IgnoreSpecificDefaultLibraries>libcpmt.lib</IgnoreSpecificDefaultLibraries>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseAVX2|x64'">
-    <ISPC>
-      <TargetISA>7</TargetISA>
-      <IncludePaths>$(SolutionDir)\devices\device_ispc;$(EMBREE_INSTALL_DIR)/include</IncludePaths>
-    </ISPC>
     <Midl>
       <TargetEnvironment>X64</TargetEnvironment>
     </Midl>
@@ -383,7 +316,7 @@
       <Optimization>Full</Optimization>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <WholeProgramOptimization>false</WholeProgramOptimization>
-      <AdditionalIncludeDirectories>$(IntDir);$(ProjectDir);$(ProjectDir)/std;$(SolutionDir);$(SolutionDir)/common;$(SolutionDir)/devices;$(EMBREE_INSTALL_DIR)/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(SolutionDir);$(SolutionDir)/common;$(SolutionDir)/devices;$(EMBREE_INSTALL_DIR)/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_CRT_SECURE_NO_WARNINGS;INTEL_SUITE_VERSION=PE120_196;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <StructMemberAlignment>Default</StructMemberAlignment>
@@ -398,145 +331,105 @@
     <Link>
       <AdditionalDependencies>$(EMBREE_INSTALL_DIR)\$(Platform)\$(Configuration)\embree.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <TargetMachine>MachineX64</TargetMachine>
-      <IgnoreSpecificDefaultLibraries>libcpmt.lib</IgnoreSpecificDefaultLibraries>
-      <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <None Include="brdfs\brdf.isph" />
-    <None Include="brdfs\compositedbrdf.isph" />
-    <None Include="brdfs\conductor.isph" />
-    <None Include="brdfs\dielectric_reflection.isph" />
-    <None Include="brdfs\dielectric_transmission.isph" />
-    <None Include="brdfs\dielectriclayer_lambertian.isph" />
-    <None Include="brdfs\dielectriclayer_microfacet_metal.isph" />
-    <None Include="brdfs\lambertian.isph" />
-    <None Include="brdfs\microfacet_metal.isph" />
-    <None Include="brdfs\microfacet_plastic.isph" />
-    <None Include="brdfs\minneart.isph" />
-    <None Include="brdfs\optics.isph" />
-    <None Include="brdfs\reflection.isph" />
-    <None Include="brdfs\specular.isph" />
-    <None Include="brdfs\transmission.isph" />
-    <None Include="brdfs\velvety.isph" />
-    <None Include="api\ref.isph" />
-    <None Include="cameras\camera.isph" />
-    <None Include="framebuffers\accubuffer.isph" />
-    <None Include="framebuffers\framebuffer.isph" />
-    <None Include="framebuffers\framebuffer_rgb8.isph" />
-    <None Include="framebuffers\framebuffer_rgb_float32.isph" />
-    <None Include="framebuffers\framebuffer_rgba8.isph" />
-    <None Include="framebuffers\swapchain.isph" />
-    <None Include="scene\instance.isph" />
-    <None Include="scene\scene.isph" />
-    <None Include="lights\light.isph" />
-    <None Include="materials\material.isph" />
-    <None Include="materials\medium.isph" />
-    <None Include="renderers\renderer.isph" />
-    <None Include="samplers\distribution2d.isph" />
-    <None Include="samplers\patterns.isph" />
-    <None Include="samplers\permutation.isph" />
-    <None Include="samplers\precomputed_sampler.isph" />
-    <None Include="samplers\random.isph" />
-    <None Include="samplers\sample.isph" />
-    <None Include="samplers\shapesampler.isph" />
-    <None Include="shapes\differentialgeometry.isph" />
-    <None Include="shapes\shape.isph" />
-    <None Include="shapes\trianglemesh.isph" />
-    <None Include="textures\image.isph" />
-    <None Include="textures\texture.isph" />
-    <None Include="tonemappers\tonemapper.isph" />
-    <None Include="default.isph" />
-  </ItemGroup>
-  <ItemGroup>
+    <ClInclude Include="brdfs\brdf.h" />
+    <ClInclude Include="brdfs\compositedbrdf.h" />
+    <ClInclude Include="brdfs\conductor.h" />
+    <ClInclude Include="brdfs\dielectric.h" />
+    <ClInclude Include="brdfs\dielectriclayer.h" />
+    <ClInclude Include="brdfs\lambertian.h" />
+    <ClInclude Include="brdfs\microfacet.h" />
+    <ClInclude Include="brdfs\minnaert.h" />
+    <ClInclude Include="brdfs\optics.h" />
+    <ClInclude Include="brdfs\reflection.h" />
+    <ClInclude Include="brdfs\specular.h" />
+    <ClInclude Include="brdfs\transmission.h" />
+    <ClInclude Include="brdfs\velvety.h" />
+    <ClInclude Include="brdfs\microfacet\anisotropic_beckmann_distribution.h" />
+    <ClInclude Include="brdfs\microfacet\anisotropic_power_cosine_distribution.h" />
+    <ClInclude Include="brdfs\microfacet\beckmann_distribution.h" />
+    <ClInclude Include="brdfs\microfacet\fresnel.h" />
+    <ClInclude Include="brdfs\microfacet\power_cosine_distribution.h" />
     <ClInclude Include="api\data.h" />
     <ClInclude Include="api\datastream.h" />
     <ClInclude Include="api\framebuffer.h" />
     <ClInclude Include="api\handle.h" />
-    <ClInclude Include="api\ispc_device.h" />
+    <ClInclude Include="api\instance.h" />
     <ClInclude Include="api\parms.h" />
-    <ClInclude Include="api\ref.h" />
+    <ClInclude Include="api\scene.h" />
+    <ClInclude Include="api\scene_flat.h" />
+    <ClInclude Include="api\scene_instancing.h" />
+    <ClInclude Include="api\singleray_device.h" />
     <ClInclude Include="api\swapchain.h" />
     <ClInclude Include="api\variant.h" />
+    <ClInclude Include="cameras\camera.h" />
     <ClInclude Include="cameras\depthoffieldcamera.h" />
     <ClInclude Include="cameras\pinholecamera.h" />
+    <ClInclude Include="filters\boxfilter.h" />
+    <ClInclude Include="filters\bsplinefilter.h" />
+    <ClInclude Include="filters\filter.h" />
+    <ClInclude Include="integrators\integrator.h" />
+    <ClInclude Include="integrators\pathtraceintegrator.h" />
     <ClInclude Include="lights\ambientlight.h" />
     <ClInclude Include="lights\directionallight.h" />
     <ClInclude Include="lights\distantlight.h" />
     <ClInclude Include="lights\hdrilight.h" />
+    <ClInclude Include="lights\light.h" />
     <ClInclude Include="lights\pointlight.h" />
     <ClInclude Include="lights\spotlight.h" />
     <ClInclude Include="lights\trianglelight.h" />
+    <ClInclude Include="materials\brushedmetal.h" />
+    <ClInclude Include="materials\cotton.h" />
     <ClInclude Include="materials\dielectric.h" />
+    <ClInclude Include="materials\material.h" />
     <ClInclude Include="materials\matte.h" />
     <ClInclude Include="materials\matte_textured.h" />
+    <ClInclude Include="materials\medium.h" />
     <ClInclude Include="materials\metal.h" />
     <ClInclude Include="materials\metallicpaint.h" />
     <ClInclude Include="materials\mirror.h" />
     <ClInclude Include="materials\obj.h" />
     <ClInclude Include="materials\plastic.h" />
+    <ClInclude Include="materials\satin.h" />
     <ClInclude Include="materials\thindielectric.h" />
-    <ClInclude Include="materials\uber.h" />
     <ClInclude Include="materials\velvet.h" />
     <ClInclude Include="renderers\debugrenderer.h" />
-    <ClInclude Include="renderers\pathtracer.h" />
+    <ClInclude Include="renderers\integratorrenderer.h" />
+    <ClInclude Include="renderers\progress.h" />
+    <ClInclude Include="renderers\renderer.h" />
+    <ClInclude Include="samplers\distribution1d.h" />
+    <ClInclude Include="samplers\distribution2d.h" />
+    <ClInclude Include="samplers\patterns.h" />
+    <ClInclude Include="samplers\sample.h" />
+    <ClInclude Include="samplers\sampler.h" />
+    <ClInclude Include="samplers\shapesampler.h" />
+    <ClInclude Include="shapes\differentialgeometry.h" />
+    <ClInclude Include="shapes\disk.h" />
+    <ClInclude Include="shapes\shape.h" />
     <ClInclude Include="shapes\sphere.h" />
     <ClInclude Include="shapes\triangle.h" />
     <ClInclude Include="shapes\trianglemesh.h" />
+    <ClInclude Include="shapes\trianglemesh_full.h" />
+    <ClInclude Include="shapes\trianglemesh_normals.h" />
     <ClInclude Include="textures\nearestneighbor.h" />
-    <ClInclude Include="tonemappers\defaulttonemapper.h" />
-    <ClInclude Include="std\stdint.h" />
+    <ClInclude Include="textures\texture.h" />
     <ClInclude Include="default.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="api\ispc_device.cpp" />
-    <ClCompile Include="shapes\sphere.cpp" />
-    <ClCompile Include="shapes\trianglemesh.cpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <ISPC Include="api\ref.ispc" />
-    <ISPC Include="cameras\depthoffieldcamera.ispc" />
-    <ISPC Include="cameras\pinholecamera.ispc" />
-    <ISPC Include="framebuffers\accubuffer.ispc" />
-    <ISPC Include="framebuffers\framebuffer.ispc" />
-    <ISPC Include="framebuffers\framebuffer_rgb8.ispc" />
-    <ISPC Include="framebuffers\framebuffer_rgb_float32.ispc" />
-    <ISPC Include="framebuffers\framebuffer_rgba8.ispc" />
-    <ISPC Include="framebuffers\swapchain.ispc" />
-    <ISPC Include="materials\uber.ispc" />
-    <ISPC Include="scene\instance.ispc" />
-    <ISPC Include="scene\scene.ispc" />
-    <ISPC Include="lights\ambientlight.ispc" />
-    <ISPC Include="lights\directionallight.ispc" />
-    <ISPC Include="lights\distantlight.ispc" />
-    <ISPC Include="lights\hdrilight.ispc" />
-    <ISPC Include="lights\light.ispc" />
-    <ISPC Include="lights\pointlight.ispc" />
-    <ISPC Include="lights\spotlight.ispc" />
-    <ISPC Include="lights\trianglelight.ispc" />
-    <ISPC Include="materials\dielectric.ispc" />
-    <ISPC Include="materials\material.ispc" />
-    <ISPC Include="materials\matte.ispc" />
-    <ISPC Include="materials\matte_textured.ispc" />
-    <ISPC Include="materials\metal.ispc" />
-    <ISPC Include="materials\metallicpaint.ispc" />
-    <ISPC Include="materials\mirror.ispc" />
-    <ISPC Include="materials\obj.ispc" />
-    <ISPC Include="materials\plastic.ispc" />
-    <ISPC Include="materials\thindielectric.ispc" />
-    <ISPC Include="materials\velvet.ispc" />
-    <ISPC Include="renderers\debugrenderer.ispc" />
-    <ISPC Include="renderers\pathtracer.ispc" />
-    <ISPC Include="renderers\renderer.ispc" />
-    <ISPC Include="samplers\distribution2d.ispc" />
-    <ISPC Include="shapes\shape.ispc" />
-    <ISPC Include="shapes\trianglemesh.ispc" />
-    <ISPC Include="textures\image3c.ispc" />
-    <ISPC Include="textures\image3ca.ispc" />
-    <ISPC Include="textures\image3f.ispc" />
-    <ISPC Include="textures\image3fa.ispc" />
-    <ISPC Include="textures\nearestneighbor.ispc" />
-    <ISPC Include="tonemappers\defaulttonemapper.ispc" />
+    <ClCompile Include="api\singleray_device.cpp" />
+    <ClCompile Include="filters\filter.cpp" />
+    <ClCompile Include="integrators\pathtraceintegrator.cpp" />
+    <ClCompile Include="lights\hdrilight.cpp" />
+    <ClCompile Include="renderers\debugrenderer.cpp" />
+    <ClCompile Include="renderers\integratorrenderer.cpp" />
+    <ClCompile Include="renderers\progress.cpp" />
+    <ClCompile Include="samplers\distribution1d.cpp" />
+    <ClCompile Include="samplers\distribution2d.cpp" />
+    <ClCompile Include="samplers\sampler.cpp" />
+    <ClCompile Include="shapes\trianglemesh_full.cpp" />
+    <ClCompile Include="shapes\trianglemesh_normals.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\common\image\image.vcxproj">
@@ -550,6 +443,5 @@
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
-    <Import Project="..\..\common\cmake\ispc.targets" />
   </ImportGroup>
 </Project>

@@ -87,7 +87,7 @@ uniform int TriangleMesh__add(RTCScene scene, const uniform Shape* uniform _this
 
   uniform unsigned int motion = 1;
   if (this->motion) motion = 2;
-  uniform unsigned int mesh = rtcNewTriangleMesh (scene, RTC_GEOMETRY_STATIC, this->numTriangles, this->numPositions, motion);
+  uniform unsigned int mesh = rtcNewTriangleMesh (scene, RTC_GEOMETRY_DYNAMIC, this->numTriangles, this->numPositions, motion);
   
   uniform RTCTriangle* uniform triangles = (uniform RTCTriangle* uniform) rtcMapBuffer(scene,mesh,RTC_INDEX_BUFFER);
   foreach(j=0 ... this->numTriangles) {
