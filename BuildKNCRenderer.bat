@@ -96,14 +96,16 @@ REM
 
 FOR /R %RENDISPCDEVDIR% %%a IN (*.ispc) DO %ISPC% %RENDISPCFLAGS% %RENDISPCINCLUDE% -h %RISPCDIR%\%%~na_ispc.h -MMM %RISPCDIR%\%%~na.dev.idep -o %RISPCDIR%\%%~na.dev.cpp %%a
 
-cd %ROBJDIR%
-
 REM
 REM   --- Renderer C++ file builds
 REM
 
-DEL %RISPCDIR%\framebuffer_rgb8.dev.cpp
-%CC% %RISPCDIR%\*.dev.cpp %RENDCFLAGSISPC%
+cd %RISPCDIR%
+
+DEL framebuffer_rgb8.dev.cpp
+%CC% *.dev.cpp %RENDCFLAGSISPC%
+
+cd %ROBJDIR%
 
 %CC% %EMBREERENDROOT%\common\simd\mic*.cpp %RENDCFLAGS% %RENDINCLUDE%
 FOR /R %EMBREERENDROOT%\common\sys %%a IN (*.cpp) DO %CC% %%a %RENDCFLAGS% %RENDINCLUDE%
@@ -128,80 +130,17 @@ cd %ROBJDIR%
 
 set PATH=C:\Program Files (x86)\Intel\Composer XE 2013 SP1\bin\intel64_mic;%PATH%
 
-REM %CC% /Qmic
+REM
+REM  -- Build single-ray device for KNC
+REM
 
 "C:\Program Files (x86)\Intel\Composer XE 2013 SP1\bin\intel64_mic\icc.exe" -static-intel -rdynamic -fPIC -fPIC -o device_singleray_knc singleray_device.o hdrilight.o trianglemesh_normals.o trianglemesh_full.o sampler.o distribution1d.o distribution2d.o pathtraceintegrator.o filter.o debugrenderer.o integratorrenderer.o progress.o coi_server.o %EOBJDIR%\*.o -lpthread -ldl "C:\Program Files\Intel\MPSS\k1om-mpss-linux\usr\lib64\libcoi_device.so" -Wl,-rpath,"C:\Program Files\Intel\MPSS\k1om-mpss-linux\usr\lib64"  -zmuldefs
 
-EXIT /B
+REM
+REM  -- Build ISPC device for KNC
+REM
 
-REM icpc  -mmic -static-intel -rdynamic -fPIC -fPIC -o ../../device_singleray_knc  
-CMakeFiles/device_singleray_knc.dir/api/singleray_device.o 
-CMakeFiles/device_singleray_knc.dir/lights/hdrilight.o 
-CMakeFiles/device_singleray_knc.dir/shapes/trianglemesh_normals.o
- CMakeFiles/device_singleray_knc.dir/shapes/trianglemesh_full.o 
- CMakeFiles/device_singleray_knc.dir/samplers/sampler.o 
- CMakeFiles/device_singleray_knc.dir/samplers/distribution1d.o 
- CMakeFiles/device_singleray_knc.dir/samplers/distribution2d.o 
- CMakeFiles/device_singleray_knc.dir/integrators/pathtraceintegrator.o 
- CMakeFiles/device_singleray_knc.dir/filters/filter.o 
- CMakeFiles/device_singleray_knc.dir/renderers/debugrenderer.o 
- CMakeFiles/device_singleray_knc.dir/renderers/integratorrenderer.o 
- CMakeFiles/device_singleray_knc.dir/renderers/progress.o 
- -rdynamic ../../libsys_knc.a /localdisk/ccongdon/embree-2.2/embree-2.2/build/libembree_xeonphi.so.2.2.0 ../../libcoi_server_knc.a ../../liblexers_knc.a ../../libsys_knc.a ../../libsimd_knc.a -lpthread -ldl /opt/mpss/3.1.2/sysroots/k1om-mpss-linux/usr/lib64/libcoi_device.so -Wl,-rpath,/opt/mpss/3.1.2/sysroots/k1om-mpss-linux/usr/lib64  -zmuldefs
-
-REM icpc  -mmic -static-intel -rdynamic -fPIC -fPIC -o ../../device_ispc_knc  
-ref.dev.o 
-scene.dev.o 
-instance.dev.o 
-pinholecamera.dev.o 
-depthoffieldcamera.dev.o 
-material.dev.o 
-matte.dev.o 
-matte_textured.dev.o 
-obj.dev.o 
-dielectric.dev.o 
-materials/thindielectric.dev.o 
-mirror.dev.o 
-metal.dev.o 
-velvet.dev.o 
-metallicpaint.dev.o 
-plastic.dev.o 
-light.dev.o 
-ambientlight.dev.o 
-pointlight.dev.o 
-directionallight.dev.o 
-distantlight.dev.o C
-spotlight.dev.o 
-trianglelight.dev.o 
-hdrilight.dev.o 
-shape.dev.o 
-trianglemesh.dev.o 
-defaulttonemapper.dev.o 
-nearestneighbor.dev.o 
-image3c.dev.o 
-image3ca.dev.o 
-image3f.dev.o 
-image3fa.dev.o 
-renderer.dev.o 
-debugrenderer.dev.o 
-pathtracer.dev.o 
-swapchain.dev.o 
-accubuffer.dev.o 
-framebuffer.dev.o 
-framebuffer_rgb_float32.dev.o 
-framebuffer_rgba8.dev.o 
-distribution2d.dev.o 
-ispc_device.o 
-trianglemesh.o 
-sphere.o 
--rdynamic ../../libsys_knc.a /localdisk/ccongdon/embree-2.2/embree-2.2/build/libembree_xeonphi.so.2.2.0 ../../libcoi_server_knc.a ../../liblexers_knc.a ../../libsys_knc.a ../../libsimd_knc.a -lpthread -ldl /opt/mpss/3.1.2/sysroots/k1om-mpss-linux/usr/lib64/libcoi_device.so -Wl,-rpath,/opt/mpss/3.1.2/sysroots/k1om-mpss-linux/usr/lib64  -zmuldefs
-
-REM icpc  -fPIC -Wall -fPIC -static-intel -fvisibility-inlines-hidden -fvisibility=hidden -DNDEBUG -O3 -no-ansi-alias -restrict -fp-model fast -fimf-precision=low -no-prec-div -no-prec-sqrt  -shared -Wl,-soname,libdevice_coi.so -o ../../libdevice_coi.so CMakeFiles/device_coi.dir/coi_device.o ../../libsys.a ../../libimage.a /opt/intel/mic/coi/host-linux-release/lib/libcoi_host.so ../../libsys.a -lpthread -ldl -Wl,-rpath,/opt/intel/mic/coi/host-linux-release/lib
+"C:\Program Files (x86)\Intel\Composer XE 2013 SP1\bin\intel64_mic\icc.exe" -static-intel -rdynamic -fPIC -fPIC -o device_ispc_knc ispc_device.o trianglemesh.o sphere.o  coi_server.o %RISPCDIR%\*.o %EOBJDIR%\*.o -lpthread -ldl "C:\Program Files\Intel\MPSS\k1om-mpss-linux\usr\lib64\libcoi_device.so" -Wl,-rpath,"C:\Program Files\Intel\MPSS\k1om-mpss-linux\usr\lib64"  -zmuldefs
 
 EXIT /B
-
-REM ------------------------ HIDE FOR NOW ---------------------
-
-
-
 
