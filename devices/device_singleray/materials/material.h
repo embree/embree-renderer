@@ -35,7 +35,7 @@ namespace embree
               const Medium& mediumInside = Medium::Vacuum(),  /*!< The medium on the opposite side. */
               bool isMediaInterface = false,                  /*!< True if the surface is an interface between two different media. */
               bool isTransparentForShadowRays = false)
-      : mediumOutside(mediumOutside), mediumInside(mediumInside), isMediaInterface(isMediaInterface) {}
+      : mediumOutside(mediumOutside), mediumInside(mediumInside), isMediaInterface(isMediaInterface), isTransparentForShadowRays(isTransparentForShadowRays) {}
 
     /*! Virtual destructor for materials */
     virtual ~Material() {}
