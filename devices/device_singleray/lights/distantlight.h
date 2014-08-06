@@ -56,7 +56,7 @@ namespace embree
     }
 
     Color Le(const Vector3f& wo) const {
-      if (dot(-wo,_wo) >= cosHalfAngle) return L;
+      //if (dot(-wo,_wo) >= cosHalfAngle) return L;
       return zero;
     }
 
