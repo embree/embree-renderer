@@ -54,6 +54,7 @@ namespace embree
     rtcIntersect(scene->scene,(RTCRay&)lightPath.lastRay);
     scene->postIntersect(lightPath.lastRay,dg);
     state.numRays++;
+    //return Color(dg.st.x,dg.st.y,0.0f);
 
     Color L = zero;
     const Vector3f wo = -lightPath.lastRay.dir;

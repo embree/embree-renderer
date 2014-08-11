@@ -68,7 +68,8 @@ namespace embree
     if (!strcmp(type, "P3"))
     {
       int r, g, b;
-      for (ssize_t y=0; y<height; y++) {
+      //for (ssize_t y=0; y<height; y++) {
+      for (ssize_t y=height-1; y>=0; y--) {
         for (ssize_t x=0; x<width; x++) {
           if (fscanf(file, "%i %i %i", &r, &g, &b) != 3)
             throw std::runtime_error("Error reading " + fileName.str());
@@ -81,7 +82,8 @@ namespace embree
     else if (!strcmp(type, "P6") && maxColor <= 255)
     {
       unsigned char rgb[3];
-      for (ssize_t y=0; y<height; y++) {
+      //for (ssize_t y=0; y<height; y++) {
+      for (ssize_t y=height-1; y>=0; y--) {
         for (ssize_t x=0; x<width; x++) {
           if (fread(rgb,sizeof(rgb),1,file) != 1)
             throw std::runtime_error("Error reading " + fileName.str());
@@ -94,7 +96,8 @@ namespace embree
     else if (!strcmp(type, "P6"))
     {
       unsigned short rgb[3];
-      for (ssize_t y=0; y<height; y++) {
+      //for (ssize_t y=0; y<height; y++) {
+      for (ssize_t y=height-1; y>=0; y--) {
         for (ssize_t x=0; x<width; x++) {
           if (fread(rgb,sizeof(rgb),1,file) != 1)
             throw std::runtime_error("Error reading " + fileName.str());
