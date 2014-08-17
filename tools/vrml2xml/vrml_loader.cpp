@@ -184,6 +184,11 @@ namespace embree
     if (tag == "DEF") {
       std::string name = cin->get().Identifier();
       tag = cin->get().Identifier();
+    } 
+    else if (tag == "USE") {
+      std::string name = cin->get().Identifier();
+      std::cout << "reusing geometry not supported: ignoring " << name << std::endl;
+      return new Mesh(defaultMaterial);
     }
     
     if (tag == "IndexedFaceSet"  ) return parseIndexedFaceSet(cin,space);

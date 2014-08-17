@@ -146,7 +146,7 @@ namespace embree
     std::string str;
     if (!isAlpha(cin->peek())) return false;
     str += (char)cin->get();
-    while (isAlphaNum(cin->peek()) || (cin->peek() == '-') || (cin->peek() == '/')) str += (char)cin->get();
+    while (isAlphaNum(cin->peek()) || (cin->peek() == '-') || (cin->peek() == '/') || (cin->peek() == '_')) str += (char)cin->get();
     token = Token(str,Token::TY_IDENTIFIER,loc);
     return true;
   }
