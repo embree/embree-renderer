@@ -91,7 +91,7 @@ export void Scene__set(void* uniform scene_in, uniform int slot, void* uniform i
     RefCount__IncRef(&instance->base);
     if (instance->shape) {
       uniform uint handle = instance->shape->add(scene->handle,instance->shape);
-      if (instance->material->isTransparentForShadowRays)
+      if (instance->material && instance->material->isTransparentForShadowRays)
         rtcSetOcclusionFilterFunction(scene->handle,handle,(RTCFilterFuncVarying)&occlusionFilter);
       scene->handle2id[handle] = slot;
       scene->id2handle[slot] = handle;

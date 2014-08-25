@@ -81,7 +81,7 @@ namespace embree
         for (size_t i=0; i<prims.size(); i++) {
           if (prims[i] && prims[i]->shape) {
             prims[i]->shape->extract(scene,i);
-            if (prims[i]->material->isTransparentForShadowRays)
+            if (prims[i]->material && prims[i]->material->isTransparentForShadowRays)
               rtcSetOcclusionFilterFunction(scene,i,(RTCFilterFunc)&occlusionFilter);
           }
         }
