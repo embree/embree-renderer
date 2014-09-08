@@ -304,7 +304,9 @@ namespace embree
     g_resetAccumulation = false;
 
     /* render image */
-    Handle<Device::RTCamera> camera = createCamera(AffineSpace3f(g_camSpace.l,g_camSpace.p));
+    AffineSpace3f camSpace = g_camSpace;
+    camSpace.l.vy *= -1.0f;
+    Handle<Device::RTCamera> camera = createCamera(AffineSpace3f(camSpace.l,g_camSpace.p));
 
     /* render into framebuffer */
     g_device->rtRenderFrame(g_renderer,camera,g_render_scene,g_tonemapper,g_frameBuffer,accumulate);
@@ -319,8 +321,8 @@ namespace embree
     // std::cout << "upload " << upload_time << std::endl;
     // exit(0);
 
-    glRasterPos2i(-1, 1);
-    glPixelZoom(1.0f, -1.0f);
+    //glRasterPos2i(-1, 1);
+    //glPixelZoom(1.0f, -1.0f);
 
     if (g_format == "RGB_FLOAT32")
       glDrawPixels((GLsizei)g_width,(GLsizei)g_height,GL_RGB,GL_FLOAT,ptr);
