@@ -55,7 +55,7 @@ void Plastic__Constructor(uniform Plastic *uniform this,
                                          make_vec3f(1.0f), 1.0f, eta, 
                                          make_Lambertian(pigmentColor));
 
-  DielectricReflection__Constructor(&this->reflection, 1.0f, eta);
+  DielectricReflection__Constructor(&this->reflection, 1.0f, eta, make_vec3f(1.0));
 
   MicrofacetPlastic__Constructor(&this->microfacet,make_vec3f(1.0f),
                                  make_FresnelDielectric(1.0f,eta), 

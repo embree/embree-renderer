@@ -43,17 +43,17 @@
 #include "lights/trianglelight.h"
 
 /* include all materials */
-#include "materials/matte.h"
-#include "materials/plastic.h"
 #include "materials/dielectric.h"
-#include "materials/thindielectric.h"
-#include "materials/mirror.h"
+#include "materials/matte.h"
 #include "materials/metal.h"
 #include "materials/metallicpaint.h"
 #include "materials/matte_textured.h"
+#include "materials/mirror.h"
 #include "materials/obj.h"
-#include "materials/velvet.h"
+#include "materials/plastic.h"
+#include "materials/thindielectric.h"
 #include "materials/uber.h"
+#include "materials/velvet.h"
 
 /* include all shapes */
 #include "shape_ispc.h"
@@ -202,28 +202,19 @@ namespace embree
 
   Device::RTMaterial ISPCDevice::rtNewMaterial(const char* type) 
   {
-    if (!strcasecmp(type,"Matte")) return (Device::RTMaterial) new ISPCCreateHandle<Matte>;
-    else if (!strcasecmp(type,"Plastic")       ) return (Device::RTMaterial) new ISPCCreateHandle<Plastic>;
-    else if (!strcasecmp(type,"Dielectric")    ) return (Device::RTMaterial) new ISPCCreateHandle<Dielectric>;
+    if (!strcasecmp(type,"Dielectric")    ) return (Device::RTMaterial) new ISPCCreateHandle<Dielectric>;
     else if (!strcasecmp(type,"Glass")         ) return (Device::RTMaterial) new ISPCCreateHandle<Dielectric>;
+    else if (!strcasecmp(type,"Matte")         ) return (Device::RTMaterial) new ISPCCreateHandle<Matte>;
+    else if (!strcasecmp(type,"MatteTextured") ) return (Device::RTMaterial) new ISPCCreateHandle<MatteTextured>;
+    else if (!strcasecmp(type,"Metal")         ) return (Device::RTMaterial) new ISPCCreateHandle<Metal>;
+    else if (!strcasecmp(type,"MetallicPaint") ) return (Device::RTMaterial) new ISPCCreateHandle<MetallicPaint>;
+    else if (!strcasecmp(type,"Mirror")        ) return (Device::RTMaterial) new ISPCCreateHandle<Mirror>;
+    else if (!strcasecmp(type,"Obj")           ) return (Device::RTMaterial) new ISPCCreateHandle<Obj>;
+    else if (!strcasecmp(type,"Plastic")       ) return (Device::RTMaterial) new ISPCCreateHandle<Plastic>;
     else if (!strcasecmp(type,"ThinDielectric")) return (Device::RTMaterial) new ISPCCreateHandle<ThinDielectric>;
     else if (!strcasecmp(type,"ThinGlass")     ) return (Device::RTMaterial) new ISPCCreateHandle<ThinDielectric>;
-    else if (!strcasecmp(type,"Mirror")        ) return (Device::RTMaterial) new ISPCCreateHandle<Mirror>;
-    else if (!strcasecmp(type,"Metal")         ) return (Device::RTMaterial) new ISPCCreateHandle<Metal>;
-    //else if (!strcasecmp(type,"BrushedMetal")  ) return (Device::RTMaterial) new ISPCCreateHandle<BrushedMetal>;
-    else if (!strcasecmp(type,"MetallicPaint") ) return (Device::RTMaterial) new ISPCCreateHandle<MetallicPaint>;
-    else if (!strcasecmp(type,"MatteTextured") ) return (Device::RTMaterial) new ISPCCreateHandle<MatteTextured>;
-    else if (!strcasecmp(type,"Obj")           ) return (Device::RTMaterial) new ISPCCreateHandle<Obj>;
-    else if (!strcasecmp(type,"Velvet")        ) return (Device::RTMaterial) new ISPCCreateHandle<Velvet>;
     else if (!strcasecmp(type,"Uber")          ) return (Device::RTMaterial) new ISPCCreateHandle<Uber>;
-    //else if (!strcasecmp(type,"Velvet2")       ) return (Device::RTMaterial) new ISPCCreateHandle<Velvet2>;
-    //else if (!strcasecmp(type,"Satin")         ) return (Device::RTMaterial) new ISPCCreateHandle<Satin>;
-    //else if (!strcasecmp(type,"Skin")          ) return (Device::RTMaterial) new ISPCCreateHandle<Skin>;
-    //else if (!strcasecmp(type,"Cotton")        ) return (Device::RTMaterial) new ISPCCreateHandle<Cotton>;
-    //else if (!strcasecmp(type,"Woven")         ) return (Device::RTMaterial) new ISPCCreateHandle<Woven>;
-    //else if (!strcasecmp(type,"WovenIsotropic")) return (Device::RTMaterial) new ISPCCreateHandle<WovenIsotropic>;
-    //else if (!strcasecmp(type,"Eye"           )) return (Device::RTMaterial) new ISPCCreateHandle<Eye>;
-    //else if (!strcasecmp(type,"EyeLash"       )) return (Device::RTMaterial) new ISPCCreateHandle<EyeLash>;
+    else if (!strcasecmp(type,"Velvet")        ) return (Device::RTMaterial) new ISPCCreateHandle<Velvet>;
     else { 
       //throw std::runtime_error("unknown material type: "+std::string(type));
       printf("WARNING: unknown material \"%s\", using Matte as default\n",type);
@@ -632,7 +623,11 @@ namespace embree
     double t0 = getSeconds();
     int numRays = ispc::Renderer__renderFrame(renderer->instance.ptr,camera->instance.ptr,scene->instance.ptr,toneMapper->instance.ptr,swapchain->instance.ptr,accumulate);
     double dt = getSeconds() - t0;
-    printf("ispc render %3.2f fps %.2f ms,  %3.3f mrps\n",1.0f/dt,dt*1000.0f,numRays/dt*1E-6); flush(std::cout);
+#if defined(__MIC__) 
+    printf("Coprocessor ispc render %3.2f fps %.2f ms,  %3.3f mrps\n",1.0f/dt,dt*1000.0f,numRays/dt*1E-6); flush(std::cout);
+#else
+    printf("Host ispc render %3.2f fps %.2f ms,  %3.3f mrps\n",1.0f/dt,dt*1000.0f,numRays/dt*1E-6); flush(std::cout);
+#endif
   }
 
   bool ISPCDevice::rtPick(Device::RTCamera camera_i, float x, float y, Device::RTScene scene_i, float& px, float& py, float& pz)

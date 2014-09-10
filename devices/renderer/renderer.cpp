@@ -49,8 +49,11 @@ namespace embree
   std::string g_accel = "default";
   std::string g_builder = "default";
   std::string g_traverser = "default";
-  int g_depth = -1;                       //!< recursion depth
-  int g_spp = 1;                          //!< samples per pixel for ordinary rendering
+  int g_depth = -1;                          //!< recursion depth
+  int g_spp = 1;                             //!< samples per pixel for ordinary rendering
+  bool g_filterCaustics = false;             //!< filters / smooths caustics
+  bool g_disableCausticReflection = false;   //!< disables caustics due to reflection
+  bool g_disableCausticTransmission = false; //!< disables caustics due to transmission
 
   /* output settings */
   int g_numBuffers = 2;                   //!< number of buffers of the framebuffer
@@ -128,6 +131,9 @@ namespace embree
     g_renderer = g_device->rtNewRenderer("pathtracer");
     if (g_depth >= 0) g_device->rtSetInt1(g_renderer, "maxDepth", g_depth);
     g_device->rtSetInt1(g_renderer, "sampler.spp", g_spp);
+    g_device->rtSetBool1(g_renderer, "filterCaustics", g_filterCaustics);
+    g_device->rtSetBool1(g_renderer, "disableCausticReflection", g_disableCausticReflection);
+    g_device->rtSetBool1(g_renderer, "disableCausticTransmission", g_disableCausticTransmission);
     g_device->rtCommit(g_renderer);
 
     g_tonemapper = g_device->rtNewToneMapper("default");
@@ -182,6 +188,9 @@ namespace embree
     g_renderer = g_device->rtNewRenderer("pathtracer");
     if (g_depth >= 0) g_device->rtSetInt1(g_renderer, "maxDepth", g_depth);
     g_device->rtSetInt1(g_renderer, "sampler.spp", g_spp);
+    g_device->rtSetBool1(g_renderer, "filterCaustics", g_filterCaustics);
+    g_device->rtSetBool1(g_renderer, "disableCausticReflection", g_disableCausticReflection);
+    g_device->rtSetBool1(g_renderer, "disableCausticTransmission", g_disableCausticTransmission);
     if (g_backplate) g_device->rtSetImage(g_renderer, "backplate", g_backplate);
 
     if (cin->peek() != "{") goto finish;
@@ -190,10 +199,13 @@ namespace embree
     while (cin->peek() != "}") {
       std::string tag = cin->getString();
       cin->force("=");
-      if      (tag == "depth"          ) g_device->rtSetInt1  (g_renderer, "maxDepth"       , cin->getInt()  );
-      else if (tag == "spp"            ) g_device->rtSetInt1  (g_renderer, "sampler.spp"    , cin->getInt()  );
-      else if (tag == "minContribution") g_device->rtSetFloat1(g_renderer, "minContribution", cin->getFloat());
-      else if (tag == "backplate"      ) g_device->rtSetImage (g_renderer, "backplate", rtLoadImage(path + cin->getFileName()));
+      if      (tag == "depth"                     ) g_device->rtSetInt1  (g_renderer, "maxDepth"       , cin->getInt()  );
+      else if (tag == "spp"                       ) g_device->rtSetInt1  (g_renderer, "sampler.spp"    , cin->getInt()  );
+      else if (tag == "filtercaustics"            ) g_device->rtSetBool1 (g_renderer, "filterCaustics" , bool(cin->getInt()));
+      else if (tag == "disablecausticreflection"  ) g_device->rtSetBool1 (g_renderer, "disableCausticReflection", true);
+      else if (tag == "disablecaustictransmission") g_device->rtSetBool1 (g_renderer, "disableCausticTransmission", true);
+      else if (tag == "minContribution"           ) g_device->rtSetFloat1(g_renderer, "minContribution", cin->getFloat());
+      else if (tag == "backplate"                 ) g_device->rtSetImage (g_renderer, "backplate", rtLoadImage(path + cin->getFileName()));
       else std::cout << "unknown tag \"" << tag << "\" in debug renderer parsing" << std::endl;
     }
     cin->drop();
@@ -561,6 +573,24 @@ namespace embree
         g_device->rtCommit(g_renderer);
       }
 
+      /* filter caustics */
+      else if (tag == "-filtercaustics") {
+        g_device->rtSetBool1(g_renderer, "filterCaustics", g_filterCaustics = bool(cin->getInt()));
+        g_device->rtCommit(g_renderer);
+      }
+
+      /* disable caustics due to reflection */
+      else if (tag == "-disablecausticreflection") {
+        g_device->rtSetBool1(g_renderer, "disableCausticReflection", g_disableCausticReflection = true);
+        g_device->rtCommit(g_renderer);
+      }
+
+      /* disable caustics due to transmission */
+      else if (tag == "-disablecaustictransmission") {
+        g_device->rtSetBool1(g_renderer, "disableCausticTransmission", g_disableCausticTransmission = true);
+        g_device->rtCommit(g_renderer);
+      }
+
       /* set the backplate */
       else if (tag == "-backplate") {
         g_device->rtSetImage(g_renderer, "backplate", g_backplate = rtLoadImage(path + cin->getFileName()));
@@ -654,6 +684,15 @@ namespace embree
         std::cout << std::endl;
         std::cout << "-spp i" << std::endl;
         std::cout << "  Sets the number of samples per pixel to i (default 1) (only pathtracer)." << std::endl;
+        std::cout << std::endl;
+        std::cout << "-filtercaustics" << std::endl;
+        std::cout << "  Filters / smooths caustics (only pathtracer)" << std::endl;
+        std::cout << std::endl;
+        std::cout << "-disablecausticreflection" << std::endl;
+        std::cout << "  Disables caustics due to reflection (only pathtracer)" << std::endl;
+        std::cout << std::endl;
+        std::cout << "-disablecaustictransmission" << std::endl;
+        std::cout << "  Disables caustics due to transmission (only pathtracer)" << std::endl;
         std::cout << std::endl;
         std::cout << "-backplate" << std::endl;
         std::cout << "  Sets a high resolution back ground image. (default none) (only pathtracer)." << std::endl;

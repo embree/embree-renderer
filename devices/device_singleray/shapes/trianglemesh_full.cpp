@@ -159,6 +159,7 @@ namespace embree
     const Vector3f dPdu = p1-p0, dPdv = p2-p0;
     dg.P  = ray.org+t*ray.dir;
     dg.Ng = normalize(ray.Ng);
+    dg.t  = ray.tfar;
 
     /* interpolate texture coordinates */
     float dsdu, dtdu;

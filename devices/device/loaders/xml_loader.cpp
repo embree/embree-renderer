@@ -58,6 +58,7 @@ namespace embree
     char* loadBinary(const Ref<XML>& xml, size_t eltSize, size_t& size);
     Handle<Device::RTData> loadVec2fArray(const Ref<XML>& xml, size_t& size);
     Handle<Device::RTData> loadVec3fArray(const Ref<XML>& xml, size_t& size);
+    Handle<Device::RTData> loadVec4fArray(const Ref<XML>& xml, size_t& elements);
     Handle<Device::RTData> loadVector3iArray(const Ref<XML>& xml, size_t& size);
 
     std::vector<Vec2f> loadVec2fArray(const Ref<XML>& xml);
@@ -336,6 +337,17 @@ namespace embree
     return res;
   }
 
+  Handle<Device::RTData> XMLLoader::loadVec4fArray(const Ref<XML>& xml, size_t& elements) {
+
+    if (!xml) { elements = 0;  return(NULL); }
+    size_t words = xml->body.size();  elements = words / 4;
+    if (words % 4 != 0) throw std::runtime_error(xml->loc.str() + ": wrong vector<float4> body");
+    Vec4f* data = (Vec4f *) alignedMalloc(elements * sizeof(Vec4f));
+    for (size_t i=0 ; i < elements ; i++) data[i] = Vec4f(xml->body[4 * i + 0].Float(), xml->body[4 * i + 1].Float(), xml->body[4 * i + 2].Float(), xml->body[4 * i + 3].Float());
+    return(g_device->rtNewData("immutable_managed", elements * sizeof(Vec4f), data));
+
+  }
+
   //////////////////////////////////////////////////////////////////////////////
   //// Loading of objects from XML file
   //////////////////////////////////////////////////////////////////////////////
@@ -476,8 +488,19 @@ namespace embree
       else if (entry->name == "float2" ) { Vec2f value = load<Vec2f>(entry);  g_device->rtSetFloat2(material, name.c_str(), value.x, value.y); }
       else if (entry->name == "float3" ) { Vec3f value = load<Vec3f>(entry);  g_device->rtSetFloat3(material, name.c_str(), value.x, value.y, value.z); }
       else if (entry->name == "float4" ) { Vec4f value = load<Vec4f>(entry);  g_device->rtSetFloat4(material, name.c_str(), value.x, value.y, value.z, value.w); }
-      else if (entry->name == "texture") g_device->rtSetTexture(material, name.c_str(), rtLoadTexture(path + load<std::string>(entry)));
-      else throw std::runtime_error(entry->loc.str()+": invalid type: "+entry->name);
+      else if (entry->name == "texture") { g_device->rtSetTexture(material, name.c_str(), rtLoadTexture(path + load<std::string>(entry))); }
+      else if (entry->name == "array"  ) {
+
+        if (entry->parm("type") == "float4") {
+
+          size_t elements = 0;
+          Handle<Device::RTData> data = loadVec4fArray(entry, elements);
+          g_device->rtSetArray(material, name.c_str(), "float4", data, elements, sizeof(Vec4f), 0);
+
+        } else throw std::runtime_error(entry->loc.str() + ": invalid type: " + entry->name);
+
+      } else throw std::runtime_error(entry->loc.str()+": invalid type: "+entry->name);
+
     }
 
     g_device->rtCommit(material);
@@ -595,18 +618,6 @@ namespace embree
     size_t numNormals   = 0;  Handle<Device::RTData> normals   = loadVec3fArray(xml->childOpt("normals"  ), numNormals);
     size_t numTexCoords = 0;  Handle<Device::RTData> texcoords = loadVec2fArray(xml->childOpt("texcoords"), numTexCoords);
     size_t numTriangles = 0;  Handle<Device::RTData> triangles = loadVector3iArray(xml->childOpt("triangles"), numTriangles);
-
-#if 0
-    std::vector<Vec3f> positions2 = loadVec3fArray(xml->childOpt("positions"));
-    std::vector<Vec3f> motions2   = loadVec3fArray(xml->childOpt("motions"  ));
-    std::vector<Vec3f> normals2   = loadVec3fArray(xml->childOpt("normals"  ));
-    std::vector<Vec2f> texcoords2 = loadVec2fArray(xml->childOpt("texcoords"));
-    std::vector<Vec3i> triangles2 = loadVector3iArray(xml->childOpt("triangles"));
-    Mesh* mesh2 = NULL;
-    if (material2mesh.find(materialName) != material2mesh.end()) mesh2 = material2mesh[materialName];
-    else { material2mesh[materialName] = mesh2 = new Mesh(materialName); meshes.push_back(mesh2); }
-    mesh2->add(positions2,normals2,texcoords2,triangles2);
-#endif
 
     Handle<Device::RTShape> mesh = g_device->rtNewShape("trianglemesh");
     if (numPositions) g_device->rtSetArray(mesh, "positions", "float3", positions, numPositions, sizeof(Vec3f), 0);

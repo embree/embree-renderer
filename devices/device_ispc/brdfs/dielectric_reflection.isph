@@ -21,7 +21,10 @@
 struct DielectricReflection
 {
   uniform BRDF base;
+  // relative refraction index etai/etat of both media
   float eta;
+  // Reflected color
+  vec3f R;
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -36,20 +39,25 @@ inline vec3f uniform_DielectricReflection__sample(const uniform BRDF* uniform _t
   const uniform DielectricReflection* uniform this = (const uniform DielectricReflection* uniform) _this;
   const float cosThetaO = clamp(dot(wo,dg.Ns));
   wi = reflect(wo,dg.Ns,cosThetaO);
-  return make_vec3f(fresnelDielectric(cosThetaO,this->eta));
+  return (mul(this->R,make_vec3f(fresnelDielectric(cosThetaO,this->eta))));
 }
 
 inline void DielectricReflection__Constructor(uniform DielectricReflection* uniform this,
                                               const uniform float etai,
-                                              const uniform float etat)
+                                              const uniform float etat,
+                                              const uniform vec3f R)
 {
   BRDF__Constructor(&this->base,SPECULAR_REFLECTION,
                     uniform_DielectricReflection__eval,uniform_DielectricReflection__sample);
   this->eta = etai*rcp(etat);
+  // R needs to default to make_vec3f(1.0f) if not specified
+  this->R = R;
 }
 
-inline uniform DielectricReflection make_DielectricReflection(const uniform float etai, const uniform float etat) {
-  uniform DielectricReflection v; DielectricReflection__Constructor(&v,etai,etat); return v;
+inline uniform DielectricReflection make_DielectricReflection(const uniform float etai, 
+                                                              const uniform float etat,
+                                                              const uniform vec3f R) {
+  uniform DielectricReflection v; DielectricReflection__Constructor(&v,etai,etat, R); return v;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -64,18 +72,23 @@ inline vec3f varying_DielectricReflection__sample(const uniform BRDF* uniform _t
   const varying DielectricReflection* uniform this = (const varying DielectricReflection* uniform) _this;
   const float cosThetaO = clamp(dot(wo,dg.Ns));
   wi = reflect(wo,dg.Ns,cosThetaO);
-  return make_vec3f(fresnelDielectric(cosThetaO,this->eta));
+  return (mul(this->R,make_vec3f(fresnelDielectric(cosThetaO,this->eta))));
 }
 
 inline void DielectricReflection__Constructor(varying DielectricReflection* uniform this,
                                               const varying float etai,
-                                              const varying float etat)
+                                              const varying float etat,
+                                              const varying vec3f R)
 {
   BRDF__Constructor(&this->base,SPECULAR_REFLECTION,
                     varying_DielectricReflection__eval,varying_DielectricReflection__sample);
   this->eta = etai*rcp(etat);
+  // R needs to default to make_vec3f(1.0f) if not specified
+  this->R = R;
 }
 
-inline varying DielectricReflection make_DielectricReflection(const varying float etai, const varying float etat) {
-  varying DielectricReflection v; DielectricReflection__Constructor(&v,etai,etat); return v;
+inline varying DielectricReflection make_DielectricReflection(const varying float etai, 
+                                                              const varying float etat,
+                                                              const varying vec3f R) {
+  varying DielectricReflection v; DielectricReflection__Constructor(&v,etai,etat, R); return v;
 }

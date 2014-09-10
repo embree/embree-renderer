@@ -44,17 +44,32 @@ void TriangleMesh__postIntersect(uniform const Shape *uniform _this,
   const float w = 1.0f-u-v;
   const float t = ray.tfar;
   
+  float dsdu, dtdu;
+  float dsdv, dtdv;
+  
   dg.P  = add(ray.org, mul(t,ray.dir));
   dg.Ng = normalize(ray.Ng);
+  dg.t = ray.tfar;
   dg.error = max(abs(ray.tfar),reduce_max(abs(dg.P)));
+  
+  const vec3f p0 = make_vec3f(this->position[tri.x]);
+  const vec3f p1 = make_vec3f(this->position[tri.y]);
+  const vec3f p2 = make_vec3f(this->position[tri.z]);
+  const vec3f dPdu = sub(p1, p0);
+  const vec3f dPdv = sub(p2, p0);
+
 
   if (this->texcoord) {
     const vec2f st0 = this->texcoord[tri.x];
     const vec2f st1 = this->texcoord[tri.y];
     const vec2f st2 = this->texcoord[tri.z];
     dg.st = add(add(mul(w,st0),mul(u,st1)),mul(v,st2));
+    dsdu = st1.x-st0.x; dtdu = st1.y-st0.y;
+    dsdv = st2.x-st0.x; dtdv = st2.y-st0.y;
   } else {
     dg.st = make_vec2f(u,v);
+    dsdu = 1; dtdu = 0;
+    dsdv = 0; dtdv = 1;
   }
 
   
@@ -79,6 +94,14 @@ void TriangleMesh__postIntersect(uniform const Shape *uniform _this,
   cif (dot(dg.Ng,ray.dir) >= 0.0f) {
     dg.Ng = neg(dg.Ng); dg.Ns = neg(dg.Ns);
   }
+  
+  // interpolate tangent directions
+  const vec3f dPds = normalize(sub(mul(dtdv,dPdu), mul(dtdu,dPdv)));
+  dg.Tx = normalize(sub(dPds,mul(dot(dPds,dg.Ns),dg.Ns)));
+  const vec3f dPdt = normalize(sub(mul(dsdu,dPdv), mul(dsdv,dPdu)));
+  dg.Ty = normalize(sub(dPdt,mul(dot(dPdt,dg.Ns),dg.Ns)));
+  
+  // or dg.Tx = dPdu;     dg.Ty = dPdv;   :)
 }
 
 uniform int TriangleMesh__add(RTCScene scene, const uniform Shape* uniform _this)

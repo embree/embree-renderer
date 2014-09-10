@@ -17,136 +17,250 @@
 #ifndef __EMBREE_UBER_H__
 #define __EMBREE_UBER_H__
 
-#include "../materials/material.h"
-#include "../brdfs/lambertian.h"
+#include "../brdfs/conductor.h"
 #include "../brdfs/dielectric.h"
-#include "../brdfs/dielectriclayer.h"
+#include "../brdfs/lambertian.h"
 #include "../brdfs/microfacet.h"
+#include "../brdfs/specular.h"
+#include "../brdfs/translucent.h"
+#include "../materials/material.h"
+#include "../textures/texture.h"
+#include <iostream>
+#include "stdio.h"
 
+namespace embree {
 
-namespace embree
-{
-  /*! Implements a diffuse material. */
-  class Uber : public Material
-  {
-    typedef Microfacet<FresnelDielectric,PowerCosineDistribution > MicrofacetPlastic;
-//    typedef Microfacet<FresnelConductor,PowerCosineDistribution > MicrofacetMetal;
+    //! This class can be used to model a wide range of physical material
+    //! types including Lambertian, metals, fully transparent media, and
+    //! translucency with simple scattering.
+    //!
+    class Uber : public Material {
+    public:
 
-  public:
+        Uber(const Parms &options) {
 
-    /*! Construction from parameters. */
-    Uber (const Parms& parms) {
-      diffColor = parms.getColor("diffColor",one);
-	  reflColor = parms.getColor("reflColor",one);
-      Kd = parms.getTexture("diffTexture");
-      s0 = parms.getVec2f("s0",Vec2f(0.0f,0.0f));
-      ds = parms.getVec2f("ds",Vec2f(1.0f,1.0f));
-      surfEta      = parms.getFloat("surfEta",1.4f);
-      roughness    = parms.getFloat("roughness",0.01f);
-//	  realRefract  = parms.getColor("realRefract",Color(1.4f));
-//    imagRefract  = parms.getColor("imagRefract",Color(0.0f));
-      mediumOutside.eta          = parms.getFloat("etaOutside",1.0f);
-      mediumInside.eta           = parms.getFloat("etaInside",1.4f);
-      mediumOutside.transmission = parms.getColor("transColorOutside",one);
-      mediumInside.transmission  = parms.getColor("transColor",one);
-      isMediaInterface           = true;
-	  rcpRoughness = rcp(roughness);
-	  if ((mediumInside.transmission.r == 0.0f) &&
-		  (mediumInside.transmission.g == 0.0f) &&
-		  (mediumInside.transmission.b == 0.0f))
-		  transparent = 0;
-	  else
-		  transparent = 1;
+            //! Absorption coefficient.
+            absorption = options.getColor("absorption", Color(0.0f));
 
-      /*! precompute BRDF components for more efficient shading */
-      reflection_io   = new DielectricReflection  (mediumInside.eta, mediumOutside.eta);
-      reflection_oi   = new DielectricReflection  (mediumOutside.eta,mediumInside.eta);
-      transmission_io = new DielectricTransmission(mediumInside.eta, mediumOutside.eta);
-      transmission_oi = new DielectricTransmission(mediumOutside.eta,mediumInside.eta);
-    }
+            //! Bump map.
+            bumpMap = options.getTexture("bumpMap", NULL);
 
-    /*! Destruction */
-    ~Uber()
-    {
-      if (reflection_io  ) delete reflection_io;   reflection_io = NULL;
-      if (reflection_oi  ) delete reflection_oi;   reflection_oi = NULL;
-      if (transmission_io) delete transmission_io; transmission_io = NULL;
-      if (transmission_oi) delete transmission_oi; transmission_oi = NULL;
-    }
+            //! Diffuse reflectance coefficient and map.
+            diffuse = options.getColor("diffuse", Color(0.0f));  
+            diffuseMap = options.getTexture("diffuseMap", NULL);
 
-    void shade(const Ray& ray, const Medium& currentMedium, const DifferentialGeometry& dg, CompositedBRDF& brdfs) const {
+            //! Multilayer diffusion coefficients.
+            getFloat4Array(options.getData("diffusionCoefficients"), diffusionCoefficients, 
+                    Vec4f(1.0f));
 
-#if 1
-	// Diffuse color
-      if (Kd) {
-			brdfs.add(NEW_BRDF(Lambertian)(Kd->get(ds*dg.st+s0)));
-	  }
-	  else {
-		  // diffuse plastic
-//		  brdfs.add(NEW_BRDF(DielectricLayer<Lambertian >)(one, 1.0f, surfEta, Lambertian (diffColor)));
-		  brdfs.add(NEW_BRDF(Lambertian)(diffColor));
-	  }
+            //! Diffusion scattering exponent.
+            diffusionExponent = options.getFloat("diffusionExponent", 100.0f);
+
+            //! Index of refraction can be specified as a scalar or vector float.
+            refraction = (options.getFloat("refraction", -1.0f) < 0.0f) ? 
+                options.getColor("refraction", Color(1.0f)) : 
+                Color(options.getFloat("refraction"));
+
+            //! Surface roughness.
+            roughness = options.getFloat("roughness", 0.0f);
+
+            //! Specular reflectance coefficient and map.
+            specular = options.getColor("specular", Color(0.0f));  
+            specularMap = options.getTexture("specularMap", NULL);
+
+            //! Transmitted radiance coefficient.
+            transmission = options.getColor("transmission", Color(0.0f));
+
+            //! Transmitted radiance penetration depth.
+            transmissionDepth = options.getFloat("transmissionDepth", float(inf));
+
+            //! These settings are only used to detect when the medium changes.
+            if (transmission != Color(0.0f)) { mediumInside.transmission = Color(0.9995f);  isMediaInterface = true; }
+#if 0            
+std::cout << "diffuse " << diffuse << " roughness = " << roughness << " specular = " 
+   << specular << "\n   transmission = " << transmission << "\n";
 #endif
-#if 1
-	  if (1 == transparent) {
-		  // Transparency
-		  /*! the ray transitions from outside to inside */
-		  if (currentMedium == mediumOutside) {
-			brdfs.add(reflection_oi);
-			brdfs.add(transmission_oi);
-		  }
+        }
 
-		  /*! the ray transitions from inside to outside */
-		  else {
-			brdfs.add(reflection_io);
-			brdfs.add(transmission_io);
-		  }
-	  }  // transparency
-#endif
-#if 1
-	  // Specular reflection
-      /*! use dielectric reflection in case of a specular surface */
-      if (roughness == 0.0f)
-        brdfs.add(NEW_BRDF(DielectricReflection)(1.0f, surfEta));
+        inline void bendSurfaceNormal(const DifferentialGeometry &hit) const {
 
-      /*! otherwise use the microfacet BRDF to model the rough surface */
-      else
-        brdfs.add(NEW_BRDF(MicrofacetPlastic)(reflColor, FresnelDielectric(1.0f, surfEta), PowerCosineDistribution(rcpRoughness,dg.Ns)));
-#endif
-#if 0
-	  /*! handle the special case of a specular metal through a special BRDF */
-      if (roughness == 0.0f)
-        brdfs.add(NEW_BRDF(Conductor)(reflColor, realRefract, imagRefract));
+            //! Tangent space normal from the texture map.
+            const Color texel = bumpMap->get(hit.st);
 
-      /*! otherwise use the microfacet BRDF model */
-      else
-        brdfs.add(NEW_BRDF(MicrofacetMetal)(reflColor, FresnelConductor(realRefract,imagRefract), PowerCosineDistribution(rcpRoughness,dg.Ns)));
+            //! Expand the normal range from [0, 1] to [-1, 1].
+            const Vector3f bend(2.0f * texel.r - 1.0f, 2.0f * texel.g - 1.0f, 2.0f * texel.b - 1.0f);
 
-#endif
-    }
+            //! Bend the surface normal at the hit point.
+            hit.Ns = normalize(bend.x * hit.Tx + bend.y * hit.Ty + bend.z * hit.Ns);
 
-  protected:
+        }
 
-    /*! Diffuse reflectance of the surface. The range is from 0
-     *  (black) to 1 (white). */
-    Color diffColor;
-	Color reflColor;
-//	Color realRefract;  //!< Real part of refraction index
-//	Color imagRefract;  //!< Imaginary part of refraction index
-	Vec2f s0;         //!< Offset for texture coordinates.
-    Vec2f ds;         //!< Scaling for texture coordinates.
-    Ref<Texture> Kd;  //!< Texture mapped to the surface.
-    float surfEta;    //!< Refraction index of the dielectric layer.
-    float roughness;    //!< Roughness parameter. The range goes from 0 (specular) to 1 (diffuse).
-    float rcpRoughness; //!< Reciprocal roughness parameter.
-	int transparent;
+        inline Color sampleTexture(const DifferentialGeometry &hit, const Ref<Texture> texture) const {
 
-  private:
-    DielectricReflection*   reflection_io;    //!< Reflection component for inside to outside transition.
-    DielectricReflection*   reflection_oi;    //!< Reflection component for outside to inside transition.
-    DielectricTransmission* transmission_io;  //!< Transmission component for inside to outside transition.
-    DielectricTransmission* transmission_oi;  //!< Transmission component for outside to inside transition.
-  };
+            //! Convenience routine which always returns a valid Color.
+            return((texture != NULL) ? texture->get(hit.st) : Color(1.0f));
+
+        }
+
+        void shade(const Ray &ray, const Medium &currentMedium, const DifferentialGeometry &hit, CompositedBRDF &brdfs) const {
+
+            //! Bend the surface normal according to the bump map.
+            if (bumpMap != NULL) 
+                bendSurfaceNormal(hit);
+
+            //! Material is fully opaque and is thus assumed to be a Fresnel conductor.
+            if (transmission == Color(0.0f)) 
+                shadeConductor(hit, brdfs);
+
+            //! Material is partially or fully transparent and is thus assumed to be a dielectric.
+            if (transmission != Color(0.0f)) 
+                shadeDielectric(currentMedium, hit, brdfs);
+
+        }
+
+        void shadeConductor(const DifferentialGeometry &hit, CompositedBRDF &brdfs) const {
+
+            //! Diffuse reflected color.
+            Color diffuseColor = diffuse * sampleTexture(hit, diffuseMap);
+
+            //! Specular reflected color.
+            Color specularColor = specular * sampleTexture(hit, specularMap);
+
+            //! Surface is perfectly specular.
+            if (roughness == 0.0f) 
+                brdfs.add(NEW_BRDF(Conductor)(specularColor, refraction, absorption));
+
+            //! Surface is partially or fully diffuse.
+            if (roughness > 0.0f) 
+                brdfs.add(NEW_BRDF(Lambertian)(diffuseColor));
+
+            //! Surface is partially diffuse and specular.
+            if (roughness < 1.0f && roughness > 0.0f) 
+                brdfs.add(NEW_BRDF(MicrofacetConductor)(specularColor, 
+                        FresnelConductor(refraction, absorption), 
+                        PowerCosineDistribution(rcp(roughness), hit.Ns)));
+
+        }
+
+        void shadeDielectric(const Medium &currentMedium, const DifferentialGeometry &hit, 
+            CompositedBRDF &brdfs) const 
+        {
+
+            //! Diffuse reflected color.
+            Color diffuseColor = diffuse * sampleTexture(hit, diffuseMap);
+
+            //! Specular reflected color.
+            Color specularColor = specular * sampleTexture(hit, specularMap);
+
+            //! Transmission into the material.
+            if (currentMedium == mediumOutside) 
+                shadeDielectricEntry(hit, brdfs, diffuseColor, specularColor);
+
+            //! Transmission through the material.
+            if (currentMedium == mediumInside) 
+                shadeDielectricExit(hit, brdfs, specularColor);
+
+        }
+
+        void shadeDielectricEntry(const DifferentialGeometry &hit, CompositedBRDF &brdfs, 
+            const Color &diffuseColor, const Color &specularColor) const 
+        {
+
+            //! Surface is perfectly transmissive.
+            if (transmissionDepth == float(inf)) 
+                brdfs.add(NEW_BRDF(DielectricTransmission)(1.0f, refraction.r));
+
+            //! Surface is translucent.
+            if (transmissionDepth < float(inf)) 
+                brdfs.add(NEW_BRDF(TranslucentEntry)(diffusionExponent));
+
+            //! Surface is perfectly specular.
+            if (roughness == 0.0f) 
+                brdfs.add(NEW_BRDF(DielectricReflection)(1.0f, refraction.r, specularColor));
+
+            //! Surface is partially or fully diffuse.
+            if (roughness > 0.0f) 
+                brdfs.add(NEW_BRDF(Lambertian)(diffuseColor));
+            
+            //! Specular is partially diffuse and specular.
+            if (roughness < 1.0f && roughness > 0.0f) 
+                brdfs.add(NEW_BRDF(Specular)(specularColor, (1.0f - roughness) * 99.0f));
+
+        }
+
+        void shadeDielectricExit(const DifferentialGeometry &hit, CompositedBRDF &brdfs, 
+            const Color &specularColor) const 
+        {
+
+            //! Surface is perfectly transmissive.
+            if (transmissionDepth == float(inf)) 
+                brdfs.add(NEW_BRDF(DielectricTransmission)(refraction.r, 1.0f, transmission));
+
+            //! Internal reflection in perfectly transmissive materials.
+           if (transmissionDepth == float(inf) && roughness == 0.0f) 
+                brdfs.add(NEW_BRDF(DielectricReflection)(refraction.r, 1.0f));
+
+            //! Surface is translucent.
+            if (transmissionDepth < float(inf)) 
+                brdfs.add(NEW_BRDF(TranslucentExit)(transmission, transmissionDepth, 
+                        diffusionCoefficients));
+
+        }
+
+    protected:
+
+        //! Microfacet specialization for Fresnel conductors.
+        typedef Microfacet<FresnelConductor, PowerCosineDistribution> MicrofacetConductor;
+
+        //! Absorption coefficient.
+        Color absorption;
+
+        //! Bump map.
+        Ref<Texture> bumpMap;
+
+        //! Diffuse reflectance coefficient and map.
+        Color diffuse;  
+        Ref<Texture> diffuseMap;
+
+        //! Multilayer diffusion coefficients.
+        vector_t<Vec4f> diffusionCoefficients;
+
+        //! Diffusion scattering exponent.
+        float diffusionExponent;
+
+        //! Index of refraction.
+        Color refraction;
+
+        //! Surface roughness.
+        float roughness;
+
+        //! Specular reflectance coefficient and map.
+        Color specular;  
+        Ref<Texture> specularMap;
+
+        //! Transmitted radiance coefficient.
+        Color transmission;
+
+        //! Transmitted radiance penetration depth.
+        float transmissionDepth;
+
+        //! Load an array of Vec4f values.
+        static void getFloat4Array(Variant stream, vector_t<Vec4f> &array, const Vec4f &defaultValue) {
+
+            //! Set a default if no values were specified.
+            if (!stream.data) { array.resize(1);  array[0] = defaultValue;  return; }
+
+            //! Allocate storage for the array.
+            array.resize(stream.data->size());
+
+            //! Transcribe the values.
+            for (size_t i=0 ; i < stream.data->size() ; i++) array[i] = stream.data->getVector4f(i);
+
+        }
+
+    };
+
 }
 
-#endif
+#endif // __EMBREE_UBER_H__
+

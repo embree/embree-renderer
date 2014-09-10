@@ -1,0 +1,5 @@
+-i sphere_translucent_glass.xml
+-c sphere_view.ecs
+-quadlight 213 548.77 227 130 0 0 0 0 105 50 50 50
+-ambientlight 0.4 0.4 0.4
+-renderer pathtracer

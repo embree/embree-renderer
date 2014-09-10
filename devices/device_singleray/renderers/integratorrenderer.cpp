@@ -51,6 +51,9 @@ namespace embree
     /*! get framebuffer configuration */
     gamma = parms.getFloat("gamma",1.0f);
 
+    /*! get filter caustics configuration */
+    filterCaustics = parms.getBool("filterCaustics",false);
+
     /*! show progress to the user */
     showProgress = parms.getInt("showprogress",0);
   }
@@ -93,12 +96,90 @@ namespace embree
 
   void IntegratorRenderer::RenderJob::finish(size_t threadIndex, size_t threadCount, TaskScheduler::Event* event)
   {
+    /*! if enabled, filter caustic contributions */
+    if(renderer->filterCaustics)
+    {
+      /*! perform a Gaussian blur of the diffuse accumulation buffer using the sample weights and pixel radius.
+          we only blur masked pixels, with neighboring pixels of the same geometry ID. we do not blur pixels on
+          edges between geometries. the rest of the frame buffer remains unchanged. */
+      static const float sampleWeight[3] = { 0.27901f, 0.44198f, 0.27901f };
+      static const int r = 1;
+
+      const size_t width = this->framebuffer->getWidth();
+      const size_t height = this->framebuffer->getHeight();
+
+      /*! storage for intermediate Gaussian blur results */
+      Ref<FrameBuffer> intermediate = swapchain->fbFactory()(width, height, NULL);
+
+      /*! horizontal blur */
+      for(size_t x = r; x < width-r; x++)
+      {
+        for(size_t y = r; y < height-r; y++)
+        {
+          const int geomID = swapchain->diffuseGeom()->get(x, y);
+
+          float totalWeight = 0.f;
+          Color newColor = Color(0.f);
+
+          for(int d=-r; d<=r; d++)
+          {
+            const int dGeomID = swapchain->diffuseGeom()->get(x+d, y);
+
+            if(dGeomID == geomID && geomID != GEOMETRY_ID_EDGE)
+            {
+              totalWeight += sampleWeight[d+r];
+              newColor += sampleWeight[d+r] * swapchain->diffuseAccu()->get(x+d, y);
+            }
+          }
+
+          intermediate->set(x, y, newColor / totalWeight);
+        }
+      }
+
+      /*! vertical blur */
+      for(size_t x = r; x < width-r; x++)
+      {
+        for(size_t y = r; y < height-r; y++)
+        {
+          if(swapchain->diffuseFilterMask()->get(x, y) == 0)
+            continue;
+
+          const int geomID = swapchain->diffuseGeom()->get(x, y);
+
+          if(geomID == GEOMETRY_ID_EDGE)
+            continue;
+
+          float totalWeight = 0.f;
+          Color newColor = Color(0.f);
+
+          for(int d=-r; d<=r; d++)
+          {
+            const int dGeomID = swapchain->diffuseGeom()->get(x, y+d);
+
+            if(dGeomID == geomID && geomID != GEOMETRY_ID_EDGE)
+            {
+              totalWeight += sampleWeight[d+r];
+              newColor += sampleWeight[d+r] * intermediate->get(x, y+d);
+            }
+          }
+
+          /*! tone map and assign accumulated color + filtered diffuse color to frame buffer */
+          const Color L1 = toneMapper->eval(swapchain->accu()->get(x, y) + newColor / totalWeight, x, y, swapchain);
+          this->framebuffer->set(x, y, L1);
+        }
+      }
+    }
+
     if (renderer->showProgress) progress.end();
     double dt = getSeconds()-t0;
 
      /*! print fps, render time, and rays per second */
     std::ostringstream stream;
-    stream << "Integrator render  ";
+#if defined(__MIC__) 
+    stream << "Coprocessor Integrator render  ";
+#else
+    stream << "Host Integrator render  ";
+#endif
     stream.setf(std::ios::fixed, std::ios::floatfield);
     stream.precision(2);
     stream << 1.0f/dt << " fps, ";
@@ -147,6 +228,8 @@ namespace embree
           const int set = randomNumberGenerator.getInt(renderer->samplers->sampleSets);
 
           Color L = zero;
+          Color Ldiffuse = zero; /*! diffuse color contributions only, tracked only if filterCaustics enabled. */
+
           size_t spp = renderer->samplers->samplesPerPixel;
           for (size_t s=0; s<spp; s++)
           {
@@ -156,17 +239,42 @@ namespace embree
 
             Ray primary; camera->ray(Vec2f(fx,fy), sample.getLens(), primary);
             primary.time = sample.getTime();
-            
+
             state.sample = &sample;
             state.pixel = Vec2f(fx,fy);
-            L += renderer->integrator->Li(primary, scene, state);
-          }
+            LightPathHistory history;
+
+            /*! postDiffuseContribution will be zero if filterCaustics is disabled */
+            L += renderer->integrator->Li(primary, scene, state, history) - history.postDiffuseContribution;
+
+            if(renderer->filterCaustics)
+            {
+              Ldiffuse += history.postDiffuseContribution;
+
+              /*! reset diffuse geometry ID and filter mask if accumulation resets */
+              if(iteration == 0 && s == 0)
+              {
+                swapchain->diffuseGeom()->set(x, _y, history.firstDiffuseGeomID);
+                swapchain->diffuseFilterMask()->set(x, _y, 0);
+              }
+
+              /*! if the diffuse geometry ID changes, mark it as an edge */
+              if(history.firstDiffuseGeomID != swapchain->diffuseGeom()->get(x, _y))
+                swapchain->diffuseGeom()->set(x, _y, GEOMETRY_ID_EDGE);
+
+              /*! set the filtering mask if the contribution is a diffuse -> specular -> light hit */
+              if(history.hitHistory & DIFFUSE_SPECULAR_LIGHT_HIT)
+                swapchain->diffuseFilterMask()->set(x, _y, 1);
+            }  // filterCaustics
+          }  // for spp
+
           const Color L0 = swapchain->update(x, _y, L, spp, accumulate);
-          const Color L1 = toneMapper->eval(L0,x,y,swapchain);
+          const Color L0d = renderer->filterCaustics ? swapchain->diffuseUpdate(x, _y, Ldiffuse, spp, accumulate) : Color(0.f);
+          const Color L1 = toneMapper->eval(L0 + L0d, x, y, swapchain);
           framebuffer->set(x, _y, L1);
         }
       }
-      
+
       /*! print progress bar */
       if (renderer->showProgress) progress.next();
 

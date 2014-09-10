@@ -26,6 +26,13 @@ void FrameBufferRGBA8__set(uniform FrameBuffer* uniform _this, const int x, cons
   this->ptr[index] = (b << 16) | (g << 8) | r; 
 }
 
+int FrameBufferRGBA8__get(uniform FrameBuffer* uniform _this, const int x, const int y) 
+{ 
+  uniform FrameBufferRGBA8* uniform this = (uniform FrameBufferRGBA8* uniform) _this;
+  const int index = x+this->base.size.x*y;
+  return this->ptr[index];
+}
+
 void* uniform FrameBufferRGBA8__map(uniform FrameBuffer* uniform _this) 
 {
   uniform FrameBufferRGBA8* uniform this = (uniform FrameBufferRGBA8* uniform) _this;

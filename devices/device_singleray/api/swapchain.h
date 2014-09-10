@@ -35,13 +35,16 @@ namespace embree
     
     /*! constructs a swapchain of specified width, height, and number of buffers */
     SwapChain (const std::string format, size_t width, size_t height, size_t depth, void** ptrs, Factory fb_factory)
-      : format(format), width(width), height(height), depth(depth), buf(0)
+      : format(format), width(width), height(height), depth(depth), buf(0), _fb_factory(fb_factory)
     {
       for (size_t i=0; i<depth; i++) {
         if (ptrs) _buffer.push_back(fb_factory(width,height,ptrs[i]));
         else      _buffer.push_back(fb_factory(width,height,NULL));
       }
       _accu = new AccuBuffer(width,height);
+      _diffuseAccu = new AccuBuffer(width, height);
+      _diffuseGeom = new IntBuffer(width,height);
+      _diffuseFilterMask = new IntBuffer(width,height);
     }
 
     /*! return the width of the swapchain */
@@ -81,6 +84,7 @@ namespace embree
       for (ssize_t y=start.y; y<=end.y; y++) {
         for (ssize_t x=start.x; x<=end.x; x++) {
           _accu->clear(x,y);
+          _diffuseAccu->clear(x,y);
         }
       }
     }
@@ -90,9 +94,19 @@ namespace embree
       _accu->add(x,y,Vec4f(color.r,color.g,color.b,weight));
     }
 
+    /*! accumulate inside diffuse accumulation buffer */
+    void diffuseAccumulate(size_t x, size_t y, const Color& color, const float weight) {
+      _diffuseAccu->add(x,y,Vec4f(color.r,color.g,color.b,weight));
+    }
+
     /*! accumulate inside accumulation buffer */
     Color update(size_t x, size_t y, const Color& color, const float weight, const bool accumulate) {
       return _accu->update(x,y,color,weight,accumulate);
+    }
+
+    /*! accumulate inside diffuse accumulation buffer */
+    Color diffuseUpdate(size_t x, size_t y, const Color& color, const float weight, const bool accumulate) {
+      return _diffuseAccu->update(x,y,color,weight,accumulate);
     }
 
     /*! returns framebuffer format */
@@ -100,6 +114,15 @@ namespace embree
 
     /*! returns accumulation buffer */
     __forceinline Ref<AccuBuffer>& accu() { return _accu; }
+
+    /*! returns diffuse accumulation buffer */
+    __forceinline Ref<AccuBuffer>& diffuseAccu() { return _diffuseAccu; }
+
+    /*! returns diffuse geometry buffer */
+    __forceinline Ref<IntBuffer>& diffuseGeom() { return _diffuseGeom; }
+
+    /*! returns diffuse geometry buffer */
+    __forceinline Ref<IntBuffer>& diffuseFilterMask() { return _diffuseFilterMask; }
 
     /*! returns ID of current buffer */
     __forceinline size_t id() const { return buf; }
@@ -110,6 +133,9 @@ namespace embree
     /*! returns the specified framebuffer */
     __forceinline Ref<FrameBuffer>& buffer(size_t id) { return _buffer[id]; }
 
+    /*! returns the frame buffer factory */
+    __forceinline Factory& fbFactory() { return _fb_factory; }
+
   private:
     std::string format;
     size_t width;                             //!< width of the swapchain in pixels
@@ -119,7 +145,11 @@ namespace embree
     
   private:
     Ref<AccuBuffer> _accu;                    //!< special accumulation buffer
+    Ref<AccuBuffer> _diffuseAccu;             //!< special diffuse accumulation buffer with contributions _after_ the first diffuse hit
+    Ref<IntBuffer> _diffuseGeom;              //!< geometry ID buffer associated with diffuse accumulation buffer
+    Ref<IntBuffer> _diffuseFilterMask;        //!< filter mask buffer associated with diffuse accumulation buffer
     std::vector<Ref<FrameBuffer> > _buffer;   //!< the swapchain frame buffers
+    Factory _fb_factory;                      //!< factory for creating additional frame buffers
   };
 }
 

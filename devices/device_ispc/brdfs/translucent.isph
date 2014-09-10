@@ -1,0 +1,258 @@
+// ======================================================================== //
+// Copyright 2009-2014 Intel Corporation                                    //
+//                                                                          //
+// Licensed under the Apache License, Version 2.0 (the "License");          //
+// you may not use this file except in compliance with the License.         //
+// You may obtain a copy of the License at                                  //
+//                                                                          //
+//     http://www.apache.org/licenses/LICENSE-2.0                           //
+//                                                                          //
+// Unless required by applicable law or agreed to in writing, software      //
+// distributed under the License is distributed on an "AS IS" BASIS,        //
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. //
+// See the License for the specific language governing permissions and      //
+// limitations under the License.                                           //
+// ======================================================================== //
+
+#pragma once
+
+#include "brdf.isph"
+#include "optics.isph"
+
+//! A BRDF for initializing a transmission ray into a translucent material
+//! from a hit point on the surface.  The hemisphere beneath the point is
+//! randomly sampled according to a power cosine distribution.
+//!
+struct TranslucentEntry
+{
+  uniform BRDF base;
+  
+  // Diffusion scattering exponent.
+  float diffusionExponent;
+};
+
+////////////////////////////////////////////////////////////////////////
+//  TranslucentEntry uniform
+inline vec3f uniform_TranslucentEntry__eval(const uniform BRDF* uniform _this,
+                                    const vec3f &wo, const DifferentialGeometry &dg, const vec3f &wi) 
+{
+  return make_vec3f(0.f);
+}
+
+inline vec3f uniform_TranslucentEntry__sample(const uniform BRDF* uniform _this,
+                                      const vec3f &wo, 
+                                      const DifferentialGeometry &dg, 
+                                      Sample3f &wi, 
+                                      const vec2f &s)  
+{
+  const uniform TranslucentEntry* uniform this = (const uniform TranslucentEntry* uniform) _this;
+  wi = powerCosineSampleHemisphere(s.x, s.y, neg(wo), this->diffusionExponent);
+  wi.pdf = 1.0f;
+  return make_vec3f(1.0f);
+}
+
+inline void TranslucentEntry__Constructor(uniform TranslucentEntry* uniform this, 
+                                          const uniform float diffusionExponent)
+{
+  BRDF__Constructor(&this->base,SPECULAR_TRANSMISSION,
+                    uniform_TranslucentEntry__eval,uniform_TranslucentEntry__sample);
+  this->diffusionExponent = diffusionExponent;
+}
+
+inline uniform TranslucentEntry make_TranslucentEntry(const uniform float diffusionExponent) {
+  uniform TranslucentEntry v; TranslucentEntry__Constructor(&v,diffusionExponent); return v;
+}
+
+////////////////////////////////////////////////////////////////////////
+//  TranslucentEntry varying
+inline vec3f varying_TranslucentEntry__eval(const uniform BRDF* uniform _this,
+                                    const vec3f &wo, const DifferentialGeometry &dg, const vec3f &wi) 
+{
+  return make_vec3f(0.f);
+}
+
+inline vec3f varying_TranslucentEntry__sample(const uniform BRDF* uniform _this,
+                                      const vec3f &wo, 
+                                      const DifferentialGeometry &dg, 
+                                      Sample3f &wi, 
+                                      const vec2f &s)  
+{
+  const varying TranslucentEntry* uniform this = (const varying TranslucentEntry* uniform) _this;
+  wi = powerCosineSampleHemisphere(s.x, s.y, neg(wo), this->diffusionExponent);
+  wi.pdf = 1.0f;
+  return make_vec3f(1.0f);
+}
+
+inline void TranslucentEntry__Constructor(varying TranslucentEntry* uniform this, 
+                                          const uniform float diffusionExponent)
+{
+  BRDF__Constructor(&this->base,SPECULAR_TRANSMISSION,
+                    varying_TranslucentEntry__eval,varying_TranslucentEntry__sample);
+  this->diffusionExponent = diffusionExponent;
+}
+
+
+//! A BRDF for collecting radiance on the surface of a translucent material
+//! at the exit point of a transmitted ray.  The radiance is attenuated by
+//! the distance the ray traveled through the material using a multilayer
+//! diffusion profile specified by the user.
+//!
+struct vcc4f 
+{
+  uniform float x;
+  uniform float y;
+  uniform float z;
+  uniform float w;
+};
+
+struct TranslucentExit
+{
+  uniform BRDF base;
+  
+  //! Multilayer diffusion coefficients.
+  uniform struct vcc4f* uniform diffusionCoefficients;
+  uniform int numCoefficients;
+  
+  //! Transmitted radiance coefficient.
+  vec3f transmission;
+
+  //! Transmitted radiance penetration depth.
+  float transmissionDepth;
+};
+
+////////////////////////////////////////////////////////////////////////
+//  TranslucentExit uniform
+inline vec3f uniform_TranslucentExit__eval(const uniform BRDF* uniform _this,
+                                   const vec3f &wo, const DifferentialGeometry &dg, 
+                                   const vec3f &wi) 
+{ 
+  const uniform TranslucentExit* uniform this = (const uniform TranslucentExit* uniform) _this;
+
+  vec3f diffused = make_vec3f(0.f);
+
+  uniform int i;
+  uniform int numCoefficients = this->numCoefficients;
+  float rayDistance = dg.t / this->transmissionDepth;
+  
+  for ( i=0 ; i < numCoefficients ; i++) 
+  {
+        //! Gaussian blur weights (x, y, z) and variance (w).
+        uniform struct vcc4f coefficient = this->diffusionCoefficients[i];
+
+        //! Compute a sum-of-Gaussians.
+        diffused = add(diffused, 
+                        mul(make_vec3f(coefficient.x, coefficient.y, coefficient.z),
+                            make_vec3f(exp(-rayDistance * rayDistance / coefficient.w))));
+  }
+  
+  return mul(this->transmission, diffused);
+ }
+
+inline vec3f uniform_TranslucentExit__sample(const uniform BRDF* uniform _this,
+                                     const vec3f &wo, 
+                                     const DifferentialGeometry &dg, 
+                                     Sample3f &wi, 
+                                     const vec2f &s)  
+{
+  const uniform TranslucentExit* uniform this = (const uniform TranslucentExit* uniform) _this;
+  wi = make_Sample3f(neg(wo),1.0f);
+  return uniform_TranslucentExit__eval(&this->base, wo, dg, wi.v);
+}
+
+inline void TranslucentExit__Constructor(uniform TranslucentExit* uniform this, 
+                                         const uniform vec3f transmission,
+                                         const uniform float transmissionDepth, 
+                                         const uniform int numCoefficients,
+                                         const uniform struct vcc4f* uniform diffusionCoefficients)
+{
+  BRDF__Constructor(&this->base,SPECULAR_TRANSMISSION,
+                    uniform_TranslucentExit__eval,uniform_TranslucentExit__sample);
+  this->transmission = transmission;
+  this->transmissionDepth = transmissionDepth;
+  this->numCoefficients = numCoefficients;
+  this->diffusionCoefficients = (uniform struct vcc4f* uniform)diffusionCoefficients;
+}
+
+inline uniform TranslucentExit make_TranslucentExit(
+                                    const uniform vec3f transmission,
+                                    const uniform float transmissionDepth, 
+                                    const uniform int numCoefficients,
+                                    const uniform struct vcc4f* uniform diffusionCoefficients)
+{
+  uniform TranslucentExit v; 
+  TranslucentExit__Constructor(&v,
+                                transmission,
+                                transmissionDepth,
+                                numCoefficients,
+                                (uniform struct vcc4f *uniform) diffusionCoefficients); 
+  return v;
+}
+
+////////////////////////////////////////////////////////////////////////
+//  TranslucentExit varying
+inline vec3f varying_TranslucentExit__eval(const uniform BRDF* uniform _this,
+                                   const vec3f &wo, const DifferentialGeometry &dg, 
+                                   const vec3f &wi) 
+{ 
+  const varying TranslucentExit* uniform this = (const varying TranslucentExit* uniform) _this;
+
+  vec3f diffused = make_vec3f(0.f);
+
+  uniform int i;
+  uniform int numCoefficients = this->numCoefficients;
+  float rayDistance = dg.t / this->transmissionDepth;
+  
+  for ( i=0 ; i < numCoefficients ; i++) 
+  {
+        //! Gaussian blur weights (x, y, z) and variance (w).
+        uniform struct vcc4f coefficient = this->diffusionCoefficients[i];
+
+        //! Compute a sum-of-Gaussians.
+        diffused = add(diffused, 
+                        mul(make_vec3f(coefficient.x, coefficient.y, coefficient.z),
+                            make_vec3f(exp(-rayDistance * rayDistance / coefficient.w))));
+  }
+  
+  return mul(this->transmission, diffused);
+ }
+
+inline vec3f varying_TranslucentExit__sample(const uniform BRDF* uniform _this,
+                                     const vec3f &wo, 
+                                     const DifferentialGeometry &dg, 
+                                     Sample3f &wi, 
+                                     const vec2f &s)  
+{
+  const varying TranslucentExit* uniform this = (const varying TranslucentExit* uniform) _this;
+  wi = make_Sample3f(neg(wo),1.0f);
+  return varying_TranslucentExit__eval(&this->base, wo, dg, wi.v);
+}
+
+inline void TranslucentExit__Constructor(varying TranslucentExit* uniform this, 
+                                         const uniform vec3f transmission,
+                                         const uniform float transmissionDepth, 
+                                         const uniform int numCoefficients,
+                                         const uniform struct vcc4f* uniform diffusionCoefficients)
+{
+  BRDF__Constructor(&this->base,SPECULAR_TRANSMISSION,
+                    varying_TranslucentExit__eval,varying_TranslucentExit__sample);
+  this->transmission = transmission;
+  this->transmissionDepth = transmissionDepth;
+  this->numCoefficients = numCoefficients;
+  this->diffusionCoefficients = (uniform struct vcc4f* uniform)diffusionCoefficients;
+}
+/*
+inline varying TranslucentExit make_TranslucentExit(
+                                    const uniform vec3f transmission,
+                                    const uniform float transmissionDepth, 
+                                    const uniform int numCoefficients,
+                                    const uniform struct vcc4f* uniform diffusionCoefficients)
+{
+  varying TranslucentExit v; 
+  TranslucentExit__Constructor(&v,
+                                transmission,
+                                transmissionDepth,
+                                numCoefficients,
+                                (uniform struct vcc4f *uniform) diffusionCoefficients); 
+  return v;
+}
+*/

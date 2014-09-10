@@ -30,7 +30,11 @@ namespace embree
       const float epsilon = parms.getFloat("epsilon",32.0f)*float(ulp);
       const int spp = max(1,parms.getInt("sampler.spp",1));
       ISPCRef backplate = parms.getImage("backplate");
-      return ispc::PathTracer__new(maxDepth,minContribution,epsilon,spp,backplate.ptr);
+      const bool filterCaustics = parms.getBool("filterCaustics"  , false);
+      const bool disableCausticReflection = parms.getBool("disableCausticReflection", false);
+      const bool disableCausticTransmission = parms.getBool("disableCausticTransmission", false);
+      return ispc::PathTracer__new(maxDepth,minContribution,epsilon,spp,backplate.ptr, 
+              filterCaustics, disableCausticReflection, disableCausticTransmission);
     }
   };
 }

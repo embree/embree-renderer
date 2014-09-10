@@ -25,6 +25,13 @@ void FrameBufferRGB8__set(uniform FrameBuffer* uniform _this, const int x, const
   this->ptr[idx].z = (int) clamp(rgb.z * 255.0f, 0.0f, 255.0f);
 }
 
+vec3uc FrameBufferRGB8__get(uniform FrameBuffer* uniform _this, const int x, const int y) 
+{ 
+  uniform FrameBufferRGB8* uniform this = (uniform FrameBufferRGB8* uniform) _this;
+  int idx = x+this->base.size.x*y;
+  return this->ptr[idx];
+}
+
 void* uniform FrameBufferRGB8__map(uniform FrameBuffer* uniform _this) 
 {
   uniform FrameBufferRGB8* uniform this = (uniform FrameBufferRGB8* uniform) _this;

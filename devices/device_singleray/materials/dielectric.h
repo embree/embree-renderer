@@ -31,17 +31,17 @@ namespace embree
     Dielectric(const Parms& parms)
     {
       /*! extract parameters */
-      mediumOutside.eta          = parms.getFloat("etaOutside",1.0f);
-      mediumInside.eta           = parms.getFloat("etaInside",1.4f);
-      mediumOutside.transmission = parms.getColor("transmissionOutside",one);
-      mediumInside.transmission  = parms.getColor("transmission",one);
+      mediumOutside.eta          = parms.getFloat("etaOutside", 1.0f);
+      mediumInside.eta           = parms.getFloat("etaInside", 1.4f);
+      mediumOutside.transmission = parms.getColor("transmissionOutside", Color(1.0f));
+      mediumInside.transmission  = parms.getColor("transmission", Color(1.0f));
       isMediaInterface           = true;
 
       /*! precompute BRDF components for more efficient shading */
-      reflection_io   = new DielectricReflection  (mediumInside.eta, mediumOutside.eta);
-      reflection_oi   = new DielectricReflection  (mediumOutside.eta,mediumInside.eta);
-      transmission_io = new DielectricTransmission(mediumInside.eta, mediumOutside.eta);
-      transmission_oi = new DielectricTransmission(mediumOutside.eta,mediumInside.eta);
+      reflection_io   = new DielectricReflection  (mediumInside.eta,  mediumOutside.eta);
+      reflection_oi   = new DielectricReflection  (mediumOutside.eta, mediumInside.eta);
+      transmission_io = new DielectricTransmission(mediumInside.eta,  mediumOutside.eta, mediumInside.transmission);
+      transmission_oi = new DielectricTransmission(mediumOutside.eta, mediumInside.eta);
     }
 
     /*! Destruction */

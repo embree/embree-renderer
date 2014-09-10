@@ -99,6 +99,7 @@ namespace embree
     dg.P = ray.org+t*ray.dir;
     dg.Ng = normalize(ray.Ng);
     dg.st = Vec2f(u,v);
+    dg.t  = ray.tfar;
     Vector3f Ns = w*v0.n + u*v1.n + v*v2.n;
     float len2 = dot(Ns,Ns);
     Ns = len2 > 0 ? Ns*rsqrt(len2) : Vector3f(dg.Ng);

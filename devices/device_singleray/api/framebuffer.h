@@ -225,6 +225,55 @@ namespace embree
     }
   };
 
+  /*! integer buffer, used to store geometry IDs and filtering masks. */
+  struct IntBuffer : public RefCount
+  {
+  public:
+
+    /*! constructs a new framebuffer of specified size */
+    IntBuffer (size_t width, size_t height)
+    : width(width), height(height), data(NULL)
+    {
+      data = new int[width*height];
+      memset(data,0,width*height*sizeof(int));
+    }
+
+    /*! destroys the framebuffer */
+    ~IntBuffer () {
+      delete[] data; data = NULL;
+    }
+
+    /*! return the width of the swapchain */
+    __forceinline size_t getWidth() const { return width;  }
+
+    /*! return the height of the swapchain */
+    __forceinline size_t getHeight() const { return height; }
+
+    /*! return a pointer to the raw pixel data */
+    __forceinline void* getData() { return data; }
+
+    /*! clear buffer */
+    __forceinline void clear(size_t x, size_t y) {
+      data[y*width+x] = int(-1);
+    }
+
+    /*! set pixel */
+    __forceinline void set(size_t x, size_t y, const int& c) {
+      data[y*width+x] = c;
+    }
+
+    /*! read pixel */
+    __forceinline int get(size_t x, size_t y) const
+    {
+      return data[y*width+x];
+    }
+
+  protected:
+    size_t width;              //!< width of the framebuffer in pixels
+    size_t height;             //!< height of the framebuffer in pixels
+    int* data;                 //!< framebuffer data
+  };
+
   /*! accumulation buffer */
   struct AccuBuffer : public RefCount
   {

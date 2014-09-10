@@ -15,35 +15,195 @@
 // ======================================================================== //
 
 #include "material.isph"
-#include "brdfs/dielectriclayer_lambertian.isph"
+#include "brdfs/conductor.isph"
 #include "brdfs/dielectric_reflection.isph"
 #include "brdfs/dielectric_transmission.isph"
-#include "brdfs/microfacet_plastic.isph"
+#include "brdfs/microfacet_metal.isph"
+#include "brdfs/translucent.isph"
+#include "brdfs/specular.isph"
 #include "brdfs/lambertian.isph"
 #include "textures/texture.isph"
 
+
 struct Uber
 {
-  Material base;
-  float roughness;
-  int transparent;
-  Lambertian lambertian;
-  DielectricLayerLambertian substrate;
-  DielectricReflection reflection;
-  MicrofacetPlastic microfacet;
-  vec2f s0;                     //!< Offset for texture coordinates.
-  vec2f ds;                     //!< Scaling for texture coordinates.
-  uniform Texture* uniform Kd;  //!< Texture mapped to the surface.
-  Medium mediumOutside;
-  Medium mediumInside;
-  DielectricReflection reflection_io;
-  DielectricReflection reflection_oi;
-  DielectricTransmission transmission_io;
-  DielectricTransmission transmission_oi;
+    Material base;
+    
+    //! Absorption coefficient.
+    vec3f absorption;
+
+    //! Bump map.
+    uniform Texture* uniform bumpMap;
+
+    //! Diffuse reflectance coefficient and map.
+    vec3f diffuse;  
+    uniform Texture* uniform diffuseMap;
+
+    //! Multilayer diffusion coefficients.
+    uniform struct vcc4f* uniform diffusionCoefficients;
+    int numCoefficients;
+
+    //! Diffusion scattering exponent.
+    float diffusionExponent;
+
+    //! Index of refraction.
+    vec3f refraction;
+
+    //! Surface roughness.
+    float roughness;
+
+    //! Specular reflectance coefficient and map.
+    vec3f specular;  
+    uniform Texture* uniform specularMap;
+
+    //! Transmitted radiance coefficient.
+    vec3f transmission;
+
+    //! Transmitted radiance penetration depth.
+    float transmissionDepth;
+    
+    Medium mediumOutside;
+    Medium mediumInside;
+    DielectricReflection reflection_io;
+
+    DielectricTransmission transmission_io;
+    DielectricTransmission transmission_oi;
+
+    TranslucentEntry translucentEntry;
+    TranslucentExit translucentExit;
+    
+    FresnelConductor fresnel;
+    PowerCosineDistribution powerdist;
 };
 
 ///////////////////////////////////////////////////////////////////////////////
 // Implementation
+
+// Do bump-mapping
+void Uber__bendSurfaceNormal(const uniform Uber* uniform this,
+                    const Ray&                 ray,
+                    DifferentialGeometry &dg) 
+{
+
+    //! Tangent space normal from the texture map.
+    vec3f texel;
+    if (this->bumpMap)
+        texel = this->bumpMap->get(this->bumpMap, dg.st);
+    else
+        return;
+
+    //! Expand the normal range from [0, 1] to [-1, 1].
+    vec3f bend = make_vec3f(2.0 * texel.x - 1.0, 2.0 * texel.y - 1.0, 2.0 * texel.z - 1.0);
+
+    //! Bend the surface normal at the hit point.
+    dg.Ns = normalize(add(add(mul(bend.x, dg.Tx), mul(bend.y, dg.Ty)), mul(bend.z, dg.Ns)));
+}
+
+//! Convenience routine which always returns a valid Color.
+vec3f Uber__sampleTexture(DifferentialGeometry &dg, uniform Texture* uniform  texture)
+{
+    if (NULL != texture)
+        return texture->get(texture, dg.st);
+    else
+        return make_vec3f(1.0);
+}
+
+void Uber__shadeConductor(const uniform Uber *uniform this,  
+        DifferentialGeometry& dg,              
+        uniform CompositedBRDF&     brdfs)           
+{    
+    //! Diffuse reflected color.
+    const vec3f diffuseColor = mul(this->diffuse, Uber__sampleTexture(dg, this->diffuseMap));
+
+    //! Specular reflected color.
+    const vec3f specularColor = mul(this->specular, Uber__sampleTexture(dg, this->specularMap));
+    
+    //! Surface is perfectly specular.
+    if (this->roughness == 0.0f)
+        COMPOSITED_BRDF_ADD(brdfs, Conductor, specularColor, this->refraction, this->absorption);
+
+    //! Surface is partially or fully diffuse.
+    if (this->roughness > 0.0f) 
+        COMPOSITED_BRDF_ADD(brdfs, Lambertian, diffuseColor);
+
+    //! Surface is partially diffuse and specular.
+    if (this->roughness < 1.0f && this->roughness > 0.0f) 
+    {
+        COMPOSITED_BRDF_ADD(brdfs, MicrofacetMetal, specularColor, this->fresnel, this->powerdist);               
+    }
+}
+
+void Uber__shadeDielectricEntry(const uniform Uber *uniform this,
+        DifferentialGeometry& dg,              
+        uniform CompositedBRDF&     brdfs,
+        const vec3f &diffuseColor,
+        const vec3f &specularColor)
+{
+
+    //! Surface is perfectly transmissive.
+    if (this->transmissionDepth >= 999999.0f)
+        CompositedBRDF__add(&brdfs, &this->transmission_oi.base);
+
+    //! Surface is translucent.
+    if (this->transmissionDepth < 999999.0f) 
+        CompositedBRDF__add(&brdfs, &this->translucentEntry.base);
+        //COMPOSITED_BRDF_ADD(brdfs, TranslucentEntry, this->diffusionExponent);
+
+    //! Surface is perfectly specular.
+    if (this->roughness == 0.0f) 
+        COMPOSITED_BRDF_ADD(brdfs, DielectricReflection, 1.0f, this->refraction.x, specularColor);
+
+    //! Surface is partially or fully diffuse.
+    if (this->roughness > 0.0f)
+        COMPOSITED_BRDF_ADD(brdfs, Lambertian, diffuseColor);
+
+    //! Specular is partially diffuse and specular.
+    if (this->roughness < 1.0f && this->roughness > 0.0f) 
+        COMPOSITED_BRDF_ADD(brdfs, Specular, specularColor, (1.0f - this->roughness) * 99.0f);
+
+} 
+
+void Uber__shadeDielectricExit(const uniform Uber *uniform this,
+        DifferentialGeometry& dg,              
+        uniform CompositedBRDF&     brdfs)
+{
+
+    //! Surface is perfectly transmissive.
+    if (this->transmissionDepth >= 999999.0f) 
+        CompositedBRDF__add(&brdfs,&this->transmission_io.base);
+
+    //! Internal reflection in perfectly transmissive materials.
+    if (this->transmissionDepth >= 999999.0f && this->roughness == 0.0f) 
+        CompositedBRDF__add(&brdfs, &this->reflection_io.base);
+
+    //! Surface is translucent.
+    if (this->transmissionDepth < 999999.0f)
+        CompositedBRDF__add(&brdfs, &this->translucentExit.base);
+        //COMPOSITED_BRDF_ADD(brdfs, TranslucentExit, this->transmission, this->transmissionDepth,
+        //                    this->numCoefficients, this->diffusionCoefficients);
+
+} 
+
+void Uber__shadeDielectric(const uniform Uber *uniform this,
+        const Medium&  currentMedium, 
+        DifferentialGeometry& dg,              
+        uniform CompositedBRDF&     brdfs)
+{
+    //! Diffuse reflected color.
+    const vec3f diffuseColor = mul(this->diffuse, Uber__sampleTexture(dg, this->diffuseMap));
+
+    //! Specular reflected color.
+    const vec3f specularColor = mul(this->specular, Uber__sampleTexture(dg, this->specularMap));
+
+    //! Transmission into the material.
+    if (eq(currentMedium, this->mediumOutside))
+        Uber__shadeDielectricEntry(this, dg, brdfs, diffuseColor, specularColor);
+
+    //! Transmission through the material and back out again.
+    if (eq(currentMedium, this->mediumInside)) 
+        Uber__shadeDielectricExit(this, dg, brdfs);
+
+}
 
 void Uber__shade(const uniform Material *uniform _this,
                   const Ray&                  ray,             
@@ -51,38 +211,23 @@ void Uber__shade(const uniform Material *uniform _this,
                   const DifferentialGeometry& dg,              
                   uniform CompositedBRDF&     brdfs)           
 {
-  const uniform Uber* uniform this = (const uniform Uber* uniform)_this;
-//  if (0 == this->transparent) {
-  if (this->Kd) {
-	  COMPOSITED_BRDF_ADD(brdfs,Lambertian,
-                      this->Kd->get(this->Kd,add(mul(this->ds,dg.st),this->s0)));
-  } else {
-//	  CompositedBRDF__add(&brdfs,&this->substrate.base);
-	  CompositedBRDF__add(&brdfs,&this->lambertian.base);
-  }
-//  }
-#if 1
-  if (1 == this->transparent) {
-	// Transparency
-	/*! the ray transitions from outside to inside */
-	if (eq(currentMedium,this->mediumOutside)) {
-		CompositedBRDF__add(&brdfs,&this->reflection_oi.base);
-		CompositedBRDF__add(&brdfs,&this->transmission_oi.base);
-	}
+    const uniform Uber* uniform this = (const uniform Uber* uniform)_this;
   
-	/*! the ray transitions from inside to outside */
-	else {
-		CompositedBRDF__add(&brdfs,&this->reflection_io.base);
-		CompositedBRDF__add(&brdfs,&this->transmission_io.base);
-	}
-  } // transparency
-#endif
-#if 0
-  if (this->roughness == 0.0f) 
-	  CompositedBRDF__add(&brdfs,&this->reflection.base);
-  else
-	  CompositedBRDF__add(&brdfs,&this->microfacet.base);
-#endif
+    // Make a local copy of the differential geometry so that we can
+    // change the normal
+    DifferentialGeometry localdg = dg;
+
+    //! Bend the surface normal according to the bump map.
+    if (this->bumpMap)
+        Uber__bendSurfaceNormal(this, ray, localdg);
+
+    //! Material is fully opaque and is thus assumed to be a Fresnel conductor.
+    if (eq(this->transmission, make_vec3f(0.0f))) 
+        Uber__shadeConductor(this, localdg, brdfs);
+        
+    //! Material is partially or fully transparent and is thus assumed to be a dielectric.
+    if (ne(this->transmission, make_vec3f(0.0f))) 
+        Uber__shadeDielectric(this, currentMedium, localdg, brdfs);
 }
 
 void Uber__selectNextMedium(const uniform Material *uniform _this,
@@ -97,76 +242,99 @@ void Uber__selectNextMedium(const uniform Material *uniform _this,
 void Uber__Destructor(uniform RefCount* uniform _this)
 {
   uniform Uber* uniform this = (uniform Uber* uniform) _this;
-  if (this->Kd)
-	RefCount__DecRef(&this->Kd->base);
+  
+  if (this->bumpMap)
+	RefCount__IncRef(&this->bumpMap->base);
+
+  if (this->diffuseMap)
+	RefCount__IncRef(&this->diffuseMap->base);
+
+  if (this->specularMap)
+	RefCount__IncRef(&this->specularMap->base);
+  
   Material__Destructor(_this);
 }
 
 void Uber__Constructor(uniform Uber *uniform this,
-                        const uniform vec3f& diffColor,
-						const uniform vec3f& reflColor,
-						uniform Texture* uniform Kd,
-						const uniform vec2f& s0,
-						const uniform vec2f& ds,
-						const uniform float surfEta,
-						const uniform float roughness,
-						const uniform float etaOutside,
-						const uniform vec3f& transmissionOutside,
-                        const uniform float etaInside,
-						const uniform vec3f& transmissionInside)
+                        const uniform vec3f& absorption,
+                        uniform Texture* uniform bumpMap,
+                        const uniform vec3f& diffuse,
+                        uniform Texture* uniform diffuseMap,
+                        const uniform float diffusionExponent,
+                        const uniform vec3f& refraction,
+                        const uniform float roughness,
+                        const uniform vec3f& specular,
+                        uniform Texture* uniform specularMap,
+                        const uniform vec3f& transmission,
+                        const uniform float transmissionDepth,
+                        const uniform int numCoefficients,
+                        uniform struct vcc4f* uniform diffusionCoefficients)
 {
   Material__Constructor(&this->base,Uber__Destructor,Uber__shade,Uber__selectNextMedium);
-  if (Kd)
-	RefCount__IncRef(&Kd->base);
-  this->Kd = Kd;
-  this->s0 = s0;
-  this->ds = ds;
+  if (bumpMap)
+	RefCount__IncRef(&bumpMap->base);
+  this->bumpMap = bumpMap;
+  if (diffuseMap)
+	RefCount__IncRef(&diffuseMap->base);
+  this->diffuseMap = diffuseMap;
+  if (specularMap)
+	RefCount__IncRef(&specularMap->base);
+  this->specularMap = specularMap;
+  
+  this->absorption = absorption;
+  this->diffuse = diffuse;
+  this->diffusionExponent = diffusionExponent;
+  this->refraction = refraction;
   this->roughness = roughness;
-  this->mediumOutside.eta          = etaOutside;
-  this->mediumOutside.transmission = transmissionOutside;
-  this->mediumInside.eta           = etaInside;
-  this->mediumInside.transmission  = transmissionInside;
-  DielectricReflection__Constructor  (&this->reflection_io  ,etaInside ,etaOutside);
-  DielectricReflection__Constructor  (&this->reflection_oi  ,etaOutside,etaInside);
-  DielectricTransmission__Constructor(&this->transmission_io,etaInside ,etaOutside);
-  DielectricTransmission__Constructor(&this->transmission_oi,etaOutside,etaInside);
-/*
-  DielectricLayerLambertian__Constructor(&this->substrate,
-                                         make_vec3f(1.0f), 1.0f, surfEta, 
-                                         make_Lambertian(diffColor));
-*/
-  this->lambertian = make_Lambertian(diffColor);
+  this->specular = specular;
+  this->transmission = transmission;
+  this->transmissionDepth = transmissionDepth;
+  this->numCoefficients = numCoefficients;
+  this->diffusionCoefficients = diffusionCoefficients;
+  
+  DielectricReflection__Constructor  (&this->reflection_io  ,refraction.x ,1.0f, make_vec3f(1.0f));
 
-  DielectricReflection__Constructor(&this->reflection, 1.0f, surfEta);
+  DielectricTransmission__Constructor(&this->transmission_io, refraction.x, 1.0f, transmission);
+  DielectricTransmission__Constructor(&this->transmission_oi, 1.0f, refraction.x, make_vec3f(1.0f));
 
-  MicrofacetPlastic__Constructor(&this->microfacet,reflColor,
-                                 make_FresnelDielectric(1.0f,surfEta), 
-                                 make_PowerCosineDistribution(rcp(roughness)));
-  if ((this->mediumInside.transmission.x == 0.0f) &&
-	  (this->mediumInside.transmission.y == 0.0f) &&
-	  (this->mediumInside.transmission.z == 0.0f))
-	  this->transparent = 0;
-  else
-	  this->transparent = 1;
+  this->translucentEntry = make_TranslucentEntry(diffusionExponent);
+  this->translucentExit = make_TranslucentExit(transmission, transmissionDepth,
+                            numCoefficients, diffusionCoefficients);
+  this->fresnel = make_FresnelConductor(refraction, absorption);
+  this->powerdist = make_PowerCosineDistribution(rcp(roughness));
+  
+  // Set up purely for interface detection
+  this->mediumOutside.eta          = 1.0f;
+  this->mediumOutside.transmission = make_vec3f(1.0f);
+  this->mediumInside.eta           = refraction.x;
+  this->mediumInside.transmission  = make_vec3f(0.98765f);
+
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 // External API
 
-export void* uniform Uber__new(const uniform vec3f& diffColor,
-								const uniform vec3f& reflColor,
-								void* uniform Kd,
-								const uniform vec2f& s0,
-								const uniform vec2f& ds,
-								const uniform float surfEta,
-								const uniform float roughness,
-								const uniform float etaOutside,
-								const uniform vec3f& transmissionOutside,
-                                const uniform float etaInside,
-								const uniform vec3f& transmissionInside)
+export void* uniform Uber__new(const uniform vec3f& absorption,
+                                void* uniform bumpMap,
+                                const uniform vec3f& diffuse,
+                                void* uniform diffuseMap,
+                                const uniform float diffusionExponent,
+                                const uniform vec3f& refraction,
+                                const uniform float roughness,
+                                const uniform vec3f& specular,
+                                void* uniform specularMap,
+                                const uniform vec3f& transmission,
+                                const uniform float transmissionDepth,
+                                const uniform int numCoefficients,
+                                void* uniform diffusionCoefficients)
 {
   uniform Uber *uniform this = uniform new uniform Uber;
-  Uber__Constructor(this, diffColor, reflColor, (uniform Texture* uniform)Kd, s0, ds, 
-	  surfEta, roughness, etaOutside, transmissionOutside, etaInside, transmissionInside);
+  
+Uber__Constructor(this, absorption, (uniform Texture* uniform)bumpMap, diffuse,
+    (uniform Texture* uniform)diffuseMap, diffusionExponent, refraction,
+    roughness, specular, (uniform Texture* uniform)specularMap, transmission,
+    transmissionDepth, numCoefficients, 
+    (uniform struct vcc4f* uniform)diffusionCoefficients);
+
   return this;
 }

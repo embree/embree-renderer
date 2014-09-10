@@ -48,7 +48,7 @@ namespace embree
        
     private:
 
-      /*! start functon */
+      /*! start function */
       TASK_RUN_FUNCTION(RenderJob,renderTile);
       
       /*! finish function */
@@ -84,7 +84,8 @@ namespace embree
   private:
     int maxDepth;                  //!< Maximal recursion depth.
     float gamma;                   //!< Gamma to use for framebuffer writeback.
-    
+    bool filterCaustics;           //!< Filter / smooth caustics.
+
   private:
     Ref<Integrator> integrator;    //!< Integrator to use.
     Ref<SamplerFactory> samplers;  //!< Sampler to use.

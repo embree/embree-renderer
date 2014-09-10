@@ -23,11 +23,14 @@
 struct DielectricTransmission
 {
   uniform BRDF base;
+  // relative refraction index etai/etat of both media
   float eta;
+  // transmitted color
+  vec3f T;
 };
 
 ///////////////////////////////////////////////////////////////////////////////
-// uniform DielectricReflection
+// uniform DielectricTransmission
 
 inline vec3f uniform_DielectricTransmission__eval(const uniform BRDF* uniform _this,
                                                   const vec3f &wo, 
@@ -44,21 +47,32 @@ inline vec3f uniform_DielectricTransmission__sample(const uniform BRDF* uniform 
                                                     const vec2f &s)
 {
   const uniform DielectricTransmission* uniform this = (const uniform DielectricTransmission* uniform) _this;
-  float cosThetaO = clamp(dot(wo,dg.Ns));
-  float cosThetaI; wi = refract(wo,dg.Ns,this->eta,cosThetaO,cosThetaI);
-  return make_vec3f(1.0f-fresnelDielectric(cosThetaO,cosThetaI,this->eta));
+  float cosThetaO = clamp(dot(wo, dg.Ns));
+  float cosThetaI; 
+  wi = refract(wo, dg.Ns, this->eta, cosThetaO, cosThetaI);
+  return (mul(this->T, make_vec3f(1.0f-fresnelDielectric(cosThetaO, cosThetaI, this->eta))));
 }
 
 inline void DielectricTransmission__Constructor(uniform DielectricTransmission* uniform this,
-                                                const uniform float etai, const uniform float etat)
+                                                const uniform float etai, 
+                                                const uniform float etat,
+                                                const uniform vec3f T)
 {
   BRDF__Constructor(&this->base,SPECULAR_TRANSMISSION,
                     uniform_DielectricTransmission__eval,uniform_DielectricTransmission__sample);
   this->eta = etai*rcp(etat);
+  // T needs to default to make_vec3f(1.0f) if not specified
+  this->T = T;
+}
+
+inline uniform DielectricTransmission make_DielectricTransmission(const uniform float etai, 
+                                                                  const uniform float etat,
+                                                                  const uniform vec3f T) {
+  uniform DielectricTransmission v; DielectricTransmission__Constructor(&v,etai,etat, T); return v;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// varying DielectricReflection
+// varying DielectricTransmission
 
 inline vec3f varying_DielectricTransmission__eval(const uniform BRDF* uniform _this,
                                                   const vec3f &wo, 
@@ -75,19 +89,29 @@ inline vec3f varying_DielectricTransmission__sample(const uniform BRDF* uniform 
                                                     const vec2f &s)
 {
   const varying DielectricTransmission* uniform this = (const varying DielectricTransmission* uniform) _this;
-  float cosThetaO = clamp(dot(wo,dg.Ns));
-  float cosThetaI; wi = refract(wo,dg.Ns,this->eta,cosThetaO,cosThetaI);
-  return make_vec3f(1.0f-fresnelDielectric(cosThetaO,cosThetaI,this->eta));
+  float cosThetaO = clamp(dot(wo, dg.Ns));
+  float cosThetaI; 
+  wi = refract(wo, dg.Ns, this->eta, cosThetaO, cosThetaI);
+  return (mul(this->T, make_vec3f(1.0f-fresnelDielectric(cosThetaO, cosThetaI, this->eta))));
 }
 
 inline void DielectricTransmission__Constructor(varying DielectricTransmission* uniform this,
-                                                const varying float etai, const varying float etat)
+                                                const varying float etai, 
+                                                const varying float etat,
+                                                const varying vec3f T)
 {
   BRDF__Constructor(&this->base,SPECULAR_TRANSMISSION,
                     varying_DielectricTransmission__eval,varying_DielectricTransmission__sample);
   this->eta = etai*rcp(etat);
+  // T needs to default to make_vec3f(1.0f) if not specified
+  this->T = T;
 }
 
+inline varying DielectricTransmission make_DielectricTransmission(const varying float etai, 
+                                                              const varying float etat,
+                                                              const varying vec3f T) {
+  varying DielectricTransmission v; DielectricTransmission__Constructor(&v,etai,etat, T); return v;
+}
 ///////////////////////////////////////////////////////
 
 struct ThinDielectricTransmission

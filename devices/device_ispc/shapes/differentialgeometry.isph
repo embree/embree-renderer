@@ -21,8 +21,11 @@
 struct DifferentialGeometry
 {
   vec3f P;         //!< Hit location in world coordinates.
+  vec3f Tx;        //!< Tangent in x direction
+  vec3f Ty;        //!< Tangent in y direction
   vec3f Ng;        //!< Geometric normal.
   vec3f Ns;        //!< Shading normal.
   vec2f st;        //!< Hit location in surface parameter space.
+  float t;         //!< Hit distance along the ray
   float error;     //!< Intersection error factor.
 };

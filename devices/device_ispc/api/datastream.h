@@ -46,6 +46,11 @@ namespace embree
       return Vector3i(p[0],p[1],p[2]);
     }
 
+    __forceinline Vec4f getVector4f(size_t i) {
+      float* p = (float*)(ptr->map()+i*stride+ofs);
+      return Vec4f(p[0],p[1],p[2],p[3]);
+    }   
+    
   private:
     Ref<Data> ptr;    //!< Data buffer containing the stream.
     size_t elements;  //!< Number of elements in the stream.

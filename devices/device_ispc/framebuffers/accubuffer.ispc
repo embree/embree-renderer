@@ -23,7 +23,8 @@ void AccuBuffer__Destructor(uniform RefCount* uniform _this)
   RefCount__Destructor(_this);
 }
 
-void AccuBuffer__Constructor(uniform AccuBuffer* uniform this, const uniform uint width, const uniform uint height)
+void AccuBuffer__Constructor(uniform AccuBuffer* uniform this, 
+        const uniform uint width, const uniform uint height)
 {
   RefCount__Constructor(&this->base,AccuBuffer__Destructor);
   this->size.x = width;
@@ -40,3 +41,27 @@ uniform AccuBuffer* uniform AccuBuffer__new(const uniform uint width, const unif
   return this;
 }
 
+void IntBuffer__Destructor(uniform RefCount* uniform _this)
+{
+  uniform IntBuffer* uniform this = (uniform IntBuffer* uniform) _this;
+  delete[] this->ptr; this->ptr = NULL;
+  RefCount__Destructor(_this);
+}
+
+void IntBuffer__Constructor(uniform IntBuffer* uniform this, 
+        const uniform uint width, const uniform uint height)
+{
+  RefCount__Constructor(&this->base,IntBuffer__Destructor);
+  this->size.x = width;
+  this->size.y = height;
+  this->ptr = uniform new uniform int[width*height];
+  for (uniform int i=0; i<width*height; i++)
+    this->ptr[i] = 0;
+}
+
+uniform IntBuffer* uniform IntBuffer__new(const uniform uint width, const uniform uint height)
+{
+  uniform IntBuffer* uniform this = uniform new uniform IntBuffer;
+  IntBuffer__Constructor(this,width,height);
+  return this;
+}

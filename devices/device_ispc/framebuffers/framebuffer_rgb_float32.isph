@@ -24,3 +24,4 @@ struct FrameBufferRGBFloat32
 };
 
 uniform FrameBuffer* uniform FrameBufferRGBFloat32__new(const uniform uint width, const uniform uint height, const void* uniform ptr);
+vec3f FrameBufferRGBFloat32__get(uniform FrameBuffer* uniform _this, const varying int x, const varying int y);

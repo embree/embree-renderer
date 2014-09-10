@@ -34,6 +34,9 @@ void SwapChain__Destructor(uniform RefCount* uniform _this)
   delete[] this->buffers; this->buffers = NULL;
 
   RefCount__Destroy(&this->accu->base);
+  RefCount__Destroy(&this->diffuseAccu->base);
+  RefCount__Destroy(&this->diffuseGeom->base);
+  RefCount__Destroy(&this->diffuseFilterMask->base);
   RefCount__Destructor(&this->base);
 }
 
@@ -57,6 +60,9 @@ void SwapChain__Constructor(uniform SwapChain* uniform this,
     else      this->buffers[i] = create(width,height,NULL);
   }
   this->accu = AccuBuffer__new(width,height);
+  this->diffuseAccu = AccuBuffer__new(width,height);
+  this->diffuseGeom = IntBuffer__new(width,height);
+  this->diffuseFilterMask = IntBuffer__new(width,height);
 }
 
 export void* uniform SwapChainRGBFloat32__new(const uniform uint width, const uniform uint height, const uniform uint depth, void* uniform* uniform ptrs)
@@ -88,6 +94,21 @@ uniform FrameBuffer* uniform SwapChain__get_buffer(uniform SwapChain* uniform th
 
 uniform AccuBuffer* uniform SwapChain__get_accu(uniform SwapChain* uniform this) {
   return this->accu;
+}
+
+uniform AccuBuffer*  uniform SwapChain__get_diffuseAccu  (uniform SwapChain* uniform this)
+{
+  return this->diffuseAccu;
+}
+
+uniform IntBuffer*  uniform SwapChain__get_diffuseGeom  (uniform SwapChain* uniform this)
+{
+  return this->diffuseGeom;
+}
+
+uniform IntBuffer*  uniform SwapChain__get_diffuseFilterMask  (uniform SwapChain* uniform this)
+{
+  return this->diffuseFilterMask;
 }
 
 export void* uniform SwapChain__map(void* uniform _this, uniform int id)

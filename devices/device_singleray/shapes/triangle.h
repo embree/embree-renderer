@@ -74,11 +74,12 @@ namespace embree
 
     /*! Post intersection to compute shading data. */
     void postIntersect(const Ray& ray, DifferentialGeometry& dg) const {
-      dg.P = ray.org+ray.tfar*ray.dir;
+      dg.P  = ray.org + ray.tfar * ray.dir;
       dg.Ng = this->Ng;
       dg.Ns = this->Ng;
-      dg.st = Vec2f(ray.u,ray.v);
-      dg.error = max(abs(ray.tfar),reduce_max(abs(dg.P)));
+      dg.st = Vec2f(ray.u, ray.v);
+      dg.t  = ray.tfar;
+      dg.error = max(abs(ray.tfar), reduce_max(abs(dg.P)));
     }
 
   public:

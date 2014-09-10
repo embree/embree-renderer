@@ -73,7 +73,13 @@ namespace embree
     strcpy(fname, (executable.path() + fullName).c_str());
 //    void* lib = dlopen((executable.path() + fullName).c_str(),RTLD_NOW);
     void* lib = dlopen(&fname[0],RTLD_NOW);
-    if (lib == NULL) throw std::runtime_error(dlerror());
+    if (lib == NULL) 
+    {
+        fprintf(stderr, "ERROR - dlopen failed for file %s\n", fname);
+        fprintf (stderr, " -- Error was >%s<\n", dlerror());
+        fflush(stderr); fflush(stdout);
+        throw std::runtime_error(dlerror());
+    }
     return lib_t(lib);
   }
 

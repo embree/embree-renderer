@@ -23,6 +23,30 @@
 
 namespace embree
 {
+    /*! We track certain types of hits to disable or filter caustics. */
+    enum LightPathHitHistory {
+      NO_HIT                            = 0x00000000,   /*! no tracked hits in history                                     */
+      DIFFUSE_HIT                       = 0x00000001,   /*! a diffuse surface has been hit in the path                     */
+      DIFFUSE_SPECULAR_REFLECTION_HIT   = 0x00000010,   /*! a diffuse surface and then specular surface hit (reflection)   */
+      DIFFUSE_SPECULAR_TRANSMISSION_HIT = 0x00000100,   /*! a diffuse surface and then specular surface hit (transmission) */
+      DIFFUSE_SPECULAR_LIGHT_HIT        = 0x00001000    /*! a diffuse, specular, light hit sequence                        */
+    };
+
+    /*! Geometry IDs >= 0 are valid. We also track edges between different geometry IDs. */
+    enum GeometryIdType {
+      GEOMETRY_ID_INVALID = -1,
+      GEOMETRY_ID_EDGE = -2
+    };
+
+    /*! Tracked components of the light path history */
+    struct LightPathHistory {
+      LightPathHistory() : hitHistory(NO_HIT), firstDiffuseGeomID(GEOMETRY_ID_INVALID), postDiffuseContribution(0.f) {}
+
+      LightPathHitHistory hitHistory;
+      int firstDiffuseGeomID;
+      Color postDiffuseContribution;
+    };
+
   /*! Integrator State */
   struct IntegratorState
   {
@@ -49,8 +73,9 @@ namespace embree
      *  the ray direction. */
     virtual Color Li(      Ray&               ray,     /*!< Ray to compute the radiance along.                */
                      const Ref<BackendScene>& scene,   /*!< Scene geometry and lights.                        */
-                     IntegratorState&   state) = 0;
-                     
+                     IntegratorState&   state,
+                     LightPathHistory& history) = 0;
+
   };
 }
 

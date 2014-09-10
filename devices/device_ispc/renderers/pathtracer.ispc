@@ -24,6 +24,7 @@
 #include "textures/image.isph"
 #include "samplers/precomputed_sampler.isph"
 #include "framebuffers/framebuffer.isph"
+#include "framebuffers/framebuffer_rgb_float32.isph"
 
 #if defined (ISPC_TARGET_SSE2) || defined (ISPC_TARGET_SSE4)
 #  define PACKET_WIDTH 2
@@ -42,9 +43,40 @@
 //////////////////////////////////////////////////////////////////
 // LightPath
 
+/*! We track certain types of hits to disable or filter caustics. */
+enum LightPathHitHistory {
+  NO_HIT                            = 0x00000000,   /*! no tracked hits in history                                     */
+  DIFFUSE_HIT                       = 0x00000001,   /*! a diffuse surface has been hit in the path                     */
+  DIFFUSE_SPECULAR_REFLECTION_HIT   = 0x00000010,   /*! a diffuse surface and then specular surface hit (reflection)   */
+  DIFFUSE_SPECULAR_TRANSMISSION_HIT = 0x00000100,   /*! a diffuse surface and then specular surface hit (transmission) */
+  DIFFUSE_SPECULAR_LIGHT_HIT        = 0x00001000    /*! a diffuse, specular, light hit sequence                        */
+};
+
+/*! Geometry IDs >= 0 are valid. We also track edges between different geometry IDs. */
+enum GeometryIdType {
+  GEOMETRY_ID_INVALID = -1,
+  GEOMETRY_ID_EDGE = -2
+};
+
+/*! Tracked components of the light path history */
+struct LightPathHistory 
+{
+  LightPathHitHistory hitHistory;
+  int firstDiffuseGeomID;
+  vec3f postDiffuseContribution;
+};
+
+inline void init_LightPathHistory(LightPathHistory& lph)
+{
+  lph.hitHistory = NO_HIT;
+  lph.firstDiffuseGeomID = GEOMETRY_ID_INVALID;
+  lph.postDiffuseContribution = make_vec3f(0.f);
+}
+
 struct LightPath 
 {
   Ray    ray;                /*! Last ray in the path. */
+  LightPathHistory history;   /*! Tracked components of the light path history */
   Medium lastMedium;             /*! Medium the last ray travels inside. */
   uniform uint depth;            /*! Recursion depth of path. */
   vec3f  throughput;             /*! Determines the fraction of
@@ -57,9 +89,10 @@ struct LightPath
   bool   unbent;                    /*! True of the ray path is a straight line. */
 };
 
-inline void init_LightPath(LightPath& lp, const Ray &ray)
+inline void init_LightPath(LightPath& lp, const LightPathHistory& history, const Ray &ray)
 {
   lp.ray = ray;
+  lp.history = history;
   lp.lastMedium = make_Medium_Vacuum();
   lp.depth = 0;
   lp.throughput = make_vec3f(1.f);
@@ -68,6 +101,7 @@ inline void init_LightPath(LightPath& lp, const Ray &ray)
 }
 
 inline void extend_fast(LightPath& lp,
+                   const LightPathHistory& history, 
                    const vec3f nextRay_org, 
                    const vec3f nextRay_dir, 
                    const float nextRay_near, 
@@ -80,6 +114,7 @@ inline void extend_fast(LightPath& lp,
   lp.depth = lp.depth+1;
   lp.throughput = mul(lp.throughput,weight);
   lp.ignoreVisibleLights = ignoreVL;
+  lp.history = history;
 }
 
 //////////////////////////////////////////////////////////////////
@@ -97,6 +132,9 @@ struct PathTracer
   uniform int spp;
   uniform int iteration;
   uniform Image* uniform backplate;
+  uniform bool filterCaustics;              //!< Filter / smooth caustics.
+  uniform bool disableCausticReflection;    //!< Disables caustics due to reflection.
+  uniform bool disableCausticTransmission;  //!< Disables caustics due to transmission.
 
   /*! Random variables. */
   uniform int lightSampleID;            //!< 2D random variable to sample the light source.
@@ -123,10 +161,16 @@ vec3f PathTraceIntegrator_Li(const uniform PathTracer* uniform this,
   while (true) 
   {
     /*! Terminate path if too long or contribution too low. */
-    if (lightPath.depth >= this->maxDepth)
+    if (lightPath.depth >= this->maxDepth) 
+    {
+//        if (lightPath.depth > 1) print("Termination depth = %\n", lightPath.depth);
       return L;
-	if (reduce_max(lightPath.throughput) <= this->minContribution)
+    }
+	if (reduce_max(lightPath.throughput) <= this->minContribution) 
+    {
+//      if (lightPath.depth > 1) print("Contribution low - Termination depth = %\n", lightPath.depth);
 	  return L;
+    }
 
     /*! Traverse ray. */
     DifferentialGeometry dg;
@@ -170,12 +214,24 @@ vec3f PathTraceIntegrator_Li(const uniform PathTracer* uniform this,
     }
 #endif
 
-    /*! Add light emitted by hit area light source. */
-    if (!lightPath.ignoreVisibleLights) {
+    // Add light emitted by hit area light source. We may not include the 
+    // contribution if it leads to caustic effects that are disabled.
+    // We also track the light hit as part of the path history. 
+    uniform bool lightHit = false;
+
+    if (!lightPath.ignoreVisibleLights && 
+        !(this->disableCausticReflection && 
+                    (lightPath.history.hitHistory & DIFFUSE_SPECULAR_REFLECTION_HIT)) &&
+        !(this->disableCausticTransmission && 
+                    (lightPath.history.hitHistory & DIFFUSE_SPECULAR_TRANSMISSION_HIT)))
+    {
       foreach_unique(geomID in lightPath.ray.id0) {
         uniform int id = scene->handle2id[geomID];
         const uniform AreaLight* uniform l = (const uniform AreaLight* uniform) scene->instances[id]->light;
-        if (l != NULL) L = add(L, mul(Lw, l->Le(l,dg,wo)));
+        if (l != NULL) {
+            L = add(L, mul(Lw, l->Le(l,dg,wo)));
+            lightHit = true;
+        }
       }
     }
 
@@ -192,7 +248,7 @@ vec3f PathTraceIntegrator_Li(const uniform PathTracer* uniform this,
 
         /*! Either use precomputed samples for the light or sample light now. */
         LightSample ls; 
-	ls.wi.v = make_vec3f(0.0f,0.0f,0.0f); ls.wi.pdf = 0.0f;
+        ls.wi.v = make_vec3f(0.0f,0.0f,0.0f); ls.wi.pdf = 0.0f;
         if (light->type & TY_PRECOMPUTE_LIGHT_SAMPLES) {
           ls = PrecomputedSample__getLightSample(sample_,this->precomputedLightSampleID[i]);
         }
@@ -218,9 +274,10 @@ vec3f PathTraceIntegrator_Li(const uniform PathTracer* uniform this,
         rtcOccluded(scene->handle,shadow_ray);
         if (hadHit(shadow_ray)) continue; 
 
+        /*! Evaluate BRDF. */
         L = add(L,mul(mul(Lw,ls.L),mul(brdf,rcp(ls.wi.pdf))));
       }
-    }
+    }  // usedirectlighting
 
     /*! Global illumination. Pick one BRDF component and sample it. */
     if (lightPath.depth >= this->maxDepth) 
@@ -231,15 +288,47 @@ vec3f PathTraceIntegrator_Li(const uniform PathTracer* uniform this,
     vec2f s  = PrecomputedSample__getVec2f(sample_,this->firstScatterSampleID     + lightPath.depth);
     float ss = PrecomputedSample__getFloat(sample_,this->firstScatterTypeSampleID + lightPath.depth);
     vec3f c = CompositedBRDF__sample(&brdfs,wo,dg,wi,type,s,ss,giBRDFTypes);
+
+      /*! add to light path history if caustics are being modified */
+    uniform bool firstDiffuseHit = false;
+
+    if(this->filterCaustics || this->disableCausticReflection || this->disableCausticTransmission)
+    {
+      if((lightPath.history.hitHistory & DIFFUSE_SPECULAR_REFLECTION_HIT || 
+          lightPath.history.hitHistory & DIFFUSE_SPECULAR_TRANSMISSION_HIT)
+          && lightHit)
+        lightPath.history.hitHistory = (LightPathHitHistory)(lightPath.history.hitHistory | 
+                                           DIFFUSE_SPECULAR_LIGHT_HIT);
+
+      if((lightPath.history.hitHistory & DIFFUSE_HIT) && 
+              (type & SPECULAR_REFLECTION || type & GLOSSY_REFLECTION))
+        lightPath.history.hitHistory = (LightPathHitHistory)(lightPath.history.hitHistory | 
+                                           DIFFUSE_SPECULAR_REFLECTION_HIT);
+
+      if((lightPath.history.hitHistory & DIFFUSE_HIT) && 
+              (type & SPECULAR_TRANSMISSION || type & GLOSSY_TRANSMISSION))
+        lightPath.history.hitHistory = (LightPathHitHistory)(lightPath.history.hitHistory | 
+                                            DIFFUSE_SPECULAR_TRANSMISSION_HIT);
+
+      // we consider the hit a diffuse hit if the material has a diffuse BRDF 
+      //(whether or not it was chosen in this path)
+      if(!(lightPath.history.hitHistory & DIFFUSE_HIT) && 
+              (brdfs.brdfTypes & directLightingBRDFTypes))
+      {
+        lightPath.history.hitHistory = (LightPathHitHistory)(lightPath.history.hitHistory | 
+                                                        DIFFUSE_HIT);
+        firstDiffuseHit = true;
+      }
+    }
     
     /*! Continue only if we hit something valid. */
     if (reduce_max(c) <= 0.0f | wi.pdf <= PDF_CULLING) 
       return L;
 
     /*! Compute  simple volumetric effect. */
-    const vec3f transmission = lightPath.lastMedium.transmission;
-    if (ne(transmission,make_vec3f(1.f)))
-      c = mul(c, pow(transmission,lightPath.ray.tfar));
+//    const vec3f transmission = lightPath.lastMedium.transmission;
+//    if (ne(transmission,make_vec3f(1.f)))
+//      c = mul(c, pow(transmission,lightPath.ray.tfar));
     
     /*! Tracking medium if we hit a medium interface. */
     if (type & TRANSMISSION) {
@@ -256,12 +345,27 @@ vec3f PathTraceIntegrator_Li(const uniform PathTracer* uniform this,
     }
     
     /*! Continue the path. */
-    extend_fast(lightPath, 
-           dg.P,wi.v,dg.error*this->epsilon,inf,
-           c,(type & directLightingBRDFTypes) != NONE);
+    extend_fast(lightPath, lightPath.history,
+           dg.P, wi.v, dg.error*this->epsilon, inf,
+           c, (type & directLightingBRDFTypes) != NONE);
+    
+    /*! We maintain the contribution from the first diffuse hit onward in a separate buffer to filter caustics. */
+   if(this->filterCaustics && firstDiffuseHit)
+    {
+        if (GEOMETRY_ID_INVALID == lightPath.history.firstDiffuseGeomID) // first hit
+            lightPath.history.firstDiffuseGeomID = lightPath.ray.id0; // id0 == geomID
 
-    Lw = mul(mul(Lw,c),rcp(wi.pdf));
-  }
+        vec3f thiscontrib = mul(c, rcp(wi.pdf));
+        lightPath.history.postDiffuseContribution = add(lightPath.history.postDiffuseContribution,
+                thiscontrib);
+//         lightPath.history.postDiffuseContribution = c * Li(scatteredPath, scene, state) * rcp(wi.pdf);
+        Lw = mul(Lw, thiscontrib);
+//            L += lightPath.history.postDiffuseContribution;
+    }
+    else
+        Lw = mul(mul(Lw,c),rcp(wi.pdf));
+      // L += c * Li(scatteredPath, scene, state) * rcp(wi.pdf);
+  }  // while 
   return L;
 }
 
@@ -271,7 +375,10 @@ inline vec3f PathTracer__renderPixel(const uniform PathTracer* uniform this,
                                      const uniform FrameBuffer *uniform fb,
                                      uniform Random& rnd,
                                      const uint ix, const uint iy, 
-                                     uint &numRays)
+                                     uint &numRays, 
+                                     vec3f &Ldiffuse,
+                                     uniform IntBuffer *uniform diffuseGeom,
+                                     uniform IntBuffer *uniform diffuseFilterMask)
 {
   vec3f L = make_vec3f(0.f);
   uniform int set = Random__getInt(&rnd);
@@ -287,9 +394,32 @@ inline vec3f PathTracer__renderPixel(const uniform PathTracer* uniform this,
     Ray ray;
     camera->initRay(camera,ray,screenSample,lensSample);
     ray.time = lensSample.x; // FIXME: introduced correlation
-    LightPath lightPath; init_LightPath(lightPath,ray);
-    L = add(L, PathTraceIntegrator_Li(this,screenSample,lightPath,scene,sample,numRays));
-  }
+    LightPathHistory history; init_LightPathHistory(history);
+    LightPath lightPath; init_LightPath(lightPath,history, ray);
+
+    L = add(L, sub(PathTraceIntegrator_Li(this,screenSample,lightPath,scene,sample,numRays),
+                   history.postDiffuseContribution));
+    if (this->filterCaustics)
+    {
+        Ldiffuse = add(Ldiffuse, history.postDiffuseContribution);
+
+        /*! reset diffuse geometry ID and filter mask if accumulation resets */
+        if(this->iteration == 0 && s == 0)
+        {
+          IntBuffer__set(diffuseGeom, ix, iy, history.firstDiffuseGeomID);
+          IntBuffer__set(diffuseFilterMask, ix, iy, 0);
+        }
+
+        /*! if the diffuse geometry ID changes, mark it as an edge */
+        if(history.firstDiffuseGeomID != IntBuffer__get(diffuseGeom, ix, iy))
+          IntBuffer__set(diffuseGeom,ix, iy, GEOMETRY_ID_EDGE);
+
+        /*! set the filtering mask if the contribution is a diffuse -> specular -> light hit */
+        if(history.hitHistory & DIFFUSE_SPECULAR_LIGHT_HIT)
+          IntBuffer__set(diffuseFilterMask, ix, iy, 1);
+    }  // filterCaustics
+    
+  }  // for spp
   return mul(L, rcp((uniform float)this->spp));
 } 
 
@@ -299,6 +429,9 @@ task void PathTracer__renderTile(uniform PathTracer* uniform this,
                                  const uniform ToneMapper* uniform toneMapper,
                                  uniform FrameBuffer *uniform fb,
                                  uniform AccuBuffer *uniform accu,
+                                 uniform AccuBuffer *uniform diffuseAccu,
+                                 uniform IntBuffer *uniform diffuseGeom,
+                                 uniform IntBuffer *uniform diffuseFilterMask,        
                                  const uniform int accuMode,
                                  const uniform uint numTiles_x) 
 {
@@ -314,7 +447,7 @@ task void PathTracer__renderTile(uniform PathTracer* uniform this,
   
   const uniform uint tile_y0 = tile_y * TILE_SIZE_Y;
   const uniform uint tile_x0 = tile_x * TILE_SIZE_X;
-
+  
   for (uniform uint iy=0; iy<TILE_SIZE_Y; iy+=PACKET_HEIGHT)
   {
     const uint y = (tile_y0 + iy) + sample_y;
@@ -328,11 +461,19 @@ task void PathTracer__renderTile(uniform PathTracer* uniform this,
       const uint x = (tile_x0 + ix) + sample_x;
       if (x >= fb->size.x) continue;
 
-      vec3f R = PathTracer__renderPixel(this,camera,scene,fb,rnd,x,y,numRays);
-      vec3f d = AccuBuffer__update(accu,x,_y,R,accuMode);
-      if (toneMapper) d = toneMapper->toneMap(toneMapper,d,x,y,fb->size);
-      fb->set(fb,x,_y,d);
-    }
+      vec3f Ldiffuse = make_vec3f(0.f);  /// diffuse color contributions only, tracked only if filterCaustics enabled. 
+      vec3f L = PathTracer__renderPixel(this,camera,scene,fb,rnd,x,y,numRays,
+              Ldiffuse, diffuseGeom, diffuseFilterMask);
+      vec3f L0 = AccuBuffer__update(accu,x,_y,L,accuMode);
+      vec3f L0d = this->filterCaustics ? AccuBuffer__update(diffuseAccu,x,_y,Ldiffuse,accuMode) : make_vec3f(0.f);
+      if (toneMapper) 
+      {  
+        L = toneMapper->toneMap(toneMapper,add(L0,L0d),x,y,fb->size);
+        fb->set(fb,x,_y,L);
+      }
+      else
+        fb->set(fb,x,_y,add(L0,L0d));  
+    }  // for
   }
 
   /* count number of rays */
@@ -374,16 +515,97 @@ uniform int PathTracer_renderFrame(uniform Renderer* uniform _this,
                                    uniform SwapChain *uniform swapchain,
                                    const uniform int accuMode)
 {
-  uniform PathTracer* uniform this = (uniform PathTracer* uniform) _this;
-  this->numRays = 0;
-  if (accuMode == 0) this->iteration = 0;
-  uniform int numTiles_x = (swapchain->width+ (TILE_SIZE_X-1))/TILE_SIZE_X;
-  uniform int numTiles_y = (swapchain->height+(TILE_SIZE_Y-1))/TILE_SIZE_Y;
-  uniform int numTiles = numTiles_x * numTiles_y;
-  uniform FrameBuffer* uniform fb = SwapChain__get_buffer(swapchain);
-  uniform AccuBuffer* uniform accu = SwapChain__get_accu(swapchain);
-  launch[numTiles] PathTracer__renderTile(this,camera,scene,toneMapper,fb,accu,accuMode,numTiles_x);
-  sync;
+    uniform PathTracer* uniform this = (uniform PathTracer* uniform) _this;
+    this->numRays = 0;
+    if (accuMode == 0) this->iteration = 0;
+    uniform int numTiles_x = (swapchain->width+ (TILE_SIZE_X-1))/TILE_SIZE_X;
+    uniform int numTiles_y = (swapchain->height+(TILE_SIZE_Y-1))/TILE_SIZE_Y;
+    uniform int numTiles = numTiles_x * numTiles_y;
+    uniform FrameBuffer* uniform fb = SwapChain__get_buffer(swapchain);
+    uniform AccuBuffer* uniform accu = SwapChain__get_accu(swapchain);
+    uniform AccuBuffer* uniform diffuseAccu = SwapChain__get_diffuseAccu(swapchain);
+    uniform IntBuffer* uniform diffuseGeom = SwapChain__get_diffuseGeom(swapchain);
+    uniform IntBuffer* uniform diffuseFilterMask = SwapChain__get_diffuseFilterMask(swapchain);
+    launch[numTiles] PathTracer__renderTile(this,camera,scene,toneMapper,fb,accu,
+         diffuseAccu, diffuseGeom, diffuseFilterMask, accuMode,numTiles_x);
+    sync;
+
+    /*! if enabled, filter caustic contributions */
+    if(this->filterCaustics)
+    {
+      /*! perform a Gaussian blur of the diffuse accumulation buffer using the sample weights and pixel radius.
+          we only blur masked pixels, with neighboring pixels of the same geometry ID. we do not blur pixels on
+          edges between geometries. the rest of the frame buffer remains unchanged. */
+      uniform float sampleWeight[3] = { 0.27901f, 0.44198f, 0.27901f };
+      uniform int r = 1;
+
+      uniform int width = swapchain->width;
+      uniform int height = swapchain->height;
+
+      /*! storage for intermediate Gaussian blur results */
+      uniform FrameBuffer* uniform intermediate = FrameBufferRGBFloat32__new(width, height, NULL);
+
+      /*! horizontal blur */
+      for( uint x = r; x < width-r; x++)
+      {
+        for( uint y = r; y < height-r; y++)
+        {
+          const int geomID = IntBuffer__get(diffuseGeom, x, y);
+
+          float totalWeight = 0.f;
+          vec3f newColor = make_vec3f(0.f);
+
+          for( int d=-r; d<=r; d++)
+          {
+            int dGeomID = IntBuffer__get(diffuseGeom, x+d, y);
+
+            if(dGeomID == geomID && geomID != GEOMETRY_ID_EDGE)
+            {
+              totalWeight += sampleWeight[d+r];
+              newColor = add(newColor, mul(sampleWeight[d+r], AccuBuffer__get(diffuseAccu, x+d, y)));
+            }
+          }
+
+          intermediate->set(intermediate, x, y, div(newColor, totalWeight)); 
+        }
+      }
+
+      /*! vertical blur */
+      for( uint x = r; x < width-r; x++)
+      {
+        for( uint y = r; y < height-r; y++)
+        {
+          if(IntBuffer__get(diffuseFilterMask, x, y) == 0)
+            continue;
+
+          int geomID = IntBuffer__get(diffuseGeom, x, y);
+
+          if(geomID == GEOMETRY_ID_EDGE)
+            continue;
+
+          float totalWeight = 0.f;
+          vec3f newColor = make_vec3f(0.f);
+
+          for( int d=-r; d<=r; d++)
+          {
+            int dGeomID = IntBuffer__get(diffuseGeom, x, y+d);
+
+            if(dGeomID == geomID && geomID != GEOMETRY_ID_EDGE)
+            {
+                totalWeight += sampleWeight[d+r];
+                newColor = add(newColor, mul(sampleWeight[d+r], 
+                      FrameBufferRGBFloat32__get(intermediate, x, y+d)));
+            }
+          }
+
+          /*! tone map and assign accumulated color + filtered diffuse color to frame buffer */
+           vec3f L1 = toneMapper->toneMap(toneMapper,
+                  add(AccuBuffer__get(accu, x, y), div(newColor, totalWeight)),
+                  x,y,fb->size);
+          fb->set(fb, x, y, L1);
+        }
+      }
+    }  // filterCaustics
 
   rtcDebug();
   this->iteration++;
@@ -403,7 +625,10 @@ void PathTracer__Constructor(uniform PathTracer* uniform this,
                              const uniform float& minContribution,
                              const uniform float& epsilon,
                              const uniform int& spp,
-                             uniform Image* uniform backplate)
+                             uniform Image* uniform backplate,
+                             const uniform bool& filterCaustics,
+                             const uniform bool& disableCausticReflection,
+                             const uniform bool& disableCausticTransmission)
 {
   Renderer__Constructor(&this->base,PathTracer__Destructor,PathTracer_renderFrameInit,PathTracer_renderFrame);
 
@@ -420,6 +645,9 @@ void PathTracer__Constructor(uniform PathTracer* uniform this,
   this->iteration = 0;
   RefCount__IncRef(&backplate->base);
   this->backplate = backplate;
+  this->filterCaustics = filterCaustics;
+  this->filterCaustics = disableCausticReflection;
+  this->filterCaustics = disableCausticTransmission;
 
   this->lightSampleID = 0;
   this->firstScatterSampleID = 0;
@@ -431,9 +659,14 @@ export void* uniform PathTracer__new(const uniform int& maxDepth,
                                      const uniform float& minContribution,
                                      const uniform float& epsilon,
                                      const uniform int& spp,
-                                     void* uniform backplate)
+                                     void* uniform backplate,
+                                     const uniform bool& filterCaustics,
+                                     const uniform bool& disableCausticReflection,
+                                     const uniform bool& disableCausticTransmission)
 {
   uniform PathTracer *uniform this = uniform new uniform PathTracer;
-  PathTracer__Constructor(this,maxDepth,minContribution,epsilon,spp,(uniform Image* uniform) backplate);
+  PathTracer__Constructor(this,maxDepth,minContribution,epsilon,spp,
+        (uniform Image* uniform) backplate, filterCaustics, disableCausticReflection,
+        disableCausticTransmission);
   return this;
 }

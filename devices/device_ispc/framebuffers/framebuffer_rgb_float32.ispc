@@ -22,6 +22,13 @@ void FrameBufferRGBFloat32__set(uniform FrameBuffer* uniform _this, const int x,
   this->ptr[x+this->base.size.x*y] = rgb; 
 }
 
+vec3f FrameBufferRGBFloat32__get(uniform FrameBuffer* uniform _this, const int x, const int y) 
+{ 
+  uniform FrameBufferRGBFloat32* uniform this = (uniform FrameBufferRGBFloat32* uniform) _this;
+  int idx = x+this->base.size.x*y;
+  return this->ptr[idx];
+}
+
 void* uniform FrameBufferRGBFloat32__map(uniform FrameBuffer* uniform _this) 
 {
   uniform FrameBufferRGBFloat32* uniform this = (uniform FrameBufferRGBFloat32* uniform) _this;

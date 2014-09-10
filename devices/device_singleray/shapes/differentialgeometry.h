@@ -41,6 +41,7 @@ namespace embree
     Vector3f Ng;               //!< Normalized geometry normal.
     mutable Vector3f Ns;       //!< Normalized shading normal.
     Vec2f st;                  //!< Hit location in surface parameter space.
+    float t;                   //!< Hit distance along the ray.
     float error;               //!< Intersection error factor.
     light_mask_t illumMask;    //!< bit mask which light we're interested in
     light_mask_t shadowMask;   //!< bit mask which light we're interested in

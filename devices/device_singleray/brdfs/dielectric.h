@@ -20,74 +20,81 @@
 #include "../brdfs/brdf.h"
 #include "../brdfs/optics.h"
 
-namespace embree
-{
+namespace embree {
+
   /*! BRDF of the reflection of a dielectricum. */
-  class DielectricReflection : public BRDF
-  {
+  class DielectricReflection : public BRDF {
   public:
 
     /*! Dielectric reflection BRDF constructor. \param etai is the
      *  refraction index of the medium the incident ray travels in
      *  \param etat is the refraction index of the opposite medium */
-    __forceinline DielectricReflection(float etai,float etat)
-      : BRDF(SPECULAR_REFLECTION), eta(etai*rcp(etat)) {}
+    __forceinline DielectricReflection(float etai, float etat, const Color& R = Color(1.0f))
+      : BRDF(SPECULAR_REFLECTION), eta(etai * rcp(etat)), R(R) {}
 
     __forceinline Color eval(const Vector3f& wo, const DifferentialGeometry& dg, const Vector3f& wi) const {
-      return zero;
+      return(zero);
     }
 
     Color sample(const Vector3f& wo, const DifferentialGeometry& dg, Sample3f& wi, const Vec2f& s) const {
-      float cosThetaO = clamp(dot(wo,dg.Ns));
-      wi = reflect(wo,dg.Ns,cosThetaO);
-      return Color(fresnelDielectric(cosThetaO,eta));
+      float cosThetaO = clamp(dot(wo, dg.Ns));
+      wi = reflect(wo, dg.Ns, cosThetaO);
+      return(R * Color(fresnelDielectric(cosThetaO, eta)));
     }
 
     float pdf(const Vector3f& wo, const DifferentialGeometry& dg, const Vector3f& wi) const {
-      return zero;
+      return(zero);
     }
 
   private:
 
     /*! relative refraction index etai/etat of both media */
     float eta;
+
+    /*! reflected color */
+    Color R;
+
   };
 
   /*! BRDF of the transmission of a dielectricum. */
-  class DielectricTransmission : public BRDF
-  {
+  class DielectricTransmission : public BRDF {
   public:
 
     /*! Dielectric transmission BRDF constructor. \param etai is the
      *  refraction index of the medium the incident ray travels in
      *  \param etat is the refraction index of the opposite medium */
-    __forceinline DielectricTransmission(float etai, float etat)
-      : BRDF(SPECULAR_TRANSMISSION), eta(etai*rcp(etat)) {}
+    __forceinline DielectricTransmission(float etai, float etat, const Color& T = Color(1.0f))
+      : BRDF(SPECULAR_TRANSMISSION), eta(etai * rcp(etat)), T(T) {}
 
     __forceinline Color eval(const Vector3f& wo, const DifferentialGeometry& dg, const Vector3f& wi) const {
-      return zero;
+      return(zero);
     }
 
     Color sample(const Vector3f& wo, const DifferentialGeometry& dg, Sample3f& wi, const Vec2f& s) const {
-      float cosThetaO = clamp(dot(wo,dg.Ns)), cosThetaI;
-      wi = refract(wo,dg.Ns,eta,cosThetaO,cosThetaI);
-      return Color(1.0f-fresnelDielectric(cosThetaO,cosThetaI,eta));
+
+      float cosThetaO = clamp(dot(wo, dg.Ns)), cosThetaI;
+      wi = refract(wo, dg.Ns, eta, cosThetaO, cosThetaI);
+      return (T * Color(1.0f - fresnelDielectric(cosThetaO, cosThetaI, eta)));
+
     }
 
     float pdf(const Vector3f& wo, const DifferentialGeometry& dg, const Vector3f& wi) const {
-      return zero;
+      return(zero);
     }
 
   private:
 
     /*! relative refraction index etai/etat of both media */
     float eta;
+
+    /*! transmitted color */
+    Color T;
+
   };
 
   /*! BRDF of the transmission part of a thin dielectricum. Supports a
    *  color of the dielectric medium. */
-  class ThinDielectricTransmission : public BRDF
-  {
+  class ThinDielectricTransmission : public BRDF {
   public:
 
     /*! Thin dielectric transmission BRDF constructor. \param etai is
@@ -97,23 +104,24 @@ namespace embree
      *  thickness is the thickness of the medium */
 
     __forceinline ThinDielectricTransmission(float etai, float etat, const Color& T, float thickness)
-      : BRDF(SPECULAR_TRANSMISSION), eta(etai*rcp(etat)), logT(log(T.r),log(T.g),log(T.b)), thickness(thickness) {}
+      : BRDF(SPECULAR_TRANSMISSION), eta(etai * rcp(etat)), logT(log(T.r), log(T.g), log(T.b)), thickness(thickness) {}
 
     __forceinline Color eval(const Vector3f& wo, const DifferentialGeometry& dg, const Vector3f& wi) const {
       return zero;
     }
 
-    Color sample(const Vector3f& wo, const DifferentialGeometry& dg, Sample3f& wi, const Vec2f& s) const
+    Color sample(const Vector3f& wo, const DifferentialGeometry& dg, Sample3f& wi, const Vec2f& s) const 
     {
-      wi = Sample3f(-wo,1.0f);
-      float cosTheta = clamp(dot(wo,dg.Ns));
-      if (cosTheta <= 0.0f) return zero;
+      wi = Sample3f(-wo, 1.0f);
+      float cosTheta = clamp(dot(wo, dg.Ns));
+      if (cosTheta <= 0.0f) return(zero);
       float alpha = thickness * rcp(cosTheta);
-      return exp(logT*alpha) * (1.0f-fresnelDielectric(cosTheta,eta));
+      return(exp(logT * alpha) * (1.0f - fresnelDielectric(cosTheta, eta)));
+
     }
 
     float pdf(const Vector3f& wo, const DifferentialGeometry& dg, const Vector3f& wi) const {
-      return zero;
+      return(zero);
     }
 
   private:
@@ -126,7 +134,9 @@ namespace embree
 
     /*! Thickness of the medium. */
     float thickness;
+
   };
+
 }
 
 #endif

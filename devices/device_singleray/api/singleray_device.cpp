@@ -44,18 +44,18 @@
 #include "lights/trianglelight.h"
 
 /* include all materials */
-#include "materials/matte.h"
-#include "materials/plastic.h"
-#include "materials/dielectric.h"
-#include "materials/thindielectric.h"
-#include "materials/mirror.h"
-#include "materials/metal.h"
 #include "materials/brushedmetal.h"
+#include "materials/dielectric.h"
+#include "materials/matte.h"
+#include "materials/metal.h"
 #include "materials/metallicpaint.h"
 #include "materials/matte_textured.h"
+#include "materials/mirror.h"
 #include "materials/obj.h"
-#include "materials/velvet.h"
+#include "materials/plastic.h"
+#include "materials/thindielectric.h"
 #include "materials/uber.h"
+#include "materials/velvet.h"
 
 /* include all shapes */
 #include "shapes/triangle.h"
@@ -247,20 +247,20 @@ namespace embree
   Device::RTMaterial SingleRayDevice::rtNewMaterial(const char* type)
   {
     RT_COMMAND_HEADER;
-    if      (!strcasecmp(type,"Matte")         ) return (Device::RTMaterial) new ConstructorHandle<Matte,Material>;
-    else if (!strcasecmp(type,"Plastic")       ) return (Device::RTMaterial) new ConstructorHandle<Plastic,Material>;
+    if      (!strcasecmp(type,"BrushedMetal")  ) return (Device::RTMaterial) new ConstructorHandle<BrushedMetal,Material>;
     else if (!strcasecmp(type,"Dielectric")    ) return (Device::RTMaterial) new ConstructorHandle<Dielectric,Material>;
     else if (!strcasecmp(type,"Glass")         ) return (Device::RTMaterial) new ConstructorHandle<Dielectric,Material>;
+    else if (!strcasecmp(type,"Matte")         ) return (Device::RTMaterial) new ConstructorHandle<Matte,Material>;
+    else if (!strcasecmp(type,"MatteTextured") ) return (Device::RTMaterial) new ConstructorHandle<MatteTextured,Material>;
+    else if (!strcasecmp(type,"Metal")         ) return (Device::RTMaterial) new ConstructorHandle<Metal,Material>;
+    else if (!strcasecmp(type,"MetallicPaint") ) return (Device::RTMaterial) new ConstructorHandle<MetallicPaint,Material>;
+    else if (!strcasecmp(type,"Mirror")        ) return (Device::RTMaterial) new ConstructorHandle<Mirror,Material>;
+    else if (!strcasecmp(type,"Obj")           ) return (Device::RTMaterial) new ConstructorHandle<Obj,Material>;
+    else if (!strcasecmp(type,"Plastic")       ) return (Device::RTMaterial) new ConstructorHandle<Plastic,Material>;
     else if (!strcasecmp(type,"ThinDielectric")) return (Device::RTMaterial) new ConstructorHandle<ThinDielectric,Material>;
     else if (!strcasecmp(type,"ThinGlass")     ) return (Device::RTMaterial) new ConstructorHandle<ThinDielectric,Material>;
-    else if (!strcasecmp(type,"Mirror")        ) return (Device::RTMaterial) new ConstructorHandle<Mirror,Material>;
-    else if (!strcasecmp(type,"Metal")         ) return (Device::RTMaterial) new ConstructorHandle<Metal,Material>;
-    else if (!strcasecmp(type,"BrushedMetal")  ) return (Device::RTMaterial) new ConstructorHandle<BrushedMetal,Material>;
-    else if (!strcasecmp(type,"MetallicPaint") ) return (Device::RTMaterial) new ConstructorHandle<MetallicPaint,Material>;
-    else if (!strcasecmp(type,"MatteTextured") ) return (Device::RTMaterial) new ConstructorHandle<MatteTextured,Material>;
-    else if (!strcasecmp(type,"Obj")           ) return (Device::RTMaterial) new ConstructorHandle<Obj,Material>;
+    else if (!strcasecmp(type,"Uber")          ) return (Device::RTMaterial) new ConstructorHandle<Uber,Material>;
     else if (!strcasecmp(type,"Velvet")        ) return (Device::RTMaterial) new ConstructorHandle<Velvet,Material>;
-	else if (!strcasecmp(type,"Uber")          ) return (Device::RTMaterial) new ConstructorHandle<Uber,Material>;
     else throw std::runtime_error("unknown material type: "+std::string(type));
   }
 

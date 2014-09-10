@@ -27,8 +27,8 @@ namespace embree
     {
       const float etaOutside = parms.getFloat("etaOutside",1.0f);
       const float etaInside  = parms.getFloat("etaInside",1.4f);
-      const Color transmissionOutside = parms.getColor("transmissionOutside",one);
-      const Color transmissionInside  = parms.getColor("transmission",one);
+      const Color transmissionOutside = parms.getColor("transmissionOutside",Color(1.0f));
+      const Color transmissionInside  = parms.getColor("transmission",Color(1.0f));
       return ispc::Dielectric__new(etaOutside,(ispc::vec3f&)transmissionOutside,
                                    etaInside ,(ispc::vec3f&)transmissionInside);
     }

@@ -28,7 +28,8 @@ struct AccuBuffer
 
 uniform AccuBuffer* uniform AccuBuffer__new(const uniform uint width, const uniform uint height);
 
-inline vec3f AccuBuffer__update(uniform AccuBuffer* uniform this, const int x, const int y, const vec3f c, const int accuMode) 
+inline vec3f AccuBuffer__update(uniform AccuBuffer* uniform this, const uint x, const uint y, 
+        const vec3f c, const int accuMode) 
 {
   const int idx = x+this->size.x*y;
   vec4f d = make_vec4f(c.x,c.y,c.z,1.0f);
@@ -38,3 +39,31 @@ inline vec3f AccuBuffer__update(uniform AccuBuffer* uniform this, const int x, c
   return mul(make_vec3f(d.x,d.y,d.z),rcp(d.w));
 }
 
+inline vec3f AccuBuffer__get(uniform AccuBuffer* uniform this, const uint x, const uint y) 
+{
+  const int idx = x+this->size.x*y;
+  vec4f val = this->ptr[idx];
+  return make_vec3f(val.x, val.y, val.z);
+}
+
+struct IntBuffer 
+{
+  RefCount base;
+  uniform vec2ui size;           /*! size in pixels */
+  uniform int* uniform ptr;      /*! int pixel buffer */
+};
+
+uniform IntBuffer* uniform IntBuffer__new(const uniform uint width, const uniform uint height);
+
+inline void IntBuffer__set(uniform IntBuffer* uniform this, const uint x, const uint y, 
+        const int val) 
+{
+  const int idx = x+this->size.x*y;
+  this->ptr[idx] = val; 
+}
+
+inline int IntBuffer__get(uniform IntBuffer* uniform this, const uint x, const uint y) 
+{
+  const int idx = x+this->size.x*y;
+  return this->ptr[idx]; 
+}

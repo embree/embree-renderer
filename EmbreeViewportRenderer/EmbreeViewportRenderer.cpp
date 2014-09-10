@@ -472,6 +472,22 @@ embree::Handle<embree::Device::RTData>
 	return m_device->rtNewData("immutable_managed", numElem*sizeof(embree::Vec3i), data);
 }
 
+embree::Handle<embree::Device::RTData> 
+	EmbreeViewportRenderer::loadVec4fArray(float *inData, unsigned int numElem)
+{
+	embree::Vec4f *data = NULL;
+
+	if (inData == NULL) return NULL;
+
+	data = (embree::Vec4f*) embree::alignedMalloc(numElem*sizeof(embree::Vec4f));
+	for (unsigned int i=0; i < numElem; i++) 
+	{
+		data[i] = embree::Vec4f(inData[4*i+0], inData[4*i+1], inData[4*i+2], inData[4*i+3]);
+	}
+
+	return m_device->rtNewData("immutable_managed", numElem*sizeof(embree::Vec4f), data);
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Rendering methods
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -635,7 +651,7 @@ void EmbreeViewportRenderer::getMaterialData(const MDagPath &currObject,
 {
 	std::string texturefile;
 	float diffColor[3] = {1.0, 1.0, 1.0};
-	float roughness = 0.0f;  // pure specular
+	float roughness = 1.0f;  // pure diffuse (0 = pure specular)
 	float refractIndex = 1.5f;
 	float transparentColor[3] = {0.0, 0.0, 0.0};
 	float specularColor[3] = {0.0, 0.0, 0.0};
@@ -681,7 +697,7 @@ void EmbreeViewportRenderer::getMaterialData(const MDagPath &currObject,
 						texturefile = filename.asChar();
 #if 0
 char buffer[1024];
-MString pname = dagPath.fullPathName() ;
+MString pname = currObject.fullPathName() ;
 sprintf(buffer, "%s: texture %s", pname.asChar(), filename.asChar());
 MGlobal::displayInfo(buffer);
 #endif
@@ -736,8 +752,8 @@ MGlobal::displayInfo(buffer);
 			MFnBlinnShader blinn(shaderNode, &status);
 			blnn = (status == MS::kSuccess);
 #if 0
-char buffer[1026];
-MString pname = dagPath.fullPathName() ;
+char buffer[1024];
+MString pname = currObject.fullPathName() ;
 sprintf(buffer, "%s/%d: lambert %d/%d, phong %d/%d, blinn %d/%d phonge %d ", pname.asChar(), i,
 shaderNode.hasFn(MFn::kLambert), lam,
 shaderNode.hasFn(MFn::kPhong), phng, 
@@ -758,31 +774,38 @@ MGlobal::displayInfo(buffer);
 				{
 					MObject data;
 					cosinePowerPlug.getValue( cosPower );
+                    // In "Uber" roughness=0 for perfectly specular, 1.0 for fully diffuse
+                    // So we map cosPower of 100 to 0, and 0 to 1
 					roughness = 100.0f-cosPower/100.0f;
 				}	
 #if 0
-MString pname = dagPath.fullPathName() ;
-sprintf(buffer, "%s:  cosPower = %f", pname.asChar(), cosPower);
-MGlobal::displayInfo(buffer);
+char bufferphng[1024];
+MString pname = currObject.fullPathName() ;
+sprintf(bufferphng, "%s:  cosPower = %f", pname.asChar(), cosPower);
+MGlobal::displayInfo(bufferphng);
 #endif
 			} else if (blnn) {
 				// "Metal" 
-				// Maya: The valid range is 0 (no highlight) to 0.999 (broad highlight, 
-				// not very shiny surface)
+				// Maya: The valid range is 0 (no highlight) to 0.999 (broad highlight,
+                // not very shiny surface). A value of 0.1 produces a small highlight
+                // (very shiny surface)
 				float eccentricity = 0.0f;
 				MPlug eccentricityPlug = MFnDependencyNode(shaderNode).findPlug("eccentricity", &status);
 				if (status != MS::kFailure)
 				{
 					MObject data;
 					eccentricityPlug.getValue( eccentricity );
+                    // In "Uber" roughness=0 for perfectly specular, 1.0 for fully diffuse
+                    // So this is a good match
 					roughness = eccentricity;
 					// ??? Maya's funky remapping of eccentricity into cosinePower.
 					//Material.Power = (eccentricity < 0.03125f) ? 128.0f : 4.0f / eccentricity;
 				}
 #if 0
-MString pname = dagPath.fullPathName() ;
-sprintf(buffer, "%s:  eccentricity = %f", pname.asChar(), eccentricity);
-MGlobal::displayInfo(buffer);
+char bufferblnn[1024];
+MString pname = currObject.fullPathName() ;
+sprintf(bufferblnn, "%s:  eccentricity = %f", pname.asChar(), eccentricity);
+MGlobal::displayInfo(bufferblnn);
 #endif
 			} else if (phnge) {
 				// We either have a PhongE or Anisotropic shader - assume the former
@@ -792,12 +815,15 @@ MGlobal::displayInfo(buffer);
 				if (status != MS::kFailure)
 				{
 					MObject data;
+                    // In "Uber" roughness=0 for perfectly specular, 1.0 for fully diffuse
+                    // Which is roughly how Maya sees it
 					roughnessPlug.getValue( roughness );
 				}	
 #if 0
-MString pname = dagPath.fullPathName() ;
-sprintf(buffer, "%s:  roughness = %f", pname.asChar(), roughness);
-MGlobal::displayInfo(buffer);
+char bufferphnge[1024];
+MString pname = currObject.fullPathName() ;
+sprintf(bufferphnge, "%s:  roughness = %f", pname.asChar(), roughness);
+MGlobal::displayInfo(bufferphnge);
 #endif
 			}
 
@@ -852,23 +878,39 @@ void EmbreeViewportRenderer::convertSurfaceMaterial(const MDagPath &dagPath,
 	getMaterialData(dagPath, haveTexture, materialInfo);
 
 	material = m_device->rtNewMaterial("Uber");
-	m_device->rtSetFloat3(material, "diffColor", 
+	m_device->rtSetFloat3(material, "diffuse", 
 				materialInfo.diffcolor[2], materialInfo.diffcolor[1], materialInfo.diffcolor[0]);
-	m_device->rtSetFloat3(material, "reflColor", 
+	m_device->rtSetFloat3(material, "specular", 
 				materialInfo.specularColor[2], materialInfo.specularColor[1], materialInfo.specularColor[0]);
 	m_device->rtSetFloat1(material, "roughness", materialInfo.roughness);
-	m_device->rtSetFloat3(material, "transColor", 
+	m_device->rtSetFloat3(material, "transmission", 
 				materialInfo.transparentColor[2], materialInfo.transparentColor[1], materialInfo.transparentColor[0]);
-	m_device->rtSetFloat1(material, "etaInside", materialInfo.refractIndex);
-//			m_device->rtSetFloat3(material, "realRefract", 0.19f, 0.45f, 1.50f); // gold
-//			m_device->rtSetFloat3(material, "imagRefract", 3.06f, 2.40f, 1.88f);
-
+	m_device->rtSetFloat1(material, "refraction", materialInfo.refractIndex);
+#if 1
+char bufferphng[1024];
+MString pname = dagPath.fullPathName() ;
+sprintf(bufferphng, "%s:  trans[0] = %f, trans[1] = %f, trans[2] = %f", pname.asChar(), 
+        materialInfo.transparentColor[0], materialInfo.transparentColor[1], materialInfo.transparentColor[2]);
+MGlobal::displayInfo(bufferphng);
+#endif
+#if 0
+    float dcoeff[] = {0.133f, 0.155f, 0.149f, 0.0064f,
+            0.100f, 0.236f, 0.244f, 0.0484f,
+            0.118f, 0.198f, 0.000f, 0.1870f,
+            0.113f, 0.007f, 0.007f, 0.5670f,
+            0.358f, 0.304f, 0.200f, 1.9900f,
+            0.078f, 0.070f, 0.040f, 7.4100f};
+    m_device->rtSetFloat1(material, "transmissionDepth", 65.0f);
+    m_device->rtSetFloat1(material, "diffusionExponent", 60.0f);
+    embree::Handle<embree::Device::RTData> data = loadVec4fArray(&dcoeff[0], 6);
+    m_device->rtSetArray(material, "diffusionCoefficients", "float4", data, 6, sizeof(embree::Vec4f), 0);
+#endif
 	if ((1 == haveTexture) && (!materialInfo.texturefile.empty())) {  // need texture coordinates *and* a file
 		// Load and assign the texture file
 		// WARNING!!!
 		// Note:  only ppm, pfm, and jpeg supported unless you build with USE_IMAGEMAGICK
         embree::Handle<embree::Device::RTTexture> texture = embree::rtLoadTexture(materialInfo.texturefile);
-		m_device->rtSetTexture(material, "diffTexture", texture);
+		m_device->rtSetTexture(material, "diffuseMap", texture);
 	}
 }
 

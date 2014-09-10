@@ -36,17 +36,32 @@ namespace embree
     public:
 
       /*! Constructs a path. */
-      __forceinline LightPath (const Ray& ray, const Medium& medium = Medium::Vacuum(), const int depth = 0,
-                               const Color& throughput = one, const bool ignoreVisibleLights = false, const bool unbend = true)
-        : lastRay(ray), lastMedium(medium), depth(depth), throughput(throughput), ignoreVisibleLights(ignoreVisibleLights), unbend(unbend) {}
+      __forceinline LightPath (const Ray& ray, 
+                               LightPathHistory& history, 
+                               const Medium& medium = Medium::Vacuum(), 
+                               const int depth = 0,
+                               const Color& throughput = one, 
+                               const bool ignoreVisibleLights = false, 
+                               const bool unbend = true) : 
+        lastRay(ray), history(history), lastMedium(medium), depth(depth), 
+        throughput(throughput), ignoreVisibleLights(ignoreVisibleLights), 
+                unbend(unbend) {}
 
       /*! Extends a light path. */
-      __forceinline LightPath extended(const Ray& nextRay, const Medium& nextMedium, const Color& weight, const bool ignoreVL) const {
-        return LightPath(nextRay, nextMedium, depth+1, throughput*weight, ignoreVL, unbend && (nextRay.dir == lastRay.dir));
+      __forceinline LightPath extended(const Ray& nextRay, 
+                                       LightPathHistory& history, 
+                                       const Medium& nextMedium, 
+                                       const Color& weight, 
+                                       const bool ignoreVL) const 
+      {
+        return LightPath(nextRay, history, nextMedium, depth+1, 
+                throughput*weight, ignoreVL, 
+                unbend && (nextRay.dir == lastRay.dir));
       }
 
     public:
       Ray lastRay;                 /*! Last ray in the path. */
+      LightPathHistory& history;   /*! Tracked components of the light path history */
       Medium lastMedium;           /*! Medium the last ray travels inside. */
       uint32 depth;                /*! Recursion depth of path. */
       Color throughput;            /*! Determines the fraction of radiance reaches the pixel along the path. */
@@ -67,14 +82,17 @@ namespace embree
     Color Li(LightPath& lightPath, const Ref<BackendScene>& scene, IntegratorState& state);
 
     /*! Computes the radiance arriving at the origin of the ray from the ray direction. */
-    Color Li(Ray& ray, const Ref<BackendScene>& scene, IntegratorState& state);
+    Color Li(Ray& ray, const Ref<BackendScene>& scene, IntegratorState& state, LightPathHistory& history);
 
     /* Configuration. */
   private:
-    size_t maxDepth;               //!< Maximal recursion depth (1=primary ray only)
-    float minContribution;         //!< Minimal contribution of a path to the pixel.
-    float epsilon;                 //!< Epsilon to avoid self intersections.
-    Ref<Image> backplate;          //!< High resolution background.
+    size_t maxDepth;                 //!< Maximal recursion depth (1=primary ray only)
+    float minContribution;           //!< Minimal contribution of a path to the pixel.
+    float epsilon;                   //!< Epsilon to avoid self intersections.
+    bool filterCaustics;             //!< Filter / smooth caustics.
+    bool disableCausticReflection;   //!< Disables caustics due to reflection.
+    bool disableCausticTransmission; //!< Disables caustics due to transmission.
+    Ref<Image> backplate;            //!< High resolution background.
 
     /*! Random variables. */
   private:

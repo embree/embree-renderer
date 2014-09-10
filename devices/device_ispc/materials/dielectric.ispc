@@ -73,10 +73,10 @@ void Dielectric__Constructor(uniform Dielectric* uniform this,
   this->mediumOutside.transmission = transmissionOutside;
   this->mediumInside.eta           = etaInside;
   this->mediumInside.transmission  = transmissionInside;
-  DielectricReflection__Constructor  (&this->reflection_io  ,etaInside ,etaOutside);
-  DielectricReflection__Constructor  (&this->reflection_oi  ,etaOutside,etaInside);
-  DielectricTransmission__Constructor(&this->transmission_io,etaInside ,etaOutside);
-  DielectricTransmission__Constructor(&this->transmission_oi,etaOutside,etaInside);
+  DielectricReflection__Constructor  (&this->reflection_io  ,etaInside ,etaOutside, make_vec3f(1.0));
+  DielectricReflection__Constructor  (&this->reflection_oi  ,etaOutside,etaInside, make_vec3f(1.0));
+  DielectricTransmission__Constructor(&this->transmission_io,etaInside ,etaOutside, transmissionInside);
+  DielectricTransmission__Constructor(&this->transmission_oi,etaOutside,etaInside, make_vec3f(1.0));
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -87,7 +87,7 @@ export void* uniform Dielectric__new(const uniform float etaOutside,
                                      const uniform float etaInside,
                                      const uniform vec3f& transmissionInside) 
 {
-  uniform Dielectric *uniform mat = uniform new uniform Dielectric;
-  Dielectric__Constructor(mat,etaOutside,transmissionOutside,etaInside,transmissionInside);
-  return mat;
+  uniform Dielectric *uniform this = uniform new uniform Dielectric;
+  Dielectric__Constructor(this,etaOutside,transmissionOutside,etaInside,transmissionInside);
+  return this;
 }

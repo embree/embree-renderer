@@ -45,7 +45,7 @@ void ThinDielectric__Constructor(uniform ThinDielectric* uniform this,
                                  const uniform float thickness)
 {
   Material__Constructor(&this->base,Material__Destructor,ThinDielectric__shade,NULL);
-  DielectricReflection__Constructor      (&this->reflection  , 1.0f, eta);
+  DielectricReflection__Constructor      (&this->reflection  , 1.0f, eta, make_vec3f(1.0));
   ThinDielectricTransmission__Constructor(&this->transmission, 1.0f, eta, transmission, thickness);
 }
 

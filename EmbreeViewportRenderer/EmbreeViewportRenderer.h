@@ -207,6 +207,8 @@ protected:
 					loadVec3fArray(float *inData, unsigned int numElem);
 	embree::Handle<embree::Device::RTData> 
 					loadVec3iArray(int *inData, unsigned int numElem);
+	embree::Handle<embree::Device::RTData> 
+					loadVec4fArray(float *inData, unsigned int numElem);
 
 
 

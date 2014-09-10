@@ -24,6 +24,9 @@ namespace embree
     maxDepth        = parms.getInt  ("maxDepth"       ,10    );
     minContribution = parms.getFloat("minContribution",0.01f );
     epsilon         = parms.getFloat("epsilon"        ,32.0f)*float(ulp);
+    filterCaustics  = parms.getBool("filterCaustics"  , false);
+    disableCausticReflection = parms.getBool("disableCausticReflection", false);
+    disableCausticTransmission = parms.getBool("disableCausticTransmission", false);
     backplate       = parms.getImage("backplate");
   }
   
@@ -90,9 +93,17 @@ namespace embree
     CompositedBRDF brdfs;
     if (dg.material) dg.material->shade(lightPath.lastRay, lightPath.lastMedium, dg, brdfs);
 
-    /*! Add light emitted by hit area light source. */
-    if (!lightPath.ignoreVisibleLights && dg.light && !backfacing)
+    /*! Add light emitted by hit area light source. We may not include the contribution if it leads to caustic effects that are disabled.
+        We also track the light hit as part of the path history. */
+    bool lightHit = false;
+
+    if (!lightPath.ignoreVisibleLights && dg.light && !backfacing &&
+        !(disableCausticReflection && (lightPath.history.hitHistory & DIFFUSE_SPECULAR_REFLECTION_HIT)) &&
+        !(disableCausticTransmission && (lightPath.history.hitHistory & DIFFUSE_SPECULAR_TRANSMISSION_HIT)))
+    {
       L += dg.light->Le(dg,wo);
+      lightHit = true;
+    }
 
     /*! Global illumination. Pick one BRDF component and sample it. */
     if (lightPath.depth < maxDepth)
@@ -101,23 +112,57 @@ namespace embree
       Sample3f wi; BRDFType type;
       Vec2f s  = state.sample->getVec2f(firstScatterSampleID     + lightPath.depth);
       float ss = state.sample->getFloat(firstScatterTypeSampleID + lightPath.depth);
-      Color c = brdfs.sample(wo, dg, wi, type, s, ss, giBRDFTypes);
+      Color c  = brdfs.sample(wo, dg, wi, type, s, ss, giBRDFTypes);
+
+      /*! add to light path history if caustics are being modified */
+      bool firstDiffuseHit = false;
+
+      if(filterCaustics || disableCausticReflection || disableCausticTransmission)
+      {
+        if((lightPath.history.hitHistory & DIFFUSE_SPECULAR_REFLECTION_HIT || lightPath.history.hitHistory & DIFFUSE_SPECULAR_TRANSMISSION_HIT)
+            && lightHit)
+          lightPath.history.hitHistory = LightPathHitHistory(lightPath.history.hitHistory | DIFFUSE_SPECULAR_LIGHT_HIT);
+
+        if((lightPath.history.hitHistory & DIFFUSE_HIT) && (type & SPECULAR_REFLECTION || type & GLOSSY_REFLECTION))
+          lightPath.history.hitHistory = LightPathHitHistory(lightPath.history.hitHistory | DIFFUSE_SPECULAR_REFLECTION_HIT);
+
+        if((lightPath.history.hitHistory & DIFFUSE_HIT) && (type & SPECULAR_TRANSMISSION || type & GLOSSY_TRANSMISSION))
+          lightPath.history.hitHistory = LightPathHitHistory(lightPath.history.hitHistory | DIFFUSE_SPECULAR_TRANSMISSION_HIT);
+
+        /*! we consider the hit a diffuse hit if the material has a diffuse BRDF (whether or not it was chosen in this path) */
+        if(!(lightPath.history.hitHistory & DIFFUSE_HIT) && brdfs.has(DIFFUSE))
+        {
+          lightPath.history.hitHistory = LightPathHitHistory(lightPath.history.hitHistory | DIFFUSE_HIT);
+          firstDiffuseHit = true;
+        }
+      }
 
       /*! Continue only if we hit something valid. */
-      if (c != Color(zero) && wi.pdf > 0.0f)
-      {
-        /*! Compute  simple volumetric effect. */
-        const Color& transmission = lightPath.lastMedium.transmission;
-        if (transmission != Color(one)) c *= pow(transmission,lightPath.lastRay.tfar);
+      if (c != Color(zero) && wi.pdf > 0.0f) {
+
+        /*! Compute a simple distance attenuated volumetric effect. */
+//      const Color &transmissionColor   = lightPath.lastMedium.transmission;
+//      const float  transmissionDepth   = lightPath.lastMedium.transmissionDepth;
+//      const float  transmissionFalloff = lightPath.lastMedium.transmissionFalloff;
+//      if (transmissionColor != Color(one)) c = c * exp(-lightPath.lastRay.tfar / transmissionDepth * transmissionFalloff) * transmissionColor;
 
         /*! Tracking medium if we hit a medium interface. */
         Medium nextMedium = lightPath.lastMedium;
         if (type & TRANSMISSION) nextMedium = dg.material->nextMedium(lightPath.lastMedium);
 
         /*! Continue the path. */
-        LightPath scatteredPath = lightPath.extended(Ray(dg.P, wi, dg.error*epsilon, inf, lightPath.lastRay.time), 
+        LightPath scatteredPath = lightPath.extended(Ray(dg.P, wi, dg.error*epsilon, inf, lightPath.lastRay.time), lightPath.history,
                                                      nextMedium, c, (type & directLightingBRDFTypes) != NONE);
-        L += c * Li(scatteredPath, scene, state) * rcp(wi.pdf);
+
+        /*! We maintain the contribution from the first diffuse hit onward in a separate buffer to filter caustics. */
+        if(filterCaustics && firstDiffuseHit)
+        {
+          lightPath.history.firstDiffuseGeomID = lightPath.lastRay.id0; // id0 == geomID
+          lightPath.history.postDiffuseContribution = c * Li(scatteredPath, scene, state) * rcp(wi.pdf);
+          L += lightPath.history.postDiffuseContribution;
+        }
+        else
+          L += c * Li(scatteredPath, scene, state) * rcp(wi.pdf);
       }
     }
 
@@ -162,8 +207,9 @@ namespace embree
     return L;
   }
 
-  Color PathTraceIntegrator::Li(Ray& ray, const Ref<BackendScene>& scene, IntegratorState& state) {
-    LightPath path(ray); return Li(path,scene,state);
+  Color PathTraceIntegrator::Li(Ray& ray, const Ref<BackendScene>& scene, IntegratorState& state, LightPathHistory& history) {
+    LightPath path(ray, history);
+    return Li(path, scene, state);
   }
 }
 

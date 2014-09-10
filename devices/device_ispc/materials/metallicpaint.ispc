@@ -50,7 +50,7 @@ inline void MetallicPaint__Constructor(uniform MetallicPaint *uniform this,
                                        const uniform float eta)
 {
   Material__Constructor(&this->base,Material__Destructor,MetallicPaint__shade,NULL);
-  DielectricReflection__Constructor(&this->reflection, 1.0f, eta);
+  DielectricReflection__Constructor(&this->reflection, 1.0f, eta, make_vec3f(1.0));
   DielectricLayerLambertian__Constructor(&this->paint, make_vec3f(1.0f), 1.0f, eta, make_Lambertian(shadeColor));
 
   uniform vec3f etaAluminium = make_vec3f(0.62f,0.62f,0.62f);
