@@ -81,10 +81,8 @@ struct Uber
 
 // Do bump-mapping
 void Uber__bendSurfaceNormal(const uniform Uber* uniform this,
-                    const Ray&                 ray,
-                    DifferentialGeometry &dg) 
-{
-
+                     DifferentialGeometry &dg) 
+{ 
     //! Tangent space normal from the texture map.
     vec3f texel;
     if (this->bumpMap)
@@ -96,7 +94,8 @@ void Uber__bendSurfaceNormal(const uniform Uber* uniform this,
     vec3f bend = make_vec3f(2.0 * texel.x - 1.0, 2.0 * texel.y - 1.0, 2.0 * texel.z - 1.0);
 
     //! Bend the surface normal at the hit point.
-    dg.Ns = normalize(add(add(mul(bend.x, dg.Tx), mul(bend.y, dg.Ty)), mul(bend.z, dg.Ns)));
+    dg.Ns =  normalize(add(dg.Ns, 
+      normalize(add(add(mul(bend.x, dg.Tx), mul(bend.y, dg.Ty)), mul(bend.z, dg.Ns)))));
 }
 
 //! Convenience routine which always returns a valid Color.
@@ -133,8 +132,7 @@ void Uber__shadeConductor(const uniform Uber *uniform this,
     }
 }
 
-void Uber__shadeDielectricEntry(const uniform Uber *uniform this,
-        DifferentialGeometry& dg,              
+void Uber__shadeDielectricEntry(const uniform Uber *uniform this,          
         uniform CompositedBRDF&     brdfs,
         const vec3f &diffuseColor,
         const vec3f &specularColor)
@@ -163,8 +161,7 @@ void Uber__shadeDielectricEntry(const uniform Uber *uniform this,
 
 } 
 
-void Uber__shadeDielectricExit(const uniform Uber *uniform this,
-        DifferentialGeometry& dg,              
+void Uber__shadeDielectricExit(const uniform Uber *uniform this,             
         uniform CompositedBRDF&     brdfs)
 {
 
@@ -197,37 +194,33 @@ void Uber__shadeDielectric(const uniform Uber *uniform this,
 
     //! Transmission into the material.
     if (eq(currentMedium, this->mediumOutside))
-        Uber__shadeDielectricEntry(this, dg, brdfs, diffuseColor, specularColor);
+        Uber__shadeDielectricEntry(this, brdfs, diffuseColor, specularColor);
 
     //! Transmission through the material and back out again.
     if (eq(currentMedium, this->mediumInside)) 
-        Uber__shadeDielectricExit(this, dg, brdfs);
+        Uber__shadeDielectricExit(this, brdfs);
 
 }
 
 void Uber__shade(const uniform Material *uniform _this,
                   const Ray&                  ray,             
                   const Medium&               currentMedium,   
-                  const DifferentialGeometry& dg,              
+                  DifferentialGeometry& dg,              
                   uniform CompositedBRDF&     brdfs)           
 {
     const uniform Uber* uniform this = (const uniform Uber* uniform)_this;
-  
-    // Make a local copy of the differential geometry so that we can
-    // change the normal
-    DifferentialGeometry localdg = dg;
-
+ 
     //! Bend the surface normal according to the bump map.
     if (this->bumpMap)
-        Uber__bendSurfaceNormal(this, ray, localdg);
-
+        Uber__bendSurfaceNormal(this, dg);
+    
     //! Material is fully opaque and is thus assumed to be a Fresnel conductor.
     if (eq(this->transmission, make_vec3f(0.0f))) 
-        Uber__shadeConductor(this, localdg, brdfs);
+        Uber__shadeConductor(this, dg, brdfs);
         
     //! Material is partially or fully transparent and is thus assumed to be a dielectric.
     if (ne(this->transmission, make_vec3f(0.0f))) 
-        Uber__shadeDielectric(this, currentMedium, localdg, brdfs);
+        Uber__shadeDielectric(this, currentMedium, dg, brdfs);
 }
 
 void Uber__selectNextMedium(const uniform Material *uniform _this,
@@ -244,13 +237,13 @@ void Uber__Destructor(uniform RefCount* uniform _this)
   uniform Uber* uniform this = (uniform Uber* uniform) _this;
   
   if (this->bumpMap)
-	RefCount__IncRef(&this->bumpMap->base);
+	RefCount__DecRef(&this->bumpMap->base);
 
   if (this->diffuseMap)
-	RefCount__IncRef(&this->diffuseMap->base);
+	RefCount__DecRef(&this->diffuseMap->base);
 
   if (this->specularMap)
-	RefCount__IncRef(&this->specularMap->base);
+	RefCount__DecRef(&this->specularMap->base);
   
   Material__Destructor(_this);
 }
@@ -271,12 +264,15 @@ void Uber__Constructor(uniform Uber *uniform this,
                         uniform struct vcc4f* uniform diffusionCoefficients)
 {
   Material__Constructor(&this->base,Uber__Destructor,Uber__shade,Uber__selectNextMedium);
+  
   if (bumpMap)
 	RefCount__IncRef(&bumpMap->base);
   this->bumpMap = bumpMap;
+  
   if (diffuseMap)
 	RefCount__IncRef(&diffuseMap->base);
   this->diffuseMap = diffuseMap;
+  
   if (specularMap)
 	RefCount__IncRef(&specularMap->base);
   this->specularMap = specularMap;
@@ -303,7 +299,7 @@ void Uber__Constructor(uniform Uber *uniform this,
   this->fresnel = make_FresnelConductor(refraction, absorption);
   this->powerdist = make_PowerCosineDistribution(rcp(roughness));
   
-  // Set up purely for interface detection
+  // These values are purely for interface detection
   this->mediumOutside.eta          = 1.0f;
   this->mediumOutside.transmission = make_vec3f(1.0f);
   this->mediumInside.eta           = refraction.x;

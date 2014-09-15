@@ -72,7 +72,7 @@ namespace embree {
             transmission = options.getColor("transmission", Color(0.0f));
 
             //! Transmitted radiance penetration depth.
-            transmissionDepth = options.getFloat("transmissionDepth", float(inf));
+            transmissionDepth = options.getFloat("transmissionDepth", float(9999999.0f));
 
             //! These settings are only used to detect when the medium changes.
             if (transmission != Color(0.0f)) { mediumInside.transmission = Color(0.9995f);  isMediaInterface = true; }
@@ -91,7 +91,7 @@ std::cout << "diffuse " << diffuse << " roughness = " << roughness << " specular
             const Vector3f bend(2.0f * texel.r - 1.0f, 2.0f * texel.g - 1.0f, 2.0f * texel.b - 1.0f);
 
             //! Bend the surface normal at the hit point.
-            hit.Ns = normalize(bend.x * hit.Tx + bend.y * hit.Ty + bend.z * hit.Ns);
+            hit.Ns = normalize(hit.Ns + normalize(bend.x * hit.Tx + bend.y * hit.Ty + bend.z * hit.Ns));
 
         }
 
@@ -167,11 +167,11 @@ std::cout << "diffuse " << diffuse << " roughness = " << roughness << " specular
         {
 
             //! Surface is perfectly transmissive.
-            if (transmissionDepth == float(inf)) 
+            if (transmissionDepth >= 999999.0f) 
                 brdfs.add(NEW_BRDF(DielectricTransmission)(1.0f, refraction.r));
 
             //! Surface is translucent.
-            if (transmissionDepth < float(inf)) 
+            if (transmissionDepth < 999999.0f) 
                 brdfs.add(NEW_BRDF(TranslucentEntry)(diffusionExponent));
 
             //! Surface is perfectly specular.
@@ -193,15 +193,15 @@ std::cout << "diffuse " << diffuse << " roughness = " << roughness << " specular
         {
 
             //! Surface is perfectly transmissive.
-            if (transmissionDepth == float(inf)) 
+            if (transmissionDepth >= 999999.0f) 
                 brdfs.add(NEW_BRDF(DielectricTransmission)(refraction.r, 1.0f, transmission));
 
             //! Internal reflection in perfectly transmissive materials.
-           if (transmissionDepth == float(inf) && roughness == 0.0f) 
+           if (transmissionDepth == 999999.0f && roughness == 0.0f) 
                 brdfs.add(NEW_BRDF(DielectricReflection)(refraction.r, 1.0f));
 
             //! Surface is translucent.
-            if (transmissionDepth < float(inf)) 
+            if (transmissionDepth < 999999.0f) 
                 brdfs.add(NEW_BRDF(TranslucentExit)(transmission, transmissionDepth, 
                         diffusionCoefficients));
 

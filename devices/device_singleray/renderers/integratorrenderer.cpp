@@ -171,6 +171,7 @@ namespace embree
     }
 
     if (renderer->showProgress) progress.end();
+#if 0   // disable pre-frame render timing for overall timing
     double dt = getSeconds()-t0;
 
      /*! print fps, render time, and rays per second */
@@ -188,7 +189,7 @@ namespace embree
     stream.precision(3);
     stream << atomicNumRays/dt*1E-6 << " mrps";
     std::cout << stream.str() << std::endl;
-
+#endif
     rtcDebug();
 
     delete this;

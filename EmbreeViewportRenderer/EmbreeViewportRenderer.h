@@ -96,14 +96,19 @@ class SceneData
 	  float penumbraAngle;
 	  int decayRate;
 	  // Material properties
-	  std::string texturefile;
 	  int haveTexture;
+	  std::string diffuseTextureFile;
+      std::string specularTextureFile;
+      std::string bumpTextureFile;
 	  float diffcolor[3]; 
-	  float roughness;  
-	  float refractIndex; 
 	  float transparentColor[3]; 
 	  float specularColor[3]; 
-
+	  float absorption[3];
+      float roughness;  
+	  float refractIndex; 
+      float diffusionExponent;
+      float transmissionDepth;
+      
 	  // Book keeping
 	  int eindex;   // Embree index
 	  int lindex;   // List index
@@ -252,6 +257,9 @@ protected:
 	viewPortInfo m_viewportArray[VIEWPORTARRAYSIZE];
 	std::map<std::string, SceneData> m_objectDatabase;
 	std::map<std::string, SceneData> m_lightDatabase;
+    
+    // Misc
+    int m_plugintype;
 };
 
 //

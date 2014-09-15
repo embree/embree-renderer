@@ -34,7 +34,7 @@ struct Plastic
 void Plastic__shade(const uniform Material *uniform _this,
                   const Ray&                  ray,             
                   const Medium&               currentMedium,   
-                  const DifferentialGeometry& dg,              
+                  DifferentialGeometry& dg,              
                   uniform CompositedBRDF&     brdfs)           
 {
   const uniform Plastic* uniform this = (const uniform Plastic* uniform)_this;

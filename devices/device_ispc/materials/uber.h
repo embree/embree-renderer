@@ -86,18 +86,15 @@ namespace embree
         //! Multilayer diffusion coefficients.
         struct vc4f* diffusionCoefficients;
         int numCoefficients;
-        // Nice memory leak - these are not deallocated
+        // BUG BUG BUG - Nice memory leak - these are not deallocated
         getFloat4Array(parms.getData("diffusionCoefficients"), diffusionCoefficients, 
                 numCoefficients, Vec4f(1.0f));
         
-//        for (int i = 0; i < numCoefficients; i++)
-//            std::cout << i << ":  " << diffusionCoefficients[i].x << " " << diffusionCoefficients[i].y << " " << diffusionCoefficients[i].z << " " << diffusionCoefficients[i].w << " " << "\n";
-
         //! Diffusion scattering exponent.
         float diffusionExponent = parms.getFloat("diffusionExponent", 100.0f);
 
-        //! Index of refraction.
         //! Index of refraction can be specified as a scalar or vector float.
+        //! It's up to the plugin to send fown the one that is wanted.
         Vec3f refraction = (parms.getFloat("refraction", -1.0f) < 0.0f) ? 
                     parms.getVector3f("refraction", Vector3f(1.0f)) : 
                     Vec3f(parms.getFloat("refraction"));
@@ -128,36 +125,12 @@ namespace embree
                                 transmissionDepth,
                                 numCoefficients,
                                 diffusionCoefficients);
-/*    
-		const Color diffColor = parms.getColor("diffColor",one);
-		const Color reflColor = parms.getColor("reflColor",one);
-		ISPCRef Kd = parms.getTexture("diffTexture");
-		const Vec2f s0 = parms.getVec2f("s0",Vec2f(0.0f,0.0f));
-		const Vec2f ds = parms.getVec2f("ds",Vec2f(1.0f,1.0f));
-		const float surfEta = parms.getFloat("surfEta",1.4f);
-		const float roughness = parms.getFloat("roughness",0.01f);
-		const float etaOutside = parms.getFloat("etaOutside",1.0f);
-		const float etaInside  = parms.getFloat("etaInside",1.4f);
-		const Color transmissionOutside = parms.getColor("transColorOutside",one);
-		const Color transmissionInside  = parms.getColor("transColor",one);
-
-      return ispc::Uber__new((ispc::vec3f&)diffColor,
-								(ispc::vec3f&)reflColor,
-								Kd.ptr,
-								(ispc::vec2f&)s0,
-								(ispc::vec2f&)ds,
-								surfEta,
-								roughness,
-								etaOutside,
-								(ispc::vec3f&)transmissionOutside,
-                                etaInside,
-								(ispc::vec3f&)transmissionInside);
- */
     }  // create
     
 /*    
     ~Uber()
     {
+        // Would that this worked...
         if ((numCoefficients > 0) && NULL != (diffusionCoefficients))
         {
             free(diffusionCoefficients);

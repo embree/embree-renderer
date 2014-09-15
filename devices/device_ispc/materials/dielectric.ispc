@@ -35,7 +35,7 @@ struct Dielectric
 void Dielectric__shade(const uniform Material *uniform _this,
                        const Ray&                  ray,      
                        const Medium&               currentMedium,
-                       const DifferentialGeometry& dg,           
+                       DifferentialGeometry& dg,           
                        uniform CompositedBRDF&     brdfs)        
 {
   uniform const Dielectric *uniform this = (uniform const Dielectric *uniform)_this;

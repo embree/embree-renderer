@@ -29,7 +29,7 @@ struct Matte
 void Matte__shade(const uniform Material *uniform _this,
                   const Ray&                  ray,            
                   const Medium&               currentMedium,  
-                  const DifferentialGeometry& dg,             
+                  DifferentialGeometry& dg,             
                   uniform CompositedBRDF&     brdfs)          
 {
   uniform const Matte *uniform this = (uniform const Matte *uniform)_this;

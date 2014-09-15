@@ -96,12 +96,15 @@ void TriangleMesh__postIntersect(uniform const Shape *uniform _this,
   }
   
   // interpolate tangent directions
+#if 1
   const vec3f dPds = normalize(sub(mul(dtdv,dPdu), mul(dtdu,dPdv)));
   dg.Tx = normalize(sub(dPds,mul(dot(dPds,dg.Ns),dg.Ns)));
   const vec3f dPdt = normalize(sub(mul(dsdu,dPdv), mul(dsdv,dPdu)));
   dg.Ty = normalize(sub(dPdt,mul(dot(dPdt,dg.Ns),dg.Ns)));
-  
-  // or dg.Tx = dPdu;     dg.Ty = dPdv;   :)
+#else
+  dg.Tx = dPdu;
+  dg.Ty = dPdv;
+#endif
 }
 
 uniform int TriangleMesh__add(RTCScene scene, const uniform Shape* uniform _this)

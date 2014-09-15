@@ -29,7 +29,7 @@ struct Material;
 typedef void (*Material__shade)(const uniform Material *uniform this,
                                 const Ray&                  ray,              /*!< The ray arriving at the point to shade. */
                                 const Medium&               currentMedium,    /*!< The medium this ray travels inside. */
-                                const DifferentialGeometry& dg,               /*!< The point to shade on a surface. */
+                                DifferentialGeometry& dg,               /*!< The point to shade on a surface. */
                                 uniform CompositedBRDF&     brdfs);           /*!< Container for generated BRDF components. */
 
 typedef void (*Material__selectNextMediumFunc)(const uniform Material *uniform this,

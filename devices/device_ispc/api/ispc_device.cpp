@@ -620,13 +620,17 @@ namespace embree
     ISPCConstHandle* swapchain    = castHandle<ISPCConstHandle>  (swapchain_i,"framebuffer");
 
     ispc::Renderer__renderFrameInit(renderer->instance.ptr,scene->instance.ptr);
+#if 0   // disable pre-frame render timing for overall timing
     double t0 = getSeconds();
+#endif
     int numRays = ispc::Renderer__renderFrame(renderer->instance.ptr,camera->instance.ptr,scene->instance.ptr,toneMapper->instance.ptr,swapchain->instance.ptr,accumulate);
+#if 0   // disable pre-frame render timing for overall timing
     double dt = getSeconds() - t0;
 #if defined(__MIC__) 
     printf("Coprocessor ispc render %3.2f fps %.2f ms,  %3.3f mrps\n",1.0f/dt,dt*1000.0f,numRays/dt*1E-6); flush(std::cout);
 #else
     printf("Host ispc render %3.2f fps %.2f ms,  %3.3f mrps\n",1.0f/dt,dt*1000.0f,numRays/dt*1E-6); flush(std::cout);
+#endif
 #endif
   }
 

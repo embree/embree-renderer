@@ -34,7 +34,7 @@ struct MetallicPaint
 void MetallicPaint__shade(const uniform Material *uniform _this,
                           const Ray&                  ray,             
                           const Medium&               currentMedium,   
-                          const DifferentialGeometry& dg,              
+                          DifferentialGeometry& dg,              
                           uniform CompositedBRDF&     brdfs)           
 {
   uniform const MetallicPaint *uniform this = (uniform const MetallicPaint *uniform)_this;

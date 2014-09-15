@@ -217,7 +217,7 @@ vec3f PathTraceIntegrator_Li(const uniform PathTracer* uniform this,
     // Add light emitted by hit area light source. We may not include the 
     // contribution if it leads to caustic effects that are disabled.
     // We also track the light hit as part of the path history. 
-    uniform bool lightHit = false;
+    bool lightHit = false;
 
     if (!lightPath.ignoreVisibleLights && 
         !(this->disableCausticReflection && 
@@ -290,7 +290,7 @@ vec3f PathTraceIntegrator_Li(const uniform PathTracer* uniform this,
     vec3f c = CompositedBRDF__sample(&brdfs,wo,dg,wi,type,s,ss,giBRDFTypes);
 
       /*! add to light path history if caustics are being modified */
-    uniform bool firstDiffuseHit = false;
+    bool firstDiffuseHit = false;
 
     if(this->filterCaustics || this->disableCausticReflection || this->disableCausticTransmission)
     {
@@ -374,7 +374,7 @@ inline vec3f PathTracer__renderPixel(const uniform PathTracer* uniform this,
                                      const uniform Scene  *uniform scene,
                                      const uniform FrameBuffer *uniform fb,
                                      uniform Random& rnd,
-                                     const uint ix, const uint iy, 
+                                     const int ix, const int iy, 
                                      uint &numRays, 
                                      vec3f &Ldiffuse,
                                      uniform IntBuffer *uniform diffuseGeom,
@@ -450,7 +450,7 @@ task void PathTracer__renderTile(uniform PathTracer* uniform this,
   
   for (uniform uint iy=0; iy<TILE_SIZE_Y; iy+=PACKET_HEIGHT)
   {
-    const uint y = (tile_y0 + iy) + sample_y;
+    const int y = (tile_y0 + iy) + sample_y;
     if (y >= fb->size.y) continue;
     
     if (!activeLine(y)) continue;
@@ -458,7 +458,7 @@ task void PathTracer__renderTile(uniform PathTracer* uniform this,
 
     for (uniform unsigned int ix=0; ix<TILE_SIZE_X; ix+=PACKET_WIDTH) 
     { 
-      const uint x = (tile_x0 + ix) + sample_x;
+      const int x = (tile_x0 + ix) + sample_x;
       if (x >= fb->size.x) continue;
 
       vec3f Ldiffuse = make_vec3f(0.f);  /// diffuse color contributions only, tracked only if filterCaustics enabled. 
@@ -646,8 +646,8 @@ void PathTracer__Constructor(uniform PathTracer* uniform this,
   RefCount__IncRef(&backplate->base);
   this->backplate = backplate;
   this->filterCaustics = filterCaustics;
-  this->filterCaustics = disableCausticReflection;
-  this->filterCaustics = disableCausticTransmission;
+  this->disableCausticReflection = disableCausticReflection;
+  this->disableCausticTransmission = disableCausticTransmission;
 
   this->lightSampleID = 0;
   this->firstScatterSampleID = 0;

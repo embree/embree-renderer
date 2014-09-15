@@ -27,14 +27,19 @@ SceneData::SceneData()   // Constructor
    coneAngle = 0;
    penumbraAngle = 0;
    decayRate = 0;
-   texturefile.clear();
+   diffuseTextureFile.clear();
+   specularTextureFile.clear();
+   bumpTextureFile.clear();
    haveTexture = 0;
    diffcolor[0] = 1.0; diffcolor[1] = 1.0; diffcolor[2] = 1.0; 
-   roughness = 0.0f;
-   refractIndex = 1.5f;
    transparentColor[0] = 0.0; transparentColor[1] = 0.0; transparentColor[2] = 0.0;
    specularColor[0] = 0.0; specularColor[1] = 0.0; specularColor[2] = 0.0;
-
+   absorption[0] = 0.0; absorption[1] = 0.0; absorption[2] = 0.0;
+   roughness = 0.0f;
+   refractIndex = 1.5f;
+   diffusionExponent = 100.0f;
+   transmissionDepth = 9999999.9f;
+    
    eindex = -1;
    lindex = -1;
 }
@@ -52,13 +57,18 @@ SceneData::SceneData(const SceneData &copyin)   // Copy constructor to handle pa
    coneAngle = copyin.coneAngle;
    penumbraAngle = copyin.penumbraAngle;
    decayRate = copyin.decayRate;
-   texturefile = copyin.texturefile;
+   diffuseTextureFile = copyin.diffuseTextureFile;
+   specularTextureFile = copyin.specularTextureFile;
+   bumpTextureFile = copyin.bumpTextureFile;
    haveTexture = copyin.haveTexture;
    diffcolor[0] = copyin.diffcolor[0]; diffcolor[1] = copyin.diffcolor[1]; diffcolor[2] = copyin.diffcolor[2];
-   roughness = copyin.roughness;
-   refractIndex = copyin.refractIndex;
    transparentColor[0] = copyin.transparentColor[0]; transparentColor[1] = copyin.transparentColor[1]; transparentColor[2] = copyin.transparentColor[2];
    specularColor[0] = copyin.specularColor[0]; specularColor[1] = copyin.specularColor[1]; specularColor[2] = copyin.specularColor[2];
+   absorption[0] = copyin.absorption[0]; absorption[1] = copyin.absorption[1]; absorption[2] = copyin.absorption[2];
+   roughness = copyin.roughness;
+   refractIndex = copyin.refractIndex;
+   diffusionExponent = copyin.diffusionExponent;
+   transmissionDepth = copyin.transmissionDepth;
 
    eindex = copyin.eindex;
    lindex = copyin.lindex;
@@ -73,12 +83,17 @@ ostream &operator<<(ostream &output, const SceneData &aaa)
    output << aaa.color << ' ' << aaa.intensity << ' ' << aaa.lightDirection << endl;
    output << aaa.coneAngle << ' ' << aaa.penumbraAngle << ' ' << aaa.decayRate << endl;
    output << "Embree Index " << aaa.eindex << "  List Index " << aaa.lindex << endl;
-   if (aaa.haveTexture)
-	   output << "Texture name " << aaa.texturefile << endl;
-   output << "roughness=" << aaa.roughness << " refractindex= " << aaa.refractIndex << endl;
+   if (aaa.haveTexture) {
+	   output << "Diffuse Texture name " << aaa.diffuseTextureFile << endl;
+       output << "Specular Texture name " << aaa.specularTextureFile << endl;
+       output << "Bump Texture name " << aaa.bumpTextureFile << endl;
+   }
    output << "diffcolor = " << aaa.diffcolor[0] << "," << aaa.diffcolor[1] << "," << aaa.diffcolor[2] << endl; 
    output << "transparentColor = " << aaa.transparentColor[0] << "," << aaa.transparentColor[1] << "," << aaa.transparentColor[2] << endl; 
    output << "specularColor = " << aaa.specularColor[0] << "," << aaa.specularColor[1] << "," << aaa.specularColor[2] << endl; 
+   output << "absorption = " << aaa.absorption[0] << "," << aaa.absorption[1] << "," << aaa.absorption[2] << endl; 
+   output << "roughness=" << aaa.roughness << " refractindex= " << aaa.refractIndex << endl;
+   output << "diffusionExponent=" << aaa.diffusionExponent << " transmissionDepth= " << aaa.transmissionDepth << endl;
    return output;
 }
 
@@ -96,13 +111,18 @@ SceneData& SceneData::operator=(const SceneData &rhs)
    this->penumbraAngle = rhs.penumbraAngle;
    this->decayRate = rhs.decayRate;
    this->haveTexture = rhs.haveTexture;
-   this->texturefile = rhs.texturefile;
-   this->roughness = rhs.roughness;
-   this->refractIndex = rhs.refractIndex;
+   this->diffuseTextureFile = rhs.diffuseTextureFile;
+   this->specularTextureFile = rhs.specularTextureFile;
+   this->bumpTextureFile = rhs.bumpTextureFile;
    this->diffcolor[0] = rhs.diffcolor[0]; this->diffcolor[1] = rhs.diffcolor[1]; this->diffcolor[2] = rhs.diffcolor[2]; 
    this->transparentColor[0] = rhs.transparentColor[0]; this->transparentColor[1] = rhs.transparentColor[1]; this->transparentColor[2] = rhs.transparentColor[2]; 
    this->specularColor[0] = rhs.specularColor[0]; this->specularColor[1] = rhs.specularColor[1]; this->specularColor[2] = rhs.specularColor[2]; 
-
+   this->absorption[0] = rhs.absorption[0]; this->absorption[1] = rhs.absorption[1]; this->absorption[2] = rhs.absorption[2]; 
+   this->roughness = rhs.roughness;
+   this->refractIndex = rhs.refractIndex;
+   this->diffusionExponent = rhs.diffusionExponent;
+   this->transmissionDepth = rhs.transmissionDepth;
+   
    this->eindex = rhs.eindex;
    this->lindex = rhs.lindex;
    return *this;
@@ -123,13 +143,18 @@ int SceneData::operator==(const SceneData &rhs) const
    if( this->coneAngle != rhs.coneAngle) return 0;
    if( this->penumbraAngle != rhs.penumbraAngle) return 0;
    if( this->decayRate != rhs.decayRate) return 0;
-   if( this->texturefile != rhs.texturefile) return 0;
-   if( this->roughness != rhs.roughness) return 0;
-   if( this->refractIndex != rhs.refractIndex) return 0;
+   if( this->haveTexture != rhs.haveTexture) return 0;
+   if( this->diffuseTextureFile != rhs.diffuseTextureFile) return 0;
+   if( this->specularTextureFile != rhs.specularTextureFile) return 0;
+   if( this->bumpTextureFile != rhs.bumpTextureFile) return 0;
    if( this->diffcolor[0] != rhs.diffcolor[0]) return 0; if( this->diffcolor[1] != rhs.diffcolor[1]) return 0; if( this->diffcolor[2] != rhs.diffcolor[2]) return 0;
    if( this->transparentColor[0] != rhs.transparentColor[0]) return 0; if( this->transparentColor[1] != rhs.transparentColor[1]) return 0; if( this->transparentColor[2] != rhs.transparentColor[2]) return 0;
    if( this->specularColor[0] != rhs.specularColor[0]) return 0; if( this->specularColor[1] != rhs.specularColor[1]) return 0; if( this->specularColor[2] != rhs.specularColor[2]) return 0;
-
+   if( this->absorption[0] != rhs.absorption[0]) return 0; if( this->absorption[1] != rhs.absorption[1]) return 0; if( this->absorption[2] != rhs.absorption[2]) return 0;
+   if( this->roughness != rhs.roughness) return 0;
+   if( this->refractIndex != rhs.refractIndex) return 0;
+   if( this->diffusionExponent != rhs.diffusionExponent) return 0;
+   if( this->transmissionDepth != rhs.transmissionDepth) return 0;
 
    if( this->eindex != rhs.eindex) return 0;
    if( this->lindex != rhs.lindex) return 0;
@@ -150,11 +175,15 @@ int SceneData::operator<(const SceneData &rhs) const
 	        rhs.boundBox.min().distanceTo(rhs.boundBox.max())) return 1;
    if( this->coneAngle < rhs.coneAngle) return 1;
    if( this->penumbraAngle < rhs.penumbraAngle) return 1;
-   if( this->roughness < rhs.roughness) return 1;
-   if( this->refractIndex < rhs.refractIndex) return 1;
    if( this->diffcolor[0] < rhs.diffcolor[0]) return 1;   if( this->diffcolor[1] < rhs.diffcolor[1]) return 1;   if( this->diffcolor[2] < rhs.diffcolor[2]) return 1;
    if( this->transparentColor[0] < rhs.transparentColor[0]) return 1;   if( this->transparentColor[1] < rhs.transparentColor[1]) return 1;   if( this->transparentColor[2] < rhs.transparentColor[2]) return 1;
    if( this->specularColor[0] < rhs.specularColor[0]) return 1;   if( this->specularColor[1] < rhs.specularColor[1]) return 1;   if( this->specularColor[2] < rhs.specularColor[2]) return 1;
+   if( this->absorption[0] < rhs.absorption[0]) return 1;   if( this->absorption[1] < rhs.absorption[1]) return 1;   if( this->absorption[2] < rhs.absorption[2]) return 1;
+   if( this->roughness < rhs.roughness) return 1;
+   if( this->refractIndex < rhs.refractIndex) return 1;
+   if( this->diffusionExponent < rhs.diffusionExponent) return 1;
+   if( this->transmissionDepth < rhs.transmissionDepth) return 1;
+
   return 0;
 }
 
@@ -173,6 +202,7 @@ void EmbreeViewportRendererXeonSingle::createRenderDevice()
       m_device = embree::Device::rtCreateDevice("default",   // single ray device
 	          m_numThreads,m_rtcore_cfg.c_str());
 	}
+    m_plugintype = 1;
 }
 
 // ------------------------------------------------------------------
@@ -190,6 +220,7 @@ void EmbreeViewportRendererXeonISPC::createRenderDevice()
       m_device = embree::Device::rtCreateDevice("ispc",   // ispc_device
 	          m_numThreads,m_rtcore_cfg.c_str());
 	}
+    m_plugintype = 2;
 }
 
 // ------------------------------------------------------------------
@@ -207,6 +238,7 @@ void EmbreeViewportRendererXeonPhiSingle::createRenderDevice()
       m_device = embree::Device::rtCreateDevice("singleray_knc",   // single-ray over COI
 	          m_numThreads,m_rtcore_cfg.c_str());
 	}
+    m_plugintype = 3;
 }
 
 // ------------------------------------------------------------------
@@ -221,9 +253,14 @@ void EmbreeViewportRendererXeonPhiISPC::createRenderDevice()
 {
 	if (m_device == NULL) 
 	{
+
       m_device = embree::Device::rtCreateDevice("ispc_knc",   // ispc_device over COI
 	          m_numThreads,m_rtcore_cfg.c_str());
+      //              m_numThreads,"builder=morton64");
+      // Note - the 64-bit Morton builder is slower than the 32-bit one
+      // for dynamic scenes, but in return it supports more complex scenes
 	}
+    m_plugintype = 4;
 }
 
 // ------------------------------------------------------------------
@@ -238,8 +275,11 @@ EmbreeViewportRenderer::EmbreeViewportRenderer( const MString & name )
 
 	// Set API and version number
 	m_API = MViewportRenderer::kSoftware;
-	m_Version = 2.2f;
+	m_Version = 2.3f;
 
+    // Misc
+    m_plugintype = 0;
+    
 	/* rendering device and handles */
 	m_device = NULL;
 	embree::g_device = NULL;
@@ -330,13 +370,16 @@ EmbreeViewportRenderer::initialize()
 
     if (m_depth >= 0) m_device->rtSetInt1(m_renderer, "maxDepth", m_depth);
     m_device->rtSetInt1(m_renderer, "sampler.spp", m_spp);
+//    m_device->rtSetBool1(m_renderer, "filterCaustics", true);
+//    m_device->rtSetBool1(m_renderer, "disableCausticReflection", true);
+//    m_device->rtSetBool1(m_renderer, "disableCausticTransmission", true);
     m_device->rtCommit(m_renderer);
-
+    
     m_tonemapper = m_device->rtNewToneMapper("default");
     m_device->rtSetFloat1(m_tonemapper, "gamma", m_gamma);
     m_device->rtSetBool1(m_tonemapper, "vignetting", m_vignetting);
     m_device->rtCommit(m_tonemapper);
-
+    
     return MStatus::kSuccess;
 }
 
@@ -390,12 +433,49 @@ EmbreeViewportRenderer::uninitialize()
 	return MStatus::kSuccess;
 }
 
+#define RUNTIMEAVG 5
 /* virtual */
 MStatus
 EmbreeViewportRenderer::render(const MRenderingInfo &renderInfo)
 {
-	// We don't care what renderInfo.renderingAPI() is used - we will use this one
+    static int first_time = 1;
+    static int count=0;
+    static double accum = 0.0;
+    double t0, dt;
+    
+    if (1 == first_time)
+    {
+        first_time = 0;
+        if (m_plugintype == 1) {
+            printf("\n*** single-ray host calls/sec ***\n");  fflush(0);
+        }
+        if (m_plugintype == 2) {
+            printf("\n*** ispc host calls/sec *** \n");  fflush(0);
+        }
+        if (m_plugintype == 3) {
+            printf("\n*** single-ray coprocessor calls/sec ***\n");  fflush(0);
+        }
+        if (m_plugintype == 4) {
+            printf("\n*** ispc coprocessor calls/sec ***\n");  fflush(0);
+        }
+    }
+    
+    t0 = embree::getSeconds();
+    
+    // We don't care what renderInfo.renderingAPI() is used - we will use this one
 	renderToTarget( renderInfo );
+    
+    dt = embree::getSeconds() - t0;
+    accum += dt;
+    count++;
+    
+    if (count >= RUNTIMEAVG)
+    {
+        printf("%g, ", (double)RUNTIMEAVG / accum);  fflush(0);
+        count = 0;
+        accum = 0.0;
+    }
+    
 	return MStatus::kSuccess;
 }
 
@@ -649,13 +729,22 @@ MObject EmbreeViewportRenderer::findShader( MObject& setNode )
 void EmbreeViewportRenderer::getMaterialData(const MDagPath &currObject, 
 	int haveTexture, SceneData &materialInfo)
 {
-	std::string texturefile;
-	float diffColor[3] = {1.0, 1.0, 1.0};
-	float roughness = 1.0f;  // pure diffuse (0 = pure specular)
-	float refractIndex = 1.5f;
+	std::string diffuseTextureFile;
+    std::string specularTextureFile;
+    std::string bumpTextureFile;
+	float diffColor[3] = {1.0, 1.0, 1.0};  // Needed to make diffuse textures visible
 	float transparentColor[3] = {0.0, 0.0, 0.0};
-	float specularColor[3] = {0.0, 0.0, 0.0};
-
+	float specularColor[3] = {1.0, 1.0, 1.0};  // Used to make specular textures visible
+    float absorption[3] = {0.0, 0.0, 0.0};
+    float roughness = 1.0f;  // pure diffuse (0 = pure specular)
+	float refractIndex = 1.5f;
+    float diffusionExponent = 100.0f;
+    float transmissionDepth = 9999999.9f;
+    
+    diffuseTextureFile.clear();
+    specularTextureFile.clear();
+    bumpTextureFile.clear();
+    
 	MFnMesh fnMesh(currObject);
 	MObjectArray sets;
 	MObjectArray comps;
@@ -663,7 +752,6 @@ void EmbreeViewportRenderer::getMaterialData(const MDagPath &currObject,
 	if (!fnMesh.getConnectedSetsAndMembers(instanceNum, sets, comps, true))
 		MGlobal::displayError("ERROR : MFnMesh::getConnectedSetsAndMembers");
 	
-	texturefile.clear();
 	for ( unsigned i=0; i<sets.length(); i++ ) 
 	{
 		MObject set = sets[i];  // all sets
@@ -681,12 +769,13 @@ void EmbreeViewportRenderer::getMaterialData(const MDagPath &currObject,
 		MObject shaderNode = findShader(set);
 		if (shaderNode != MObject::kNullObj)
 		{
-			// Color data
+			// Diffuse color
 			MPlug colorPlug = MFnDependencyNode(shaderNode).findPlug("color", &status);
 			if (status != MS::kFailure)
-			{
+			{   
+                // Get any texture associated with the diffuse color
 				MItDependencyGraph It( colorPlug, MFn::kFileTexture, MItDependencyGraph::kUpstream);
-				if( !It.isDone())
+				if( !It.isDone() && haveTexture)
 				{
 					// We have a texture associated with this material
 					// Get the filename
@@ -694,22 +783,22 @@ void EmbreeViewportRenderer::getMaterialData(const MDagPath &currObject,
 					MString filename;
 					MFnDependencyNode( MayaTexture).findPlug( "fileTextureName").getValue( filename);
 					if( filename.length())
-						texturefile = filename.asChar();
+						diffuseTextureFile = filename.asChar();
 #if 0
 char buffer[1024];
 MString pname = currObject.fullPathName() ;
-sprintf(buffer, "%s: texture %s", pname.asChar(), filename.asChar());
+sprintf(buffer, "%s: diffuse texture %s", pname.asChar(), filename.asChar());
 MGlobal::displayInfo(buffer);
 #endif
 				}
-				else 
-				{
-					// Only basic colors
-					MObject data;
-					colorPlug.getValue( data);
-					MFnNumericData val(data);
-					val.getData( diffColor[0], diffColor[1], diffColor[2]);
-				}
+                else
+                {
+                    // Don't override the defaults when we have a texture
+                    MObject data;
+                    colorPlug.getValue( data);
+                    MFnNumericData val(data);
+                    val.getData( diffColor[0], diffColor[1], diffColor[2]);
+                }
 			}  // got color data
 
 			// Transparency
@@ -726,20 +815,115 @@ MGlobal::displayInfo(buffer);
 			MPlug specularColorPlug = MFnDependencyNode(shaderNode).findPlug("specularColor", &status);
 			if (status != MS::kFailure)
 			{
-				MObject data;
-				specularColorPlug.getValue( data);
-				MFnNumericData val(data);
-				val.getData( specularColor[0], specularColor[1], specularColor[2]);
+                // Get any texture associated with the specular color
+				MItDependencyGraph It( specularColorPlug, MFn::kFileTexture, MItDependencyGraph::kUpstream);
+				if( !It.isDone() && haveTexture)
+				{
+					// We have a texture associated with this material
+					// Get the filename
+					MObject				MayaTexture = It.thisNode();
+					MString filename;
+					MFnDependencyNode( MayaTexture).findPlug( "fileTextureName").getValue( filename);
+					if( filename.length())
+						specularTextureFile = filename.asChar();
+#if 0
+char buffer[1024];
+MString pname = currObject.fullPathName() ;
+sprintf(buffer, "%s: specular texture %s", pname.asChar(), filename.asChar());
+MGlobal::displayInfo(buffer);
+#endif
+				}
+                else
+                {
+                    // Don't override the defaults when we have a texture
+                    MObject data;
+                    specularColorPlug.getValue( data);
+                    MFnNumericData val(data);
+                    val.getData( specularColor[0], specularColor[1], specularColor[2]);
+                }
 			}
 
 			// Index of refraction
+            // NOTE:  To do metals via Uber this would need to be something like a color.
+            // Since "incandesance" has already been subverted, that leaves
+            // "ambience" for this if such support is desired.  Not implemented
+            // here at this time.
 			MPlug refIndexPlug = MFnDependencyNode(shaderNode).findPlug("refractiveIndex", &status);
 			if (status != MS::kFailure)
 			{
-				MObject data;
 				refIndexPlug.getValue( refractIndex );
 			}
+            
+            // Bump map (if present)
+            MPlug bumpPlug = MFnDependencyNode(shaderNode).findPlug("normalCamera", &status);
+			if (status == MS::kSuccess)
+            {
+				MItDependencyGraph It( bumpPlug, MFn::kFileTexture, MItDependencyGraph::kUpstream);
+				if( !It.isDone() && haveTexture)
+				{
+					// We have a texture associated with this bump
+					// Get the filename
+					MObject				MayaTexture = It.thisNode();
+					MString filename;
+					MFnDependencyNode( MayaTexture).findPlug( "fileTextureName").getValue( filename);
+                    if( filename.length())
+						bumpTextureFile = filename.asChar();
+#if 0
+char buffer[1024];
+MString pname = currObject.fullPathName() ;
+sprintf(buffer, "%s: found bump2d - %s/%d", pname.asChar(), filename.asChar(), filename.length());
+MGlobal::displayInfo(buffer);
+#endif
+                }
+            }
 
+            // Absorption for metals - subverting "incandescence" to get this
+            // Good values seem less than 5
+            // Copper:  4.24 2.58 2.33 with refraction 0.22 0.95 1.17
+            // Gold:  4.10 2.73 1.92 with refraction 0.16 0.35 1.60
+            // Silver: 4.59 3.35 2.33 with refraction 0.14 0.12 0.16
+            // Currently we have no way to set the refraction components - we just
+            // use the traditional index of refraction
+			MPlug absorptionPlug = MFnDependencyNode(shaderNode).findPlug("incandescence", &status);
+			if (status != MS::kFailure)
+			{
+				MObject data;
+				absorptionPlug.getValue( data);
+				MFnNumericData val(data);
+				val.getData( absorption[0], absorption[1], absorption[2]);
+                absorption[0] *= 5.0f;
+                absorption[1] *= 5.0f;
+                absorption[2] *= 5.0f;
+			}
+            
+			// Translucence switch (>0 turns on)
+			MPlug translucencePlug = MFnDependencyNode(shaderNode).findPlug("translucence", &status);
+			if (status != MS::kFailure)
+			{
+                float translucence = 0.0f;
+				translucencePlug.getValue( translucence );
+               
+                if (translucence > 0.0f)
+                {
+                    // Get transmissionDepth
+                    MPlug translucenceDepthPlug = MFnDependencyNode(shaderNode).findPlug("translucenceDepth", &status);
+                    if (status != MS::kFailure)
+                    {
+                        translucenceDepthPlug.getValue( transmissionDepth );
+                    }
+                    
+                    // Take over translucenceFocus to use as the diffusionExponent
+                    // Unfortunately, since translucenceFocus only goes from 0 to 1,
+                    // we need to multiply by 100 to get a better exponent
+                    MPlug translucenceFocusPlug = MFnDependencyNode(shaderNode).findPlug("translucenceFocus", &status);
+                    if (status != MS::kFailure)
+                    {
+                        translucenceFocusPlug.getValue( diffusionExponent );
+                        diffusionExponent *= 100.0f;
+                    }
+                }  // Do translucence
+			}
+            
 			// Figure out what sort of shading model is being used since
 			// everything reports MFn::kLambert and nothing else in Maya 2014
 			int lam, phng, blnn, phnge;
@@ -826,14 +1010,22 @@ sprintf(bufferphnge, "%s:  roughness = %f", pname.asChar(), roughness);
 MGlobal::displayInfo(bufferphnge);
 #endif
 			}
-
-			materialInfo.haveTexture = haveTexture;
-			materialInfo.texturefile = texturefile;
+    
+			materialInfo.haveTexture = haveTexture;  // Do we have UVs?
+			materialInfo.diffuseTextureFile = diffuseTextureFile;
+			materialInfo.specularTextureFile = specularTextureFile;
+			materialInfo.bumpTextureFile = bumpTextureFile;
+            
 			materialInfo.roughness = roughness;
 			materialInfo.refractIndex = refractIndex;
+            materialInfo.diffusionExponent = diffusionExponent;
+            materialInfo.transmissionDepth = transmissionDepth;
+            
 			materialInfo.diffcolor[0] = diffColor[0]; materialInfo.diffcolor[1] = diffColor[1]; materialInfo.diffcolor[2] = diffColor[2];
 			materialInfo.transparentColor[0] = transparentColor[0]; materialInfo.transparentColor[1] = transparentColor[1]; materialInfo.transparentColor[2] = transparentColor[2];
 			materialInfo.specularColor[0] = specularColor[0]; materialInfo.specularColor[1] = specularColor[1]; materialInfo.specularColor[2] = specularColor[2];
+            materialInfo.absorption[0] = absorption[0]; materialInfo.absorption[1] = absorption[1]; materialInfo.absorption[2] = absorption[2]; 
+
 			break;  // Start with one shader per object
 		} // non-null shader node
 	}  // for all connected sets and members
@@ -852,9 +1044,10 @@ int EmbreeViewportRenderer::checkMaterialProperties(const MDagPath &currObject,
 
 	// Look for changes
 	if (oldSceneInfo.haveTexture != currMaterialData.haveTexture) replacementNeeded = 1;
-	if (oldSceneInfo.texturefile != currMaterialData.texturefile) replacementNeeded = 1;
-	if (oldSceneInfo.roughness != currMaterialData.roughness) replacementNeeded = 1;
-	if (oldSceneInfo.refractIndex != currMaterialData.refractIndex) replacementNeeded = 1;
+	if (oldSceneInfo.diffuseTextureFile != currMaterialData.diffuseTextureFile) replacementNeeded = 1;
+	if (oldSceneInfo.specularTextureFile != currMaterialData.specularTextureFile) replacementNeeded = 1;
+	if (oldSceneInfo.bumpTextureFile != currMaterialData.bumpTextureFile) replacementNeeded = 1;
+
 	if (oldSceneInfo.diffcolor[0] != currMaterialData.diffcolor[0]) replacementNeeded = 1;
 	if (oldSceneInfo.diffcolor[1] != currMaterialData.diffcolor[1]) replacementNeeded = 1;
 	if (oldSceneInfo.diffcolor[2] != currMaterialData.diffcolor[2]) replacementNeeded = 1;
@@ -864,6 +1057,14 @@ int EmbreeViewportRenderer::checkMaterialProperties(const MDagPath &currObject,
 	if (oldSceneInfo.specularColor[0] != currMaterialData.specularColor[0]) replacementNeeded = 1;
 	if (oldSceneInfo.specularColor[1] != currMaterialData.specularColor[1]) replacementNeeded = 1;
 	if (oldSceneInfo.specularColor[2] != currMaterialData.specularColor[2]) replacementNeeded = 1;
+	if (oldSceneInfo.absorption[0] != currMaterialData.absorption[0]) replacementNeeded = 1;
+	if (oldSceneInfo.absorption[1] != currMaterialData.absorption[1]) replacementNeeded = 1;
+	if (oldSceneInfo.absorption[2] != currMaterialData.absorption[2]) replacementNeeded = 1;
+    
+	if (oldSceneInfo.roughness != currMaterialData.roughness) replacementNeeded = 1;
+	if (oldSceneInfo.refractIndex != currMaterialData.refractIndex) replacementNeeded = 1;
+	if (oldSceneInfo.diffusionExponent != currMaterialData.diffusionExponent) replacementNeeded = 1;
+	if (oldSceneInfo.transmissionDepth != currMaterialData.transmissionDepth) replacementNeeded = 1;
 
 	return replacementNeeded;
 }
@@ -880,37 +1081,62 @@ void EmbreeViewportRenderer::convertSurfaceMaterial(const MDagPath &dagPath,
 	material = m_device->rtNewMaterial("Uber");
 	m_device->rtSetFloat3(material, "diffuse", 
 				materialInfo.diffcolor[2], materialInfo.diffcolor[1], materialInfo.diffcolor[0]);
-	m_device->rtSetFloat3(material, "specular", 
-				materialInfo.specularColor[2], materialInfo.specularColor[1], materialInfo.specularColor[0]);
-	m_device->rtSetFloat1(material, "roughness", materialInfo.roughness);
 	m_device->rtSetFloat3(material, "transmission", 
 				materialInfo.transparentColor[2], materialInfo.transparentColor[1], materialInfo.transparentColor[0]);
-	m_device->rtSetFloat1(material, "refraction", materialInfo.refractIndex);
-#if 1
-char bufferphng[1024];
-MString pname = dagPath.fullPathName() ;
-sprintf(bufferphng, "%s:  trans[0] = %f, trans[1] = %f, trans[2] = %f", pname.asChar(), 
-        materialInfo.transparentColor[0], materialInfo.transparentColor[1], materialInfo.transparentColor[2]);
-MGlobal::displayInfo(bufferphng);
-#endif
-#if 0
+	m_device->rtSetFloat3(material, "specular", 
+				materialInfo.specularColor[2], materialInfo.specularColor[1], materialInfo.specularColor[0]);
+	m_device->rtSetFloat3(material, "absorption", 
+				materialInfo.absorption[2], materialInfo.absorption[1], materialInfo.absorption[0]);
+    m_device->rtSetFloat1(material, "roughness", materialInfo.roughness);
+	m_device->rtSetFloat3(material, "refraction", materialInfo.refractIndex, 
+                                    materialInfo.refractIndex, materialInfo.refractIndex);
+	m_device->rtSetFloat1(material, "diffusionExponent", materialInfo.diffusionExponent);
+	m_device->rtSetFloat1(material, "transmissionDepth", materialInfo.transmissionDepth);
+    // So for the present these are hard-coded since I don't have a good
+    // idea for how to get them out of Maya.  One of the mental ray 
+    // textures?  Text file we read?  Environment variables?
+    // wax
+    // works best with transmissionDepth = 25.0, diffusionExponent = 1.0
+    // transmission = 0.9f, 0.9f, 0.9f
+    float dcoeff[] = {1.0f, 1.0f, 1.0f, 1.0f};  
+#if 0   
+    // Carnival glass
+    // works best with transmissionDepth = 65.0, diffusionExponent = 60.0
     float dcoeff[] = {0.133f, 0.155f, 0.149f, 0.0064f,
             0.100f, 0.236f, 0.244f, 0.0484f,
             0.118f, 0.198f, 0.000f, 0.1870f,
             0.113f, 0.007f, 0.007f, 0.5670f,
             0.358f, 0.304f, 0.200f, 1.9900f,
             0.078f, 0.070f, 0.040f, 7.4100f};
-    m_device->rtSetFloat1(material, "transmissionDepth", 65.0f);
-    m_device->rtSetFloat1(material, "diffusionExponent", 60.0f);
-    embree::Handle<embree::Device::RTData> data = loadVec4fArray(&dcoeff[0], 6);
-    m_device->rtSetArray(material, "diffusionCoefficients", "float4", data, 6, sizeof(embree::Vec4f), 0);
 #endif
-	if ((1 == haveTexture) && (!materialInfo.texturefile.empty())) {  // need texture coordinates *and* a file
-		// Load and assign the texture file
-		// WARNING!!!
-		// Note:  only ppm, pfm, and jpeg supported unless you build with USE_IMAGEMAGICK
-        embree::Handle<embree::Device::RTTexture> texture = embree::rtLoadTexture(materialInfo.texturefile);
+    embree::Handle<embree::Device::RTData> data = loadVec4fArray(&dcoeff[0], 1);
+    m_device->rtSetArray(material, "diffusionCoefficients", "float4", data, 1, sizeof(embree::Vec4f), 0);
+
+#if 0
+char bufferphng[1024];
+MString pname = dagPath.fullPathName() ;
+sprintf(bufferphng, "%s:  trans[0] = %f, trans[1] = %f, trans[2] = %f", pname.asChar(), 
+        materialInfo.transparentColor[0], materialInfo.transparentColor[1], materialInfo.transparentColor[2]);
+MGlobal::displayInfo(bufferphng);
+#endif
+
+    // Load and assign the texture files if we have texture coordinates *and* the file
+	// WARNING!!!
+	// Note:  only ppm, pfm, and jpeg supported unless you build with USE_IMAGEMAGICK
+	if ((1 == haveTexture) && (!materialInfo.diffuseTextureFile.empty())) 
+    {
+        embree::Handle<embree::Device::RTTexture> texture = embree::rtLoadTexture(materialInfo.diffuseTextureFile);
 		m_device->rtSetTexture(material, "diffuseMap", texture);
+	}
+	if ((1 == haveTexture) && (!materialInfo.specularTextureFile.empty())) 
+    {
+        embree::Handle<embree::Device::RTTexture> texture = embree::rtLoadTexture(materialInfo.specularTextureFile);
+		m_device->rtSetTexture(material, "specularMap", texture);
+	}
+	if ((1 == haveTexture) && (!materialInfo.bumpTextureFile.empty())) 
+    {
+        embree::Handle<embree::Device::RTTexture> texture = embree::rtLoadTexture(materialInfo.bumpTextureFile);
+		m_device->rtSetTexture(material, "bumpMap", texture);
 	}
 }
 

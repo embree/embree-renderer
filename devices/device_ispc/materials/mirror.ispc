@@ -29,7 +29,7 @@ struct Mirror
 void Mirror__shade(const uniform Material *uniform _this,
                   const Ray&                  ray,            
                   const Medium&               currentMedium,  
-                  const DifferentialGeometry& dg,             
+                  DifferentialGeometry& dg,             
                   uniform CompositedBRDF&     brdfs)          
 {
   uniform const Mirror *uniform this = (uniform const Mirror *uniform)_this;

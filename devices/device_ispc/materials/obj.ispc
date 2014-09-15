@@ -36,7 +36,7 @@ struct Obj
 void Obj__shade(const uniform Material *uniform _this,
                 const Ray&                  ray,           
                 const Medium&               currentMedium, 
-                const DifferentialGeometry& dg,            
+                DifferentialGeometry& dg,            
                 uniform CompositedBRDF&     brdfs)         
 {
   uniform const Obj* uniform this = (uniform const Obj* uniform)_this;

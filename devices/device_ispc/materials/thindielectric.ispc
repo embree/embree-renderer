@@ -31,7 +31,7 @@ struct ThinDielectric
 void ThinDielectric__shade(const uniform Material *uniform _this,
                        const Ray&                  ray,            
                        const Medium&               currentMedium,  
-                       const DifferentialGeometry& dg,             
+                       DifferentialGeometry& dg,             
                        uniform CompositedBRDF&     brdfs)          
 {
   uniform const ThinDielectric *uniform this = (uniform const ThinDielectric *uniform)_this;

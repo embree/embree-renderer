@@ -32,7 +32,7 @@ struct Metal
 void Metal__shade(const uniform Material *uniform _this,
                   const Ray&                  ray,       
                   const Medium&               currentMedium,
-                  const DifferentialGeometry& dg,           
+                  DifferentialGeometry& dg,           
                   uniform CompositedBRDF&     brdfs)        
 {
   const uniform Metal* uniform this = (const uniform Metal* uniform)_this;
