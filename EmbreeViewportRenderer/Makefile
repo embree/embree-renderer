@@ -22,7 +22,8 @@ MAYAINCLUDE := /usr/autodesk/maya2014-x64/include
 MAYALIBS := /usr/autodesk/maya2014-x64/lib
 EMBREEROOT := /nfs/pdx/home/cwcongdo/Programming/dcc_render-embree
 RENDERROOT := /nfs/pdx/home/cwcongdo/Programming/dcc_render-dcc_render-ccongdon-embree-renderer
-INTELCOMPOSERXEROOT := /opt/intel/composer_xe_2013_sp1.3.174
+INTELCOMPOSERXEROOT := /opt/intel/composer_xe_2015.0.090
+# INTELCOMPOSERXEROOT := /opt/intel/composer_xe_2013_sp1.3.174
 INTELCOMPILERLIBS := $(INTELCOMPOSERXEROOT)/compiler/lib/intel64
 TOP := ..
 include buildrules

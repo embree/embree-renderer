@@ -1,3 +1,21 @@
+// ======================================================================== //
+// Copyright 2009-2014 Intel Corporation                                    //
+//                                                                          //
+// Licensed under the Apache License, Version 2.0 (the "License");          //
+// you may not use this file except in compliance with the License.         //
+// You may obtain a copy of the License at                                  //
+//                                                                          //
+//     http://www.apache.org/licenses/LICENSE-2.0                           //
+//                                                                          //
+// Unless required by applicable law or agreed to in writing, software      //
+// distributed under the License is distributed on an "AS IS" BASIS,        //
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. //
+// See the License for the specific language governing permissions and      //
+// limitations under the License.                                           //
+// ======================================================================== //
+//
+// This software contains copyrighted code owned by Autodesk, Inc. but has 
+// been modified and is not endorsed by Autodesk, Inc.
 //-
 // ==========================================================================
 // Copyright 1995,2006,2008 Autodesk, Inc. All rights reserved.
@@ -296,8 +314,11 @@ EmbreeViewportRenderer::EmbreeViewportRenderer( const MString & name )
 	m_builder = "default";
 	m_traverser = "default";
 	m_depth = -1;                       //!< recursion depth - -1 sets default
-	//  m_spp = 1;                          //!< samples per pixel for ordinary rendering
-	m_spp = 4;  //!< samples per pixel for ordinary rendering
+#if 0
+	m_spp = 1;                          //!< samples per pixel for ordinary rendering
+#else
+	m_spp = 4;                          //!< samples per pixel for ordinary rendering
+#endif
 
 	/* output settings */
 	m_numBuffers = 2;                   //!< number of buffers of the framebuffer
@@ -1077,7 +1098,7 @@ void EmbreeViewportRenderer::convertSurfaceMaterial(const MDagPath &dagPath,
 	SceneData materialInfo;
 
 	getMaterialData(dagPath, haveTexture, materialInfo);
-
+#if 1
 	material = m_device->rtNewMaterial("Uber");
 	m_device->rtSetFloat3(material, "diffuse", 
 				materialInfo.diffcolor[2], materialInfo.diffcolor[1], materialInfo.diffcolor[0]);
@@ -1138,6 +1159,11 @@ MGlobal::displayInfo(bufferphng);
         embree::Handle<embree::Device::RTTexture> texture = embree::rtLoadTexture(materialInfo.bumpTextureFile);
 		m_device->rtSetTexture(material, "bumpMap", texture);
 	}
+#else
+    material = m_device->rtNewMaterial("Matte");
+    m_device->rtSetFloat3(material, "reflectance", materialInfo.diffcolor[2], 
+                materialInfo.diffcolor[1], materialInfo.diffcolor[0]);
+#endif
 }
 
 // ------------------------------------------------------------

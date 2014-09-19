@@ -18,6 +18,7 @@
 #define __EMBREE_TRIANGLE_H__
 
 #include "../shapes/shape.h"
+#include "stdio.h"
 
 namespace embree
 {
@@ -54,7 +55,10 @@ namespace embree
     BBox3f extract(RTCScene scene, size_t id) const
     {
       unsigned mesh = rtcNewTriangleMesh (scene, RTC_GEOMETRY_STATIC, 1, 3);
-      if (mesh != id) throw std::runtime_error("ID does not match");
+      if (mesh != id) {
+          printf("Exception Error:  ID (%lu) and mesh (%u) do not match\n   Put non-mesh objects at the end of your scene description\n", id, mesh);  fflush(0);
+          throw std::runtime_error("ID does not match");
+      }
       Vec3fa* vertices = (Vec3fa*) rtcMapBuffer(scene,mesh,RTC_VERTEX_BUFFER); 
       RTCTriangle* triangles = (RTCTriangle*) rtcMapBuffer(scene,mesh,RTC_INDEX_BUFFER);
       BBox3f bounds = empty;
