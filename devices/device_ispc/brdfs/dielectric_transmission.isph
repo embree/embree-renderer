@@ -18,8 +18,9 @@
 
 #include "brdf.isph"
 
-///////////////////////////////////////////////////////
-
+/*! Dielectric transmission BRDF constructor. \param etai is the
+ *  refraction index of the medium the incident ray travels in
+ *  \param etat is the refraction index of the opposite medium */
 struct DielectricTransmission
 {
   uniform BRDF base;
@@ -154,7 +155,10 @@ inline vec3f uniform_ThinDielectricTransmission__sample(const uniform BRDF* unif
 }
 
 inline void ThinDielectricTransmission__Constructor(uniform ThinDielectricTransmission* uniform this,
-                                                    const uniform float etai, const uniform float etat, const uniform vec3f T, const uniform float thickness)
+                                                    const uniform float etai, 
+                                                    const uniform float etat, 
+                                                    const uniform vec3f T, 
+                                                    const uniform float thickness)
 {
   BRDF__Constructor(&this->base,SPECULAR_TRANSMISSION,uniform_ThinDielectricTransmission__eval,uniform_ThinDielectricTransmission__sample);
   this->eta = etai*rcp(etat);
@@ -191,7 +195,10 @@ inline vec3f varying_ThinDielectricTransmission__sample(const uniform BRDF* unif
 }
 
 inline void ThinDielectricTransmission__Constructor(varying ThinDielectricTransmission* uniform this,
-                                                    const varying float etai, const varying float etat, const varying vec3f T, const varying float thickness)
+                                                    const varying float etai, 
+                                                    const varying float etat, 
+                                                    const varying vec3f T, 
+                                                    const varying float thickness)
 {
   BRDF__Constructor(&this->base,SPECULAR_TRANSMISSION,varying_ThinDielectricTransmission__eval,varying_ThinDielectricTransmission__sample);
   this->eta = etai*rcp(etat);

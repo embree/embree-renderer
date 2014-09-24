@@ -64,6 +64,7 @@ struct Uber
     
     Medium mediumOutside;
     Medium mediumInside;
+    
     DielectricReflection reflection_io;
 
     DielectricTransmission transmission_io;
@@ -132,6 +133,7 @@ void Uber__shadeConductor(const uniform Uber *uniform this,
     }
 }
 
+/*! the ray transitions from outside to inside */
 void Uber__shadeDielectricEntry(const uniform Uber *uniform this,          
         uniform CompositedBRDF&     brdfs,
         const vec3f &diffuseColor,
@@ -139,7 +141,7 @@ void Uber__shadeDielectricEntry(const uniform Uber *uniform this,
 {
 
     //! Surface is perfectly transmissive.
-    if (this->transmissionDepth >= 999999.0f)
+    if (this->transmissionDepth >= 999999.0f && this->refraction.x != 1.0f)
         CompositedBRDF__add(&brdfs, &this->transmission_oi.base);
 
     //! Surface is translucent.
@@ -161,12 +163,13 @@ void Uber__shadeDielectricEntry(const uniform Uber *uniform this,
 
 } 
 
+/*! the ray transitions from inside to outside */
 void Uber__shadeDielectricExit(const uniform Uber *uniform this,             
         uniform CompositedBRDF&     brdfs)
 {
 
     //! Surface is perfectly transmissive.
-    if (this->transmissionDepth >= 999999.0f) 
+    if (this->transmissionDepth >= 999999.0f && this->refraction.x != 1.0f) 
         CompositedBRDF__add(&brdfs,&this->transmission_io.base);
 
     //! Internal reflection in perfectly transmissive materials.
@@ -178,7 +181,7 @@ void Uber__shadeDielectricExit(const uniform Uber *uniform this,
         CompositedBRDF__add(&brdfs, &this->translucentExit.base);
         //COMPOSITED_BRDF_ADD(brdfs, TranslucentExit, this->transmission, this->transmissionDepth,
         //                    this->numCoefficients, this->diffusionCoefficients);
-
+    
 } 
 
 void Uber__shadeDielectric(const uniform Uber *uniform this,
@@ -192,13 +195,16 @@ void Uber__shadeDielectric(const uniform Uber *uniform this,
     //! Specular reflected color.
     const vec3f specularColor = mul(this->specular, Uber__sampleTexture(dg, this->specularMap));
 
-    //! Transmission into the material.
     if (eq(currentMedium, this->mediumOutside))
+    {
+        //! Transmission into the material.
         Uber__shadeDielectricEntry(this, brdfs, diffuseColor, specularColor);
-
-    //! Transmission through the material and back out again.
-    if (eq(currentMedium, this->mediumInside)) 
+    }
+    else
+    {
+        //! Transmission through the material and back out again.
         Uber__shadeDielectricExit(this, brdfs);
+    }
 
 }
 

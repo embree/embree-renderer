@@ -18,6 +18,9 @@
 
 #include "brdf.isph"
 
+/*! Dielectric reflection BRDF constructor. \param etai is the
+ *  refraction index of the medium the incident ray travels in
+ *  \param etat is the refraction index of the opposite medium */
 struct DielectricReflection
 {
   uniform BRDF base;

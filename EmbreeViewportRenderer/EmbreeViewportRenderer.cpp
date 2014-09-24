@@ -273,10 +273,11 @@ void EmbreeViewportRendererXeonPhiISPC::createRenderDevice()
 	{
 
       m_device = embree::Device::rtCreateDevice("ispc_knc",   // ispc_device over COI
-	          m_numThreads,m_rtcore_cfg.c_str());
-      //              m_numThreads,"builder=morton64");
+                    m_numThreads,"builder=morton64");
       // Note - the 64-bit Morton builder is slower than the 32-bit one
       // for dynamic scenes, but in return it supports more complex scenes
+      // My understanding is that Xeon automatically switches to a 64-bit
+      // Morton builder on need
 	}
     m_plugintype = 4;
 }
@@ -1160,9 +1161,24 @@ MGlobal::displayInfo(bufferphng);
 		m_device->rtSetTexture(material, "bumpMap", texture);
 	}
 #else
+#if 0
     material = m_device->rtNewMaterial("Matte");
     m_device->rtSetFloat3(material, "reflectance", materialInfo.diffcolor[2], 
                 materialInfo.diffcolor[1], materialInfo.diffcolor[0]);
+#else
+//    material = m_device->rtNewMaterial("Plastic");
+//    material = m_device->rtNewMaterial("Metal");
+//    m_device->rtSetFloat3(material, "reflectance", 1.0, 1.0, 1.0);
+//    m_device->rtSetFloat3(material, "eta", 0.19, 0.45, 1.50);
+//    m_device->rtSetFloat3(material, "k", 3.06, 2.40, 1.88);
+//    m_device->rtSetFloat1(material, "roughness", 0.005);
+//      material = m_device->rtNewMaterial("MetallicPaint");
+//      m_device->rtSetFloat1(material, "eta", 1.45);
+//      m_device->rtSetFloat3(material, "glitterColor", 0.5, 0.44, 0.42);
+//      m_device->rtSetFloat1(material, "glitterSpread", 0.01);
+//      m_device->rtSetFloat3(material, "shadeColor", 0.5, 0.42, 0.35);
+
+#endif
 #endif
 }
 
