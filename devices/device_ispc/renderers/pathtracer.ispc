@@ -349,7 +349,8 @@ vec3f PathTraceIntegrator_Li(const uniform PathTracer* uniform this,
            dg.P, wi.v, dg.error*this->epsilon, inf,
            c, (type & directLightingBRDFTypes) != NONE);
     
-    /*! We maintain the contribution from the first diffuse hit onward in a separate buffer to filter caustics. */
+    /*! We maintain the contribution from the first diffuse hit 
+     * onward in a separate buffer to filter caustics. */
    if(this->filterCaustics && firstDiffuseHit)
     {
         if (GEOMETRY_ID_INVALID == lightPath.history.firstDiffuseGeomID) // first hit
@@ -358,13 +359,13 @@ vec3f PathTraceIntegrator_Li(const uniform PathTracer* uniform this,
         vec3f thiscontrib = mul(c, rcp(wi.pdf));
         lightPath.history.postDiffuseContribution = add(lightPath.history.postDiffuseContribution,
                 thiscontrib);
-//         lightPath.history.postDiffuseContribution = c * Li(scatteredPath, scene, state) * rcp(wi.pdf);
+//         single ray does this:  lightPath.history.postDiffuseContribution = c * Li(scatteredPath, scene, state) * rcp(wi.pdf);
         Lw = mul(Lw, thiscontrib);
-//            L += lightPath.history.postDiffuseContribution;
+//            single ray:  L += lightPath.history.postDiffuseContribution;
     }
     else
         Lw = mul(mul(Lw,c),rcp(wi.pdf));
-      // L += c * Li(scatteredPath, scene, state) * rcp(wi.pdf);
+      // single ray:  L += c * Li(scatteredPath, scene, state) * rcp(wi.pdf);
   }  // while 
   return L;
 }

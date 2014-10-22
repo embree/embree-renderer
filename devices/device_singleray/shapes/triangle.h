@@ -54,7 +54,7 @@ namespace embree
 
     BBox3f extract(RTCScene scene, size_t id) const
     {
-      unsigned mesh = rtcNewTriangleMesh (scene, RTC_GEOMETRY_STATIC, 1, 3);
+      unsigned mesh = rtcNewTriangleMesh (scene, RTC_GEOMETRY_DYNAMIC, 1, 3);
       if (mesh != id) {
           printf("Exception Error:  ID (%lu) and mesh (%u) do not match\n   Put non-mesh objects at the end of your scene description\n", id, mesh);  fflush(0);
           throw std::runtime_error("ID does not match");

@@ -62,8 +62,6 @@ namespace embree
       
       void setPrimitive(size_t slot, Ref<PrimitiveHandle> prim) 
       {
-		// BUG BUG BUG - this mostly works, although the visual artifacts suggest something is
-		// still wrong
         if (slot >= prims.size()) {
 			prims.resize(slot+1);
 			modified.resize(slot+1);
@@ -74,7 +72,7 @@ namespace embree
         if (shape) shape = shape->transform(prim->transform);
         if (light) light = light->transform(prim->transform,prim->illumMask,prim->shadowMask);
 		if (prims[slot]) {
-			// check if existing primitive is a shape, if so, changes will require
+			// check if existing primitive is not a light, changes will require
 			// a rebuild (may be assigned to NULL later, but still need to rebuild).
 			if (!(prims[slot]->light)) {
 			  rebuild = true;
@@ -89,9 +87,9 @@ namespace embree
       void create() 
       {
 		if (rebuild) {
-			RTCScene scene = rtcNewScene(RTC_SCENE_STATIC,RTC_INTERSECT1);
+			RTCScene scene = rtcNewScene(RTC_SCENE_DYNAMIC,RTC_INTERSECT1);
 			for (size_t i=0; i<prims.size(); i++) {
-			  if (prims[i] && prims[i]->shape)
+			  if (prims[i] && prims[i]->shape && !prims[i]->light)
 				prims[i]->shape->extract(scene,i);
 			}
 			rtcCommit(scene);
@@ -102,8 +100,6 @@ namespace embree
 		}
 		else
 		{
-		// BUG BUG BUG - this mostly works, although the visual artifacts suggest something is
-		// still wrong
 			// Just replace/add existing lights - geometry unchanged
 			size_t numoldlights = instance->allLights.size();  // lights already in the geometry list
 			Ref<BackendSceneFlat>& besf = (Ref<BackendSceneFlat>&)instance;

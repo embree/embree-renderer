@@ -63,7 +63,7 @@ namespace embree
 
   BBox3f TriangleMeshWithNormals::extract(RTCScene scene, size_t id) const
   {
-    unsigned mesh = rtcNewTriangleMesh (scene, RTC_GEOMETRY_STATIC, triangles.size(), vertices.size());
+    unsigned mesh = rtcNewTriangleMesh (scene, RTC_GEOMETRY_DYNAMIC, triangles.size(), vertices.size());
     if (mesh != id) throw std::runtime_error("ID does not match");
     Vec3fa* vertices_o = (Vec3fa*) rtcMapBuffer(scene,mesh,RTC_VERTEX_BUFFER); 
     RTCTriangle* triangles_o = (RTCTriangle*) rtcMapBuffer(scene,mesh,RTC_INDEX_BUFFER);

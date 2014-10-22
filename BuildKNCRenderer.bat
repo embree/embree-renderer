@@ -5,11 +5,15 @@ REM  ----- NOTE NOTE NOTE ----
 REM  Be sure to create the "objs" and "ispcgen" directories in the Embree AND
 REM  Embree sample renderer directories before running this script
 REM
-REM  Run this script in an "Intel Composer XE 2013 SP1 Intel(R) 64 Visual Studio 2010" command window
+REM  Run this script in an "Intel Composer XE <version> Intel(R) 64 Visual Studio 2010" command window
 
 REM
 
 SET CC=icl
+
+SET INTELMPSSROOTPATH="C:\Program Files\Intel\MPSS\k1om-mpss-linux\usr"
+SET INTELCOMPILER="C:\Program Files (x86)\Intel\Composer XE 2013 SP1\bin\intel64_mic\icc.exe"
+
 REM SET ISPCDIR=C:\Users\cwcongdo\Documents\ispc-v1.6.0-windows
 SET ISPCDIR=C:\Users\cwcongdo\Documents\ispc-v1.6dev-mic_win_cross
 REM SET ISPC=%ISPCDIR%\ispc_wintophixcompile.exe
@@ -75,10 +79,9 @@ SET ROBJDIR=%EMBREERENDROOT%\objs
 SET RISPCDIR=%EMBREERENDROOT%\ispcgen
 SET RENDDEVDIR=%EMBREERENDROOT%\devices
 SET RENDISPCDEVDIR=%RENDDEVDIR%\device_ispc
-REM SET COIROOTDIR="C:\Program Files\Intel\MPSS\k1om-mpss-linux\usr\include\intel-coi"
 
 SET RENDINCLUDE=-I%EMBREERENDROOT%\common -I%RENDDEVDIR% -I%EMBREEROOT%\include -I%EMBREERENDROOT%
-SET RENDCOIDEVINCL=%RENDINCLUDE% -I%RENDDEVDIR%\device_single -I%RENDDEVDIR%\device_ispc -I"C:\Program Files\Intel\MPSS\k1om-mpss-linux\usr\include\intel-coi"
+SET RENDCOIDEVINCL=%RENDINCLUDE% -I%RENDDEVDIR%\device_single -I%RENDDEVDIR%\device_ispc -I%INTELMPSSROOTPATH%\include\intel-coi
 SET RENDSINGDEVINCL=%RENDINCLUDE% -I%RENDDEVDIR%\device_singleray
 SET RENDISPCDEVINCL=%RENDINCLUDE% -I%RENDDEVDIR%\device_ispc -I%RISPCDIR%
 
@@ -134,13 +137,13 @@ REM
 REM  -- Build single-ray device for KNC
 REM
 
-"C:\Program Files (x86)\Intel\Composer XE 2013 SP1\bin\intel64_mic\icc.exe" -static-intel -rdynamic -fPIC -fPIC -o device_singleray_knc singleray_device.o hdrilight.o trianglemesh_normals.o trianglemesh_full.o sampler.o distribution1d.o distribution2d.o pathtraceintegrator.o filter.o debugrenderer.o integratorrenderer.o progress.o coi_server.o %EOBJDIR%\*.o -lpthread -ldl "C:\Program Files\Intel\MPSS\k1om-mpss-linux\usr\lib64\libcoi_device.so" -Wl,-rpath,"C:\Program Files\Intel\MPSS\k1om-mpss-linux\usr\lib64"  -zmuldefs
+%INTELCOMPILER% -static-intel -rdynamic -fPIC -fPIC -o device_singleray_knc singleray_device.o hdrilight.o trianglemesh_normals.o trianglemesh_full.o sampler.o distribution1d.o distribution2d.o pathtraceintegrator.o filter.o debugrenderer.o integratorrenderer.o progress.o coi_server.o %EOBJDIR%\*.o -lpthread -ldl %INTELMPSSROOTPATH%\lib64\libcoi_device.so -Wl,-rpath,%INTELMPSSROOTPATH%\lib64  -zmuldefs
 
 REM
 REM  -- Build ISPC device for KNC
 REM
 
-"C:\Program Files (x86)\Intel\Composer XE 2013 SP1\bin\intel64_mic\icc.exe" -static-intel -rdynamic -fPIC -fPIC -o device_ispc_knc ispc_device.o trianglemesh.o sphere.o  coi_server.o %RISPCDIR%\*.o %EOBJDIR%\*.o -lpthread -ldl "C:\Program Files\Intel\MPSS\k1om-mpss-linux\usr\lib64\libcoi_device.so" -Wl,-rpath,"C:\Program Files\Intel\MPSS\k1om-mpss-linux\usr\lib64"  -zmuldefs
+%INTELCOMPILER% -static-intel -rdynamic -fPIC -fPIC -o device_ispc_knc ispc_device.o trianglemesh.o sphere.o  coi_server.o %RISPCDIR%\*.o %EOBJDIR%\*.o -lpthread -ldl %INTELMPSSROOTPATH%\lib64\libcoi_device.so -Wl,-rpath,%INTELMPSSROOTPATH%\lib64  -zmuldefs
 
 EXIT /B
 

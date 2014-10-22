@@ -117,6 +117,7 @@ class SceneData
 	  int numPositions;
 	  MBoundingBox boundBox;  // how much object editing will this catch?
 	  MMatrix transform;
+      
 	  // Light properties
 	  MColor color;
 	  float intensity;  
@@ -124,6 +125,7 @@ class SceneData
 	  float coneAngle;
 	  float penumbraAngle;
 	  int decayRate;
+      
 	  // Material properties
 	  int haveTexture;
 	  std::string diffuseTextureFile;
@@ -141,7 +143,6 @@ class SceneData
 	  // Book keeping
 	  int eindex;   // Embree index
 	  int lindex;   // List index
-	  // Material properties
 
       SceneData();
       SceneData(const SceneData &);
@@ -192,103 +193,101 @@ public:
 	virtual bool	override( MViewportRenderer::RenderingOverride override );
 
 protected:
-	bool			convertLight(const MDagPath &dagPath);
-	bool			convertSurface( const MDagPath &dagPath);
-	bool			drawBounds( const MDagPath &dagPath,
-								const MBoundingBox &box);
-	void			convertSurfaceMaterial(const MDagPath &dagPath, 
-								int haveTexture, 
-								embree::Handle<embree::Device::RTMaterial> &material);
-	bool			collectSceneObjects (const MRenderingInfo &renderInfo, 
-								std::vector<MDagPath> &currentObjects,
-								std::vector<MDagPath> &currentLights);
-	int				convertMayaObjectsToEmbree(std::vector<MDagPath> &currentObjects, 
-								int objectReplacementNeeded,
-								int *materialUpdated);
-	int				convertMayaLightsToEmbree(std::vector<MDagPath> &currentLights, 
-								int lightReplacementNeeded);
-	bool			renderToTarget( const MRenderingInfo &renderInfo );
+	bool    convertLight(const MDagPath &dagPath);
+	bool    convertSurface( const MDagPath &dagPath);
+	bool    drawBounds( const MDagPath &dagPath,
+                    const MBoundingBox &box);
+	void    convertSurfaceMaterial(const MDagPath &dagPath, 
+                    int haveTexture, 
+                    embree::Handle<embree::Device::RTMaterial> &material);
+	bool    collectSceneObjects (const MRenderingInfo &renderInfo, 
+                    std::vector<MDagPath> &currentObjects,
+                    std::vector<MDagPath> &currentLights);
+	int     convertMayaObjectsToEmbree(std::vector<MDagPath> &currentObjects, 
+                    int objectReplacementNeeded,
+                    int *materialUpdated);
+	int		convertMayaLightsToEmbree(std::vector<MDagPath> &currentLights, 
+                    int lightReplacementNeeded);
+	bool    renderToTarget( const MRenderingInfo &renderInfo );
 
-	void			updateSceneLightsOnly(embree::Handle<embree::Device::RTScene> scene);
+	void    updateSceneLightsOnly(embree::Handle<embree::Device::RTScene> scene);
 
-	MObject			findShader( MObject& setNode );
-	int				checkMaterialProperties(const MDagPath &currObject, int haveTexture, SceneData &oldSceneInfo);
-	void			getMaterialData(const MDagPath &currObject, int haveTexture, SceneData &materialInfo);
+	MObject     findShader( MObject& setNode );
+	int     checkMaterialProperties(const MDagPath &currObject, int haveTexture, SceneData &oldSceneInfo);
+	void    getMaterialData(const MDagPath &currObject, int haveTexture, SceneData &materialInfo);
 
-	void			getObjectData(MDagPath &currObject, SceneData &objectInfo);
-	int				checkObjectProperities(MDagPath &currObject, SceneData &oldSceneInfo, int i,
-								int *materialUpdated);
-	void			recordObjectProperties(MDagPath &currObject, int i, int eindex);
+	void    getObjectData(MDagPath &currObject, SceneData &objectInfo);
+	int     checkObjectProperities(MDagPath &currObject, SceneData &oldSceneInfo, int i,
+                    int *materialUpdated);
+	void    recordObjectProperties(MDagPath &currObject, int i, int eindex);
 
-	void			getLightData(MDagPath &currLight, SceneData &lightInfo);
-	int				checkLightProperities(MDagPath &currLight, SceneData &oldSceneInfo, int i);
-	void			recordLightProperties(MDagPath &currLight, int i, int eindex);
-	MStatus			GetViewportHandles(const MRenderingInfo &renderInfo, 
-						embree::Handle<embree::Device::RTCamera> &curr_camera, 
-						embree::Handle<embree::Device::RTFrameBuffer> &curr_frameBuffer,
-						int &accumulate);
+	void    getLightData(MDagPath &currLight, SceneData &lightInfo);
+	int     checkLightProperities(MDagPath &currLight, SceneData &oldSceneInfo, int i);
+	void    recordLightProperties(MDagPath &currLight, int i, int eindex);
+	MStatus     GetViewportHandles(const MRenderingInfo &renderInfo, 
+                    embree::Handle<embree::Device::RTCamera> &curr_camera, 
+                    embree::Handle<embree::Device::RTFrameBuffer> &curr_frameBuffer,
+                    int &accumulate);
 
-	embree::Handle<embree::Device::RTScene> 
-					createSceneFull();
+	embree::Handle<embree::Device::RTScene>   createSceneFull();
 	void createCamera(const embree::AffineSpace3f& space, 
-					  const double aspectRatio,
-					  viewPortInfo *vpInfo);
-	MStatus updateCamera(const MRenderingInfo &renderInfo, viewPortInfo *vpInfo, int newCamera);
+                    const double aspectRatio,
+                    viewPortInfo *vpInfo);
+	MStatus     updateCamera(const MRenderingInfo &renderInfo, 
+                    viewPortInfo *vpInfo, 
+                    int newCamera);
 
 	embree::Handle<embree::Device::RTData> 
-					loadVec2fArray(float *inData, unsigned int numElem);
+            loadVec2fArray(float *inData, unsigned int numElem);
 	embree::Handle<embree::Device::RTData> 
-					loadVec3fArray(float *inData, unsigned int numElem);
+            loadVec3fArray(float *inData, unsigned int numElem);
 	embree::Handle<embree::Device::RTData> 
-					loadVec3iArray(int *inData, unsigned int numElem);
+            loadVec3iArray(int *inData, unsigned int numElem);
 	embree::Handle<embree::Device::RTData> 
-					loadVec4fArray(float *inData, unsigned int numElem);
+            loadVec4fArray(float *inData, unsigned int numElem);
 
+	// Embree state for this instance
+	/* rendering device and handles */
+	embree::Device*     m_device;
+	embree::Handle<embree::Device::RTRenderer>      m_renderer;
+	embree::Handle<embree::Device::RTToneMapper>    m_tonemapper;
+	embree::Handle<embree::Device::RTImage>         m_backplate;
+	embree::Handle<embree::Device::RTScene>         m_render_scene;
+	std::vector<embree::Handle<embree::Device::RTPrimitive> >   m_prims;
+	std::vector<embree::Handle<embree::Device::RTPrimitive> >   m_lights;
 
+	/* rendering settings */
+	std::string     m_scene;
+	std::string     m_accel;
+	std::string     m_builder;
+	std::string     m_traverser;
+	int             m_depth;
+	int             m_spp;
+
+	/* output settings */
+	int             m_numBuffers;
+	int             m_refine;
+	float           m_gamma;
+	bool            m_vignetting;
+	bool            m_fullscreen;
+	size_t          m_width;
+	size_t          m_height;
+	std::string     m_format;
+	std::string     m_rtcore_cfg;
+	size_t          m_numThreads;
+
+	/* Information used for change detection */
+	int             m_oldnumObjects;
+	int             m_oldnumLights;
+	viewPortInfo    m_viewportArray[VIEWPORTARRAYSIZE];
+	std::map<std::string, SceneData>    m_objectDatabase;
+	std::map<std::string, SceneData>    m_lightDatabase;
+    
+    // Misc
+    int             m_plugintype;
 
 	RenderingAPI	m_API;		// Rendering API
 	float			m_Version;	// Embree version number as float.
-
-protected:
-	// Embree state for this instance
-	/* rendering device and handles */
-	embree::Device* m_device;
-	embree::Handle<embree::Device::RTRenderer> m_renderer;
-	embree::Handle<embree::Device::RTToneMapper> m_tonemapper;
-	embree::Handle<embree::Device::RTImage> m_backplate;
-	embree::Handle<embree::Device::RTScene> m_render_scene;
-	std::vector<embree::Handle<embree::Device::RTPrimitive> > m_prims;
-	std::vector<embree::Handle<embree::Device::RTPrimitive> > m_lights;
-
-	/* rendering settings */
-	std::string m_scene;
-	std::string m_accel;
-	std::string m_builder;
-	std::string m_traverser;
-	int m_depth;
-	int m_spp;
-
-	/* output settings */
-	int m_numBuffers;
-	int m_refine;
-	float m_gamma;
-	bool m_vignetting;
-	bool m_fullscreen;
-	size_t m_width;
-	size_t m_height;
-	std::string m_format;
-	std::string m_rtcore_cfg;
-	size_t m_numThreads;
-
-	/* Information used for change detection */
-	int m_oldnumObjects;
-	int m_oldnumLights;
-	viewPortInfo m_viewportArray[VIEWPORTARRAYSIZE];
-	std::map<std::string, SceneData> m_objectDatabase;
-	std::map<std::string, SceneData> m_lightDatabase;
-    
-    // Misc
-    int m_plugintype;
 };
 
 //

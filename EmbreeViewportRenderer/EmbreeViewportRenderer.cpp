@@ -210,7 +210,7 @@ EmbreeViewportRendererXeonSingle::EmbreeViewportRendererXeonSingle( )
 	: EmbreeViewportRenderer("EmbreeViewportRendererXeonSingle")
 {
 	// Set the ui name
-	fUIName.set( "Single-Ray Embree Renderer for Xeon");
+	fUIName.set( "Single-Ray Embree Renderer for Intel(R) Xeon(R) host");
 }
 
 void EmbreeViewportRendererXeonSingle::createRenderDevice()
@@ -228,7 +228,7 @@ EmbreeViewportRendererXeonISPC::EmbreeViewportRendererXeonISPC( )
 	: EmbreeViewportRenderer("EmbreeViewportRendererXeonISPC")
 {
 	// Set the ui name
-	fUIName.set( "ISPC Embree Renderer for Xeon");
+	fUIName.set( "ISPC Embree Renderer for Intel(R) Xeon(R) host");
 }
 
 void EmbreeViewportRendererXeonISPC::createRenderDevice()
@@ -246,7 +246,7 @@ EmbreeViewportRendererXeonPhiSingle::EmbreeViewportRendererXeonPhiSingle( )
 	: EmbreeViewportRenderer("EmbreeViewportRendererXeonPhiSingle")
 {
 	// Set the ui name
-	fUIName.set( "Single-Ray Embree Renderer for Xeon Phi");
+	fUIName.set( "Single-Ray Embree Renderer for Intel(R) Xeon Phi(TM) coprocessor");
 }
 
 void EmbreeViewportRendererXeonPhiSingle::createRenderDevice()
@@ -264,7 +264,7 @@ EmbreeViewportRendererXeonPhiISPC::EmbreeViewportRendererXeonPhiISPC( )
 	: EmbreeViewportRenderer("EmbreeViewportRendererXeonPhiISPC")
 {
 	// Set the ui name
-	fUIName.set( "ISPC Embree Renderer for Xeon Phi");
+	fUIName.set( "ISPC Embree Renderer for Intel(R) Xeon Phi(TM) coprocessor");
 }
 
 void EmbreeViewportRendererXeonPhiISPC::createRenderDevice()
@@ -273,7 +273,8 @@ void EmbreeViewportRendererXeonPhiISPC::createRenderDevice()
 	{
 
       m_device = embree::Device::rtCreateDevice("ispc_knc",   // ispc_device over COI
-                    m_numThreads,"builder=morton64");
+             	    m_numThreads,m_rtcore_cfg.c_str());
+//                  m_numThreads,"builder=morton64");
       // Note - the 64-bit Morton builder is slower than the 32-bit one
       // for dynamic scenes, but in return it supports more complex scenes
       // My understanding is that Xeon automatically switches to a 64-bit
@@ -304,10 +305,8 @@ EmbreeViewportRenderer::EmbreeViewportRenderer( const MString & name )
 	embree::g_device = NULL;
 	m_renderer = NULL;
 	m_tonemapper = NULL;
-//	m_frameBuffer = NULL;
 	m_backplate = NULL;
 	m_render_scene = NULL;
-//	m_camera = NULL;
 
 	/* rendering settings */
 	m_scene = "default";
@@ -410,18 +409,13 @@ EmbreeViewportRenderer::initialize()
 MStatus
 EmbreeViewportRenderer::uninitialize()
 {
-//	char buffer[256];
-
-//sprintf(buffer, "EmbreeViewportRenderer::uninitialize");
-//MGlobal::displayInfo(buffer);
 	m_backplate = NULL;
-//	m_frameBuffer = NULL;
 	m_tonemapper = NULL;
 	m_renderer = NULL;
 	m_prims.clear();
 	m_lights.clear();
 	m_render_scene = NULL;
-//	m_camera = NULL;
+
 	embree::rtClearTextureCache();
 	embree::rtClearImageCache();
 	// Necessary to make sure that the Embree core shuts down fully
@@ -431,8 +425,6 @@ EmbreeViewportRenderer::uninitialize()
 		embree::g_device = NULL;  // WARNING WARNING - anyone still using this is in trouble
 	}
 
-//    m_oldwidth=0;
-//   m_oldheight=0;
 	for (int i = 0; i < VIEWPORTARRAYSIZE; i++)
 	{
 		m_viewportArray[i].oldwidth=-1;
@@ -440,8 +432,6 @@ EmbreeViewportRenderer::uninitialize()
 		m_viewportArray[i].oldeye = MPoint(0,0,0);
 		m_viewportArray[i].oldlookAt = MVector(0,0,0);
 		m_viewportArray[i].oldeyeUp = MVector(0,0,0);
-//		m_viewportArray[i].frameBuffer = NULL;
-//		m_viewportArray[i].camera = NULL;
 		m_viewportArray[i].fullCameraPathName.clear();
 		/* camera settings */
 		m_viewportArray[i].camPos = embree::Vector3f(0.0f,0.0f,0.0f);
@@ -567,7 +557,6 @@ embree::Handle<embree::Device::RTData>
 	for (unsigned int i=0; i < numElem; i++)
 	{
 		data[i] = embree::Vec3i(inData[3*i+0], inData[3*i+1], inData[3*i+2]);
-//		data[i] = embree::Vec3i(inData[3*i+2], inData[3*i+1], inData[3*i+0]);
 //		cout << data[i] << "\n";
 	}
 
@@ -618,8 +607,6 @@ EmbreeViewportRenderer::convertLight(const MDagPath &dagPath)
 	// Make intensity match mental ray better
 	intensity *= 2.5;
 
-//	cout << pname.asChar() << "Light Color:  " << color << "\n";
-
 	if ( dagPath.hasFn( MFn::kPointLight ))	
 	{
 		// Create point light object
@@ -627,12 +614,11 @@ EmbreeViewportRenderer::convertLight(const MDagPath &dagPath)
 		const embree::Vector3f P((float)matrix.matrix[3][0], 
 			(float)matrix.matrix[3][1], 
 			(float)matrix.matrix[3][2]);
- //       const embree::Color I((float)(color.r * intensity),(float)(color.g * intensity),
- //			(float)(color.b * intensity));
+
 		// For some reason R & B are mixed up in Embree
 		const embree::Color I((float)(color.b * intensity),(float)(color.g * intensity),
 			(float)(color.r * intensity));
-//		cout << "Point Light " << P << I << "\n";
+
 		MFnNonAmbientLight nonAmb(dagPath, &status);
 		int decayRate = nonAmb.decayRate();
 	
@@ -715,6 +701,44 @@ EmbreeViewportRenderer::convertLight(const MDagPath &dagPath)
 		MGlobal::displayInfo(buffer);
 #endif
 	}
+    else if ( dagPath.hasFn( MFn::kAreaLight) )
+    {
+        // We don't map this to multiple triangle lights so that we don't get
+        // our light index count screwed up
+        embree::Handle<embree::Device::RTLight> light = m_device->rtNewLight("trianglelight");
+        // For some reason R & B are mixed up in Embree
+		const embree::Color L((float)(color.b * intensity),(float)(color.g * intensity),
+			(float)(color.r * intensity));
+                
+        // Area lights start out when created pointing at 0,0,-1
+        // So we need to create a light triangle perpendicular to this,
+        // rotated and scaled appropriately
+        MVector vec1(1.0, 0.0, 0.0);
+        MVector vec2(0.0, 1.0, 0.0);
+        MVector vec3 = vec1 * matrix;
+        MVector vec4 = vec2 * matrix;
+        
+        const embree::Vector3f v0((float)matrix.matrix[3][0], 
+                                  (float)matrix.matrix[3][1], 
+                                  (float)matrix.matrix[3][2]);
+        const embree::Vector3f v1(v0.x+vec3.x, v0.y+vec3.y, v0.z+vec3.z);
+        const embree::Vector3f v2(v0.x+vec4.x, v0.y+vec4.y, v0.z+vec4.z);
+        
+        m_device->rtSetFloat3(light, "v0", v0.x, v0.y, v0.z);
+        m_device->rtSetFloat3(light, "v1", v1.x, v1.y, v1.z);
+        m_device->rtSetFloat3(light, "v2", v2.x, v2.y, v2.z);
+		m_device->rtSetFloat3(light, "L", L.r, L.g, L.b);
+        m_device->rtCommit(light);
+        m_lights.push_back(m_device->rtNewLightPrimitive(light, NULL, NULL));
+#if 0
+        char buffer[1024];
+//		cout << L << "\n";
+        MFloatVector lightDirection = thislight.lightDirection(0, MSpace::kWorld);
+		sprintf(buffer, "Set up area light %s, direction = %f %f %f", pname.asChar(), 
+                lightDirection.x, lightDirection.y, lightDirection.z);
+		MGlobal::displayInfo(buffer);
+#endif
+    }
 
 
 	return true;
@@ -1048,7 +1072,7 @@ MGlobal::displayInfo(bufferphnge);
 			materialInfo.specularColor[0] = specularColor[0]; materialInfo.specularColor[1] = specularColor[1]; materialInfo.specularColor[2] = specularColor[2];
             materialInfo.absorption[0] = absorption[0]; materialInfo.absorption[1] = absorption[1]; materialInfo.absorption[2] = absorption[2]; 
 
-			break;  // Start with one shader per object
+			break;  // For now, one shader per object
 		} // non-null shader node
 	}  // for all connected sets and members
 }
@@ -1117,11 +1141,15 @@ void EmbreeViewportRenderer::convertSurfaceMaterial(const MDagPath &dagPath,
     // So for the present these are hard-coded since I don't have a good
     // idea for how to get them out of Maya.  One of the mental ray 
     // textures?  Text file we read?  Environment variables?
+#if 1
     // wax
     // works best with transmissionDepth = 25.0, diffusionExponent = 1.0
     // transmission = 0.9f, 0.9f, 0.9f
-    float dcoeff[] = {1.0f, 1.0f, 1.0f, 1.0f};  
-#if 0   
+    float dcoeff[] = {1.0f, 1.0f, 1.0f, 1.0f};
+    embree::Handle<embree::Device::RTData> data = loadVec4fArray(&dcoeff[0], 1);
+    m_device->rtSetArray(material, "diffusionCoefficients", "float4", data, 1, sizeof(embree::Vec4f), 0);
+
+#else   
     // Carnival glass
     // works best with transmissionDepth = 65.0, diffusionExponent = 60.0
     float dcoeff[] = {0.133f, 0.155f, 0.149f, 0.0064f,
@@ -1130,9 +1158,10 @@ void EmbreeViewportRenderer::convertSurfaceMaterial(const MDagPath &dagPath,
             0.113f, 0.007f, 0.007f, 0.5670f,
             0.358f, 0.304f, 0.200f, 1.9900f,
             0.078f, 0.070f, 0.040f, 7.4100f};
-#endif
     embree::Handle<embree::Device::RTData> data = loadVec4fArray(&dcoeff[0], 1);
-    m_device->rtSetArray(material, "diffusionCoefficients", "float4", data, 1, sizeof(embree::Vec4f), 0);
+    m_device->rtSetArray(material, "diffusionCoefficients", "float4", data, 6, sizeof(embree::Vec4f), 0);
+
+#endif
 
 #if 0
 char bufferphng[1024];
@@ -1222,7 +1251,6 @@ bool EmbreeViewportRenderer::convertSurface( const MDagPath &dagPath)
 		}
 
 		bool useNormals = true;
-//		bool useNormals = false;
 
 		// Setup our requirements needs.
 		MGeometryRequirements requirements;
@@ -1233,16 +1261,9 @@ bool EmbreeViewportRenderer::convertSurface( const MDagPath &dagPath)
 			requirements.addTexCoord( uvSetName );
 		if (haveColors)
 			requirements.addColor( colorSetName );
-		/*
-		// Test for tangents and binormals
-		bool testBinormal = false;
-		if (testBinormal)
-			requirements.addBinormal( uvSetName );
-		bool testTangent= false;
-		if (testTangent)
-			requirements.addTangent( uvSetName );
-		*/
+        // We are ignoring tangents and binormals for now
 
+        // Now get the object information we requested
 		MGeometry geom = MGeometryManager::getGeometry( dagPath, requirements, NULL );
 
 		unsigned int numPrims = geom.primitiveArrayCount();
@@ -1274,7 +1295,6 @@ bool EmbreeViewportRenderer::convertSurface( const MDagPath &dagPath)
 				// Is the data in floats, ints, etc.
 				MGeometryData::ElementType elemType = prim.dataType();
 
-//				unsigned int *idx = (unsigned int *) prim.data();
 				int *idx = (int *) prim.data();
 
 				if (elemType != MGeometryData::kInt32) 
@@ -1331,20 +1351,9 @@ bool EmbreeViewportRenderer::convertSurface( const MDagPath &dagPath)
 					const MGeometryData clrs = geom.color( colorSetName );
 					clrPtr = (float *)clrs.data();
 				}
-				/*
-				else if (testBinormal)
-				{
-					const MGeometryData binorm = geom.binormal( uvSetName );
-					clrPtr = (float *)binorm.data();
-					numColorComponents = 3;
-				}
-				else if (testTangent)
-				{
-					const MGeometryData tang = geom.tangent( uvSetName );
-					clrPtr = (float *)tang.data();
-					numColorComponents = 3;
-				}
-				*/
+                
+                // For now, we will ignore binormals and tangents
+
 #if 0
 			sprintf(buffer, "%s - haveData=%d", 
 					ccname.asChar(), haveData);
@@ -1364,8 +1373,7 @@ bool EmbreeViewportRenderer::convertSurface( const MDagPath &dagPath)
 						-(float)matrix.matrix[0][2], -(float)matrix.matrix[1][2], (float)matrix.matrix[2][2],
 			  			(float)matrix.matrix[3][0], (float)matrix.matrix[3][1], (float)matrix.matrix[3][2]
 					};
-//embree::AffineSpace3f testmatrix = embree::copyFromArray((const float *)&primXform[0]);
-//cout << ccname.asChar() << " " << testmatrix << "\n";
+
 					//  ------ Now load mesh data
 					// Create material for mesh
 					embree::Handle<embree::Device::RTMaterial> material;
@@ -1426,77 +1434,6 @@ bool EmbreeViewportRenderer::convertSurface( const MDagPath &dagPath)
 	return drewSurface;
 }
 
-bool
-EmbreeViewportRenderer::drawBounds( const MDagPath &dagPath,
-								    const MBoundingBox &box)
-{
-
-	return true;
-}
-
-//
-// Uncomment #define to see how pruning works
-//
-//#define _DEBUG_TRAVERSAL_PRUNING
-
-// Use a custom traverser class.
-class MsurfaceDrawTraversal : public MDrawTraversal
-{
-	virtual bool		filterNode( const MDagPath &traversalItem )
-	{
-		bool prune = false;
-		//char buffer[1024];
-
-		//
-		// Check to only prune shapes, not transforms.
-		//
-#if defined(_DEBUG_TRAVERSAL_PRUNING)
-		MString pname = traversalItem.fullPathName() ;
-#endif
-		if ( traversalItem.childCount() == 0)
-		{
-			if ( !traversalItem.hasFn( MFn::kMesh) &&
-//				!traversalItem.hasFn( MFn::kNurbsSurface) &&
-//				!traversalItem.hasFn( MFn::kSubdiv) &&
-//				!traversalItem.hasFn( MFn::kSketchPlane ) &&
-//				!traversalItem.hasFn( MFn::kGroundPlane ) &&
-				!traversalItem.hasFn( MFn::kLight) &&
-				!traversalItem.hasFn( MFn::kAmbientLight) &&
-				!traversalItem.hasFn( MFn::kNonAmbientLight) &&
-				!traversalItem.hasFn( MFn::kAreaLight) &&
-				!traversalItem.hasFn( MFn::kLinearLight ) &&
-				!traversalItem.hasFn( MFn::kNonExtendedLight ) &&
-				!traversalItem.hasFn( MFn::kDirectionalLight ) &&
-				!traversalItem.hasFn( MFn::kPointLight ) &&
-				!traversalItem.hasFn( MFn::kSpotLight )
-				)
-			{
-#if defined(_DEBUG_TRAVERSAL_PRUNING)
-				sprintf(buffer, "Prune path [ %s ]", pname.asChar());
-				MGlobal::displayInfo(buffer);
-#endif
-				prune = true;
-			}
-			else
-			{
-				prune = false;
-#if defined(_DEBUG_TRAVERSAL_PRUNING)
-//				sprintf(buffer, "Don't prune path [ %s ]", pname.asChar());
-//				MGlobal::displayInfo(buffer);
-#endif
-			}
-		}
-		else
-		{
-#if defined(_DEBUG_TRAVERSAL_PRUNING)
-			//sprintf(buffer, "Not leaf node? [ %s ]", pname.asChar());
-			//MGlobal::displayInfo(buffer);
-#endif
-		}
-		return prune;
-	}
-};
-
 // ------------------------------
 
 void EmbreeViewportRenderer::getObjectData(MDagPath &currObject, SceneData &objectInfo)
@@ -1522,7 +1459,7 @@ void EmbreeViewportRenderer::getObjectData(MDagPath &currObject, SceneData &obje
 		numPos = pos.elementCount();
 	}
 
-	// Do we have textures?
+	// Do we have texture coordinates?
 	MObject object = currObject.node();
 	MFnMesh mesh(object);
 		
@@ -1574,6 +1511,10 @@ void EmbreeViewportRenderer::getLightData(MDagPath &currLight, SceneData &lightI
 		coneAngle = 57.2957795 * spotlight.coneAngle();
 		penumbraAngle = 57.2957795 * spotlight.penumbraAngle();
 	}
+    else if ( currLight.hasFn( MFn::kAreaLight) )
+    {
+        lightDirection = thislight.lightDirection(0, MSpace::kWorld);
+    }
 
 	if (currLight.hasFn( MFn::kNonAmbientLight) )
 	{
@@ -1599,7 +1540,7 @@ int EmbreeViewportRenderer::checkObjectProperities(MDagPath &currObject, SceneDa
 
 	// Get information on the object from Maya
 	getObjectData(currObject, currObjectData);
-
+    
 	// Look for changes in the object itself
 	if (oldSceneInfo.numPrimitives != currObjectData.numPrimitives) replacementNeeded = 1;
 	if (oldSceneInfo.numIndices != currObjectData.numIndices) replacementNeeded = 1;
@@ -1608,10 +1549,10 @@ int EmbreeViewportRenderer::checkObjectProperities(MDagPath &currObject, SceneDa
 	if (oldSceneInfo.boundBox.center() != currObjectData.boundBox.center()) replacementNeeded = 1;
 	if (oldSceneInfo.boundBox.min() != currObjectData.boundBox.min()) replacementNeeded = 1;
 	if (oldSceneInfo.boundBox.max() != currObjectData.boundBox.max()) replacementNeeded = 1;
+    if (oldSceneInfo.haveTexture != currObjectData.haveTexture) replacementNeeded = 1;
 	if (oldSceneInfo.lindex != i) replacementNeeded = 1;
 
 	// If materials change, do not force an object rebuild - just replace material
-	// Yes, this implementation is relatively brute-force...
 	if (0 == replacementNeeded) 
 	{
 		int replaceMaterial;
@@ -1620,32 +1561,13 @@ int EmbreeViewportRenderer::checkObjectProperities(MDagPath &currObject, SceneDa
 
 		if (replaceMaterial && (NULL != m_render_scene))
 		{
-			// Let's see if we still have a texture
-			MObject object = currObject.node();
-			MFnMesh mesh(object);
-
-			// Figure out texturing
-			bool haveTexture = false;
-			int	numUVsets = mesh.numUVSets();
-			MString uvSetName;
-			MObjectArray textures;
-			if (numUVsets > 0)
-			{
-				mesh.getCurrentUVSetName( uvSetName );
-				MStatus status = mesh.getAssociatedUVSetTextures(uvSetName, textures);
-				if (status == MS::kSuccess && textures.length())
-				{
-					haveTexture = true;
-				}
-			}
-
-			// Grab the new material
+			// Grab the changed material and import into the Embree sample renderer
 			embree::Handle<embree::Device::RTMaterial> material;
-			convertSurfaceMaterial(currObject, haveTexture, material);
+			convertSurfaceMaterial(currObject, currObjectData.haveTexture, material);
 			m_device->rtCommit(material);
 
 			// Update the recorded material data for change detection next time
-			getMaterialData(currObject, haveTexture, oldSceneInfo);
+			getMaterialData(currObject, currObjectData.haveTexture, oldSceneInfo);
 
 			// Now replace the material in the scene
 			m_device->rtUpdateObjectMaterial(m_render_scene, material, oldSceneInfo.eindex);
@@ -1756,6 +1678,9 @@ int	 EmbreeViewportRenderer::convertMayaObjectsToEmbree(std::vector<MDagPath> &c
 	if (0 == objectReplacementNeeded)
 	{
 		// Check to see if any of the objects changed
+        // Yes, this implementation is relatively brute-force, but I have not found
+        // any other way to tell if object or material has changed without
+        // revisiting them all and looking for high-level changes
 		for (i = 0; i < numObjects; i++)
 		{
 			std::map<std::string, SceneData>::iterator oldInfoIter;
@@ -1781,10 +1706,11 @@ int	 EmbreeViewportRenderer::convertMayaObjectsToEmbree(std::vector<MDagPath> &c
 				int needReplacement = checkObjectProperities(currObject, oldSceneInfo, i, 
 														   materialUpdated);
 
-				if (needReplacement == 1) {
-                                        replacementNeeded = 1;
+				if (needReplacement == 1) 
+                {
+                    replacementNeeded = 1;
 					break;   // There was a change - no point in checking further
-                                }
+                }
 			} // check object
 		}  // all objects
 	}  // Check if objects changed
@@ -1796,8 +1722,6 @@ int	 EmbreeViewportRenderer::convertMayaObjectsToEmbree(std::vector<MDagPath> &c
 	// Something changed - rebuild the object databases
 	m_objectDatabase.clear();
 	m_prims.clear();
-//	embree::rtClearTextureCache();
-//  embree::rtClearImageCache();
 
 	for (i = 0; i < numObjects; i++)
 	{
@@ -1844,22 +1768,22 @@ int	EmbreeViewportRenderer::convertMayaLightsToEmbree(std::vector<MDagPath> &cur
 			oldInfoIter = m_lightDatabase.find(currLightName);
 			if (oldInfoIter == m_lightDatabase.end())
 			{
-                            // Never seen this light before
-                            replacementNeeded = 1;
-                            break;  // No point checking further
+                // Never seen this light before
+                replacementNeeded = 1;
+                break;  // No point checking further
 			}
 			else
 			{
-                            // Look for changes in this light
-                            oldSceneInfo = oldInfoIter->second;
+                // Look for changes in this light
+                oldSceneInfo = oldInfoIter->second;
 
-                            int needReplacement = checkLightProperities(currLight, oldSceneInfo, i);
+                int needReplacement = checkLightProperities(currLight, oldSceneInfo, i);
 
-                            if (needReplacement == 1)
-                            {
-                                replacementNeeded = 1;
-                                break;  // There was a change - no point in checking further
-                            }
+                if (needReplacement == 1)
+                {
+                    replacementNeeded = 1;
+                    break;  // There was a change - no point in checking further
+                }
 			} // seen the light before
 		} // for all lights
 	} // Check for light changes
@@ -1890,18 +1814,18 @@ int	EmbreeViewportRenderer::convertMayaLightsToEmbree(std::vector<MDagPath> &cur
 }
 
 // ------------------------------
-
+// ------
+// Scan the entire DAG for leaves that are objects or lights
+// This is necessary since off-camera objects or lights can
+// effect the lighting in the view of the camera)
+// -------
 bool EmbreeViewportRenderer::collectSceneObjects (const MRenderingInfo &renderInfo, 
 		std::vector<MDagPath> &currentObjects, std::vector<MDagPath> &currentLights)
 {
-	//char buffer[1024];
+//	char buffer[1024];
 
 //#define _DEBUG_TRAVERSAL_PRUNING
-	// ------
-	// Scan the entire DAG for leaves that are objects or lights
-	// This is necessary since off-camera objects or lights can
-	// effect the lighting in the view of the camera)
-	// -------
+
 	MStatus status;
 	MItDag dagIterator( MItDag::kDepthFirst, MFn::kInvalid, &status);
 	if (status != MS::kSuccess)
@@ -2077,15 +2001,17 @@ MStatus EmbreeViewportRenderer::updateCamera(const MRenderingInfo &renderInfo,
 
 	// Field of view - Maya returns radians, we want degrees
 	vpInfo->camFieldOfView = 57.2957795 * camera.verticalFieldOfView();
+    
 	// Location of the camera
 	vpInfo->camPos.x = eyePoint.x;  
 	vpInfo->camPos.y = eyePoint.y;  
 	vpInfo->camPos.z = eyePoint.z; 
-//	MVector viewDirection = camera.viewDirection(MSpace::kWorld);
+
 	// LookAt vector
 	vpInfo->camLookAt.x = lookAt.x;
 	vpInfo->camLookAt.y = lookAt.y;
 	vpInfo->camLookAt.z = lookAt.z;
+    
 	// Up vector - negated because that makes the result match Maya viewport
 	vpInfo->camUp.x = -viewUp.x;
 	vpInfo->camUp.y = -viewUp.y;
@@ -2178,11 +2104,11 @@ MStatus	EmbreeViewportRenderer::GetViewportHandles(const MRenderingInfo &renderI
 
 // ---------------------------
 
-bool EmbreeViewportRenderer::renderToTarget( const MRenderingInfo &renderInfo )
 //
 // Description:
 //		Render directly to current Embree target.
 //
+bool EmbreeViewportRenderer::renderToTarget( const MRenderingInfo &renderInfo )
 {
 	//char buffer[1024];
 	MStatus status;
@@ -2204,15 +2130,16 @@ bool EmbreeViewportRenderer::renderToTarget( const MRenderingInfo &renderInfo )
 	collectSceneObjects(renderInfo, currentObjects, currentLights);
 
 	// Adapt to changes in the scene from last time we were here
+    
 	// High-level "have things changed?" tests
 	if (currentObjects.size() != m_oldnumObjects) {
 		accumulate = 0;
 		m_oldnumObjects = currentObjects.size();
 		objectReplacementNeeded = 1; //BVH rebuild flag
 	}
-        else
-            if (0 == currentObjects.size())
-                return true;   // Nothing to render - pretend success
+    else
+        if (0 == currentObjects.size())
+            return true;   // Nothing to render - pretend success
 
 	if (currentLights.size() != m_oldnumLights) {
 		accumulate = 0;
@@ -2274,27 +2201,7 @@ bool EmbreeViewportRenderer::renderToTarget( const MRenderingInfo &renderInfo )
 
 	if (status != MS::kSuccess)
 		return false;
-	/*
-	// Adapt frame buffer to viewport changes
-	if ((width != m_oldwidth) || (height != m_oldheight)) {
-		m_frameBuffer = m_device->rtNewFrameBuffer(m_format.c_str(), width, height, m_numBuffers);
-		m_oldheight = height;
-		m_oldwidth = width;
-		accumulate = 0;
-	}
 
-	// Update the camera as necessary
-	status = updateCamera(renderInfo, &accumulate);
-
-	// render into framebuffer
-	m_device->rtRenderFrame(m_renderer,
-		m_camera, 
-		m_render_scene,
-		m_tonemapper,
-		m_frameBuffer,
-		accumulate);
-*/
-	// render into framebuffer
 	m_device->rtRenderFrame(m_renderer,
 		curr_camera, 
 		m_render_scene,
@@ -2302,11 +2209,9 @@ bool EmbreeViewportRenderer::renderToTarget( const MRenderingInfo &renderInfo )
 		curr_frameBuffer,
 		accumulate);
 
-//	m_device->rtSwapBuffers(m_frameBuffer);
 	m_device->rtSwapBuffers(curr_frameBuffer);
 
 	// Transfer result to Maya frame buffer
-//	unsigned char *cPtr = (unsigned char *)m_device->rtMapFrameBuffer(m_frameBuffer);
 	unsigned char *cPtr = (unsigned char *)m_device->rtMapFrameBuffer(curr_frameBuffer);
 	MImage image;
 
@@ -2316,7 +2221,6 @@ bool EmbreeViewportRenderer::renderToTarget( const MRenderingInfo &renderInfo )
 	status = renderTarget.writeColorBuffer(image, 0, 0, false);
 
 	// Clean up
-//	m_device->rtUnmapFrameBuffer(m_frameBuffer);
 	m_device->rtUnmapFrameBuffer(curr_frameBuffer);
 
 	if (status != MS::kSuccess)

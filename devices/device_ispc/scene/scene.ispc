@@ -88,7 +88,8 @@ export void Scene__set(void* uniform scene_in, uniform int slot, void* uniform i
   scene->instances[slot] = instance;
   if (instance) {
     RefCount__IncRef(&instance->base);
-    if (instance->shape) {
+    // Set up shape mapping only for geometry, not lights with geometry (the area light)
+    if (instance->shape && !(scene->instances[slot]->light)) {
       uniform uint handle = instance->shape->add(scene->handle,instance->shape);
       scene->handle2id[handle] = slot;
       scene->id2handle[slot] = handle;

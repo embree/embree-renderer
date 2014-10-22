@@ -98,7 +98,7 @@ namespace embree
   {
     BBox3f bounds = empty;
     size_t numTimeSteps = motion.size() ? 2 : 1;
-    unsigned mesh = rtcNewTriangleMesh (scene, RTC_GEOMETRY_STATIC, triangles.size(), position.size(), numTimeSteps);
+    unsigned mesh = rtcNewTriangleMesh (scene, RTC_GEOMETRY_DYNAMIC, triangles.size(), position.size(), numTimeSteps);
     if (mesh != id) throw std::runtime_error("ID does not match");
 
     /* copy indices */
