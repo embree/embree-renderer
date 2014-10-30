@@ -1,11 +1,20 @@
 @ECHO ON&& SETLOCAL&& PUSHD "%~dp0"&& SETLOCAL ENABLEDELAYEDEXPANSION&& SETLOCAL ENABLEEXTENSIONS&& SET V=5&& IF NOT "!V!"=="5" (ECHO DelayedExpansion Failed&& GOTO :EOF)
 
 REM
-REM  ----- NOTE NOTE NOTE ----
-REM  Be sure to create the "objs" and "ispcgen" directories in the Embree AND
+REM  ----- NOTES NOTES NOTES -----
+REM
+REM  1)  It only makes sense to run this script if you have a copy of the
+REM  ISPC cross-compiler for Microsoft Windows*.  Having this cross-compiler
+REM  allows you to build the ISPC Renderer for the Intel(R) Xeon Phi(TM)
+REM  coprocessor on Windows.  If you do not have this cross-compiler, 
+REM  a workaround is to build it on Linux and then copy the resulting
+REM  device_ispc_knc binary to your Windows* \Documents\maya\plug-ins  directory
+REM
+REM  2)  Be sure to create the "objs" and "ispcgen" directories in the Embree AND
 REM  Embree sample renderer directories before running this script
 REM
-REM  Run this script in an "Intel Composer XE <version> Intel(R) 64 Visual Studio 2010" command window
+REM  3)  Run this script in an "Intel Composer XE <version> Intel(R) 64 Visual 
+REM  Studio 2010" command window
 
 REM
 
@@ -14,9 +23,7 @@ SET CC=icl
 SET INTELMPSSROOTPATH="C:\Program Files\Intel\MPSS\k1om-mpss-linux\usr"
 SET INTELCOMPILER="C:\Program Files (x86)\Intel\Composer XE 2013 SP1\bin\intel64_mic\icc.exe"
 
-REM SET ISPCDIR=C:\Users\cwcongdo\Documents\ispc-v1.6.0-windows
 SET ISPCDIR=C:\Users\cwcongdo\Documents\ispc-v1.6dev-mic_win_cross
-REM SET ISPC=%ISPCDIR%\ispc_wintophixcompile.exe
 SET ISPC=%ISPCDIR%\ispc.exe
 
 SET EMBREEROOT=C:\Users\cwcongdo\Documents\dcc_render-embree
@@ -33,9 +40,7 @@ SET EMBREECFLAGS=/Qmic -c -g -debug inline-debug-info -D__SPINLOCKS__ -restrict 
 
 SET EMBREECFLAGSISPC=/Qmic -c -g -debug inline-debug-info -Dembree_xeonphi_EXPORTS -D__SPINLOCKS__ -D__TARGET_XEON_PHI__ -restrict -Wall -fasm-blocks -fPIC -O3 -DNDEBUG -mCG_lrb_num_threads=4 -mCG_lrb_num_threads=4 -fp-model fast -fimf-precision=low -fasm-blocks -no-inline-max-total-size -inline-factor=200 -fPIC  -fma  -restrict -no-prec-div -no-prec-sqrt -mGLOB_default_function_attrs="use_vec_for_imul=on;use_fast_math=on;gather_scatter_loop_jknzd=on;gather_scatter_loop_unroll=2;use_gather_scatter_hint=on;c_lrb_avoid_vector_insts_with_rip=on;c_avoid_bank_conflicts=on;c_sch_nop_insertion=on;c_avoid_movz_and_movs=off;c_avoid_integer_ciscization=on;avoid_stall_between_all_insts=on;avoid_long_vector_ints=on;avoid_loads_with_extend=on;smart_mem_conflicts=on" -mP2OPT_hlo_prefetch=F  %EMBREEINCLUDE%
 		  
-REM EMBREEISPCFLAGS = --arch=x86-64 --pic -O3 --target=generic-16 --emit-c++ --c++-include-file=$(ISPCDIR)\examples\intrinsics\knc.h --woff --opt=fast-math --opt=force-aligned-memory 
 SET EMBREEISPCFLAGS=--arch=x86-64  -O1 --target=generic-16 --emit-c++ --c++-include-file=%ISPCDIR%\examples\intrinsics\knc.h --woff --opt=fast-math --opt=force-aligned-memory 
-REM SET EMBREEISPCFLAGS=--arch=x86-64  -O1 --target=generic-16 --emit-c++ --c++-include-file=%ISPCDIR%\examples\intrinsics\knc-i1x16.h --woff --opt=fast-math --opt=force-aligned-memory 
 SET EMBREEISPCINCLUDE=-I%EMBREEROOT% -I%EKERNELSPHIDIR%
 
 REM
@@ -91,7 +96,6 @@ SET RENDCFLAGS=/Qmic -c -restrict -Wall -fasm-blocks -fPIC -O3 -D__WINDOWS_MIC__
 SET RENDCFLAGSISPC=/Qmic -c -restrict -Wall -fasm-blocks -fPIC -O3 -DNDEBUG -mCG_lrb_num_threads=4 -mCG_lrb_num_threads=4 -fp-model fast -fimf-precision=low -fasm-blocks -no-inline-max-total-size -inline-factor=200 -fPIC  -fma  -restrict -no-prec-div -no-prec-sqrt -mGLOB_default_function_attrs="use_vec_for_imul=on;use_fast_math=on;gather_scatter_loop_jknzd=on;gather_scatter_loop_unroll=2;use_gather_scatter_hint=on;c_lrb_avoid_vector_insts_with_rip=on;c_avoid_bank_conflicts=on;c_sch_nop_insertion=on;c_avoid_movz_and_movs=off;c_avoid_integer_ciscization=on;avoid_stall_between_all_insts=on;avoid_long_vector_ints=on;avoid_loads_with_extend=on;smart_mem_conflicts=on"  -mP2OPT_hlo_prefetch=F  %RENDINCLUDE% -I%RENDDEVDIR% -I%RENDISPCDEVDIR% -I%RISPCDIR%
 			   
 SET RENDISPCFLAGS=-D__MIC__ --arch=x86-64  -O1 --target=generic-16 --emit-c++ --c++-include-file=%ISPCDIR%\examples\intrinsics\knc.h --wno-perf --opt=fast-math --opt=force-aligned-memory 
-REM SET RENDISPCFLAGS=-D__MIC__ --arch=x86-64  -O1 --target=generic-16 --emit-c++ --c++-include-file=%ISPCDIR%\examples\intrinsics\knc-i1x16.h --wno-perf --opt=fast-math --opt=force-aligned-memory 
 
 REM
 REM   --- Renderer ISPC builds
