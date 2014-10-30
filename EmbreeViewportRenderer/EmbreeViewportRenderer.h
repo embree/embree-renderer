@@ -77,8 +77,6 @@
 #include <maya/MFnNumericData.h>
 #include <maya/MItDependencyGraph.h>
 
-
-//#include <maya/MHardwareRenderer.h>
 #include <stdio.h>
 #include <maya/MIOStream.h>
 
@@ -192,6 +190,7 @@ public:
 										  float version );
 	virtual bool	override( MViewportRenderer::RenderingOverride override );
 
+    // Scene-conversion code and variables
 protected:
 	bool    convertLight(const MDagPath &dagPath);
 	bool    convertSurface( const MDagPath &dagPath);
