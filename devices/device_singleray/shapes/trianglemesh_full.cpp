@@ -94,12 +94,12 @@ namespace embree
     return position.size() + motion.size();
   }
 
-  BBox3f TriangleMeshFull::extract(RTCScene scene, size_t id) const
+  int TriangleMeshFull::extract(RTCScene scene, size_t id) const
   {
     BBox3f bounds = empty;
     size_t numTimeSteps = motion.size() ? 2 : 1;
     unsigned mesh = rtcNewTriangleMesh (scene, RTC_GEOMETRY_STATIC, triangles.size(), position.size(), numTimeSteps);
-    if (mesh != id) throw std::runtime_error("ID does not match");
+    //if (mesh != id) throw std::runtime_error("ID does not match");
 
     /* copy indices */
     RTCTriangle* triangles_o = (RTCTriangle*) rtcMapBuffer(scene,mesh,RTC_INDEX_BUFFER);
@@ -142,7 +142,7 @@ namespace embree
       }
       rtcUnmapBuffer(scene,mesh,RTC_VERTEX_BUFFER); 
     }
-    return bounds;
+    return mesh;
   }
 
   void TriangleMeshFull::postIntersect(const Ray& ray, DifferentialGeometry& dg) const

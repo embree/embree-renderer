@@ -51,10 +51,10 @@ namespace embree
     size_t numTriangles() const { return 1; }
     size_t numVertices () const { return 3; }
 
-    BBox3f extract(RTCScene scene, size_t id) const
+    int extract(RTCScene scene, size_t id) const
     {
       unsigned mesh = rtcNewTriangleMesh (scene, RTC_GEOMETRY_STATIC, 1, 3);
-      if (mesh != id) throw std::runtime_error("ID does not match");
+      //if (mesh != id) throw std::runtime_error("ID does not match");
       Vec3fa* vertices = (Vec3fa*) rtcMapBuffer(scene,mesh,RTC_VERTEX_BUFFER); 
       RTCTriangle* triangles = (RTCTriangle*) rtcMapBuffer(scene,mesh,RTC_INDEX_BUFFER);
       BBox3f bounds = empty;
@@ -69,7 +69,7 @@ namespace embree
       bounds.grow(v2);
       rtcUnmapBuffer(scene,mesh,RTC_VERTEX_BUFFER); 
       rtcUnmapBuffer(scene,mesh,RTC_INDEX_BUFFER);
-      return bounds;
+      return mesh;
     }
 
     /*! Post intersection to compute shading data. */

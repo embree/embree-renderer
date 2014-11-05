@@ -61,10 +61,10 @@ namespace embree
     return vertices.size();
   }
 
-  BBox3f TriangleMeshWithNormals::extract(RTCScene scene, size_t id) const
+  int TriangleMeshWithNormals::extract(RTCScene scene, size_t id) const
   {
     unsigned mesh = rtcNewTriangleMesh (scene, RTC_GEOMETRY_STATIC, triangles.size(), vertices.size());
-    if (mesh != id) throw std::runtime_error("ID does not match");
+    //if (mesh != id) throw std::runtime_error("ID does not match");
     Vec3fa* vertices_o = (Vec3fa*) rtcMapBuffer(scene,mesh,RTC_VERTEX_BUFFER); 
     RTCTriangle* triangles_o = (RTCTriangle*) rtcMapBuffer(scene,mesh,RTC_INDEX_BUFFER);
     
@@ -85,7 +85,7 @@ namespace embree
     }
     rtcUnmapBuffer(scene,mesh,RTC_VERTEX_BUFFER); 
     rtcUnmapBuffer(scene,mesh,RTC_INDEX_BUFFER);
-    return bounds;
+    return mesh;
   }
 
   void TriangleMeshWithNormals::postIntersect(const Ray& ray, DifferentialGeometry& dg) const

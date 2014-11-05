@@ -55,7 +55,7 @@ namespace embree
     Ref<Shape> transform(const AffineSpace3f& xfm) const;
     size_t numTriangles() const;
     size_t numVertices () const;
-    BBox3f extract(RTCScene scene, size_t id) const;
+    int extract(RTCScene scene, size_t id) const;
     void postIntersect(const Ray& ray, DifferentialGeometry& dg) const;
 
   public:

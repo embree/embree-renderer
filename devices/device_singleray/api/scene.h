@@ -56,6 +56,9 @@ namespace embree
 
   public:
 
+    BackendScene ()
+      : scene(NULL) {}
+
     BackendScene (RTCScene scene)
       : scene(scene) {}
 

@@ -75,20 +75,8 @@ namespace embree
         prims[slot] = new Primitive(shape,light,prim->getMaterialInstance(),prim->illumMask,prim->shadowMask);
       }
       
-      void create() 
-      {
-        RTCScene scene = rtcNewScene(RTC_SCENE_STATIC,RTC_INTERSECT1);
-        for (size_t i=0; i<prims.size(); i++) {
-          if (prims[i] && prims[i]->shape) {
-            prims[i]->shape->extract(scene,i);
-            if (prims[i]->material && prims[i]->material->isTransparentForShadowRays)
-              rtcSetOcclusionFilterFunction(scene,i,(RTCFilterFunc)&occlusionFilter);
-          }
-        }
-        rtcCommit(scene);
-        
-        /* create new scene */
-        instance = new BackendSceneFlat(prims,scene);
+      void create() {
+        instance = new BackendSceneFlat(prims);
       }
       
     public:
@@ -96,9 +84,21 @@ namespace embree
     };
         
     /*! Construction of scene. */
-    BackendSceneFlat (const std::vector<Ref<Primitive> >& geometry, RTCScene scene)
-      : BackendScene(scene), geometry(geometry)
+    BackendSceneFlat (const std::vector<Ref<Primitive> >& prims)
     {
+      scene = rtcNewScene(RTC_SCENE_STATIC,RTC_INTERSECT1);
+      id0_to_geomID.resize(prims.size());
+      for (size_t i=0; i<prims.size(); i++) {
+        if (prims[i] && prims[i]->shape) {
+          int id0 = prims[i]->shape->extract(scene,i);
+          id0_to_geomID[id0] = i;
+          if (prims[i]->material && prims[i]->material->isTransparentForShadowRays)
+            rtcSetOcclusionFilterFunction(scene,i,(RTCFilterFunc)&occlusionFilter);
+        }
+      }
+      rtcCommit(scene);
+
+      geometry = prims;
       for (size_t i=0; i<geometry.size(); i++) {
         const Ref<Primitive>& prim = geometry[i];
         if (prim && prim->light) add(prim->light);
@@ -108,11 +108,12 @@ namespace embree
     /*! Helper to call the post intersector of the shape instance,
      *  which will call the post intersector of the shape. */
     void postIntersect(const Ray& ray, DifferentialGeometry& dg) const {
-      if (ray) geometry[ray.id0]->postIntersect(ray,dg);
+      if (ray) geometry[id0_to_geomID[ray.id0]]->postIntersect(ray,dg);
     }
 
   private:
     std::vector<Ref<Primitive> > geometry;  //!< Geometry of the scene
+    std::vector<int> id0_to_geomID;
   };
 }
 
