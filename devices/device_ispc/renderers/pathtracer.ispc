@@ -135,6 +135,8 @@ struct PathTracer
   uniform bool filterCaustics;              //!< Filter / smooth caustics.
   uniform bool disableCausticReflection;    //!< Disables caustics due to reflection.
   uniform bool disableCausticTransmission;  //!< Disables caustics due to transmission.
+  uniform int serverCount;
+  uniform int serverID;
 
   /*! Random variables. */
   uniform int lightSampleID;            //!< 2D random variable to sample the light source.
@@ -443,7 +445,7 @@ task void PathTracer__renderTile(uniform PathTracer* uniform this,
   const uint sample_x = programIndex - sample_y * PACKET_WIDTH;
 
   uniform Random rnd; 
-  uniform int uniqueID = tile_x * 917 + tile_y * 81551 + 3433*g_serverID;
+  uniform int uniqueID = tile_x * 917 + tile_y * 81551 + 3433*this->serverID;
   Random__setSeed(&rnd,uniqueID); // expensive
   
   const uniform uint tile_y0 = tile_y * TILE_SIZE_Y;
@@ -454,8 +456,8 @@ task void PathTracer__renderTile(uniform PathTracer* uniform this,
     const int y = (tile_y0 + iy) + sample_y;
     if (y >= fb->size.y) continue;
     
-    if (!activeLine(y)) continue;
-    size_t _y = raster2buffer(y);
+    if (!activeLine(y, this->serverCount, this->serverID)) continue;
+    size_t _y = raster2buffer(y, this->serverCount);
 
     for (uniform unsigned int ix=0; ix<TILE_SIZE_X; ix+=PACKET_WIDTH) 
     { 
@@ -629,7 +631,9 @@ void PathTracer__Constructor(uniform PathTracer* uniform this,
                              uniform Image* uniform backplate,
                              const uniform bool& filterCaustics,
                              const uniform bool& disableCausticReflection,
-                             const uniform bool& disableCausticTransmission)
+                             const uniform bool& disableCausticTransmission,
+                             const uniform int& serverCount,
+                             const uniform int& serverID)
 {
   Renderer__Constructor(&this->base,PathTracer__Destructor,PathTracer_renderFrameInit,PathTracer_renderFrame);
 
@@ -649,6 +653,8 @@ void PathTracer__Constructor(uniform PathTracer* uniform this,
   this->filterCaustics = filterCaustics;
   this->disableCausticReflection = disableCausticReflection;
   this->disableCausticTransmission = disableCausticTransmission;
+  this->serverCount = serverCount;
+  this->serverID = serverID;
 
   this->lightSampleID = 0;
   this->firstScatterSampleID = 0;
@@ -663,11 +669,13 @@ export void* uniform PathTracer__new(const uniform int& maxDepth,
                                      void* uniform backplate,
                                      const uniform bool& filterCaustics,
                                      const uniform bool& disableCausticReflection,
-                                     const uniform bool& disableCausticTransmission)
+                                     const uniform bool& disableCausticTransmission,
+                                     const uniform int& serverCount,
+                                     const uniform int& serverID)
 {
   uniform PathTracer *uniform this = uniform new uniform PathTracer;
   PathTracer__Constructor(this,maxDepth,minContribution,epsilon,spp,
         (uniform Image* uniform) backplate, filterCaustics, disableCausticReflection,
-        disableCausticTransmission);
+        disableCausticTransmission,serverCount, serverID);
   return this;
 }

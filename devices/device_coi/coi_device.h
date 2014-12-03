@@ -288,27 +288,28 @@ namespace embree
     /*! handle management */
   private:
     MutexSys handleMutex;
-    int nextHandle;                         //!< next ID to take if pool is empty
-    std::vector<int> pool;                  //!< pool of handle IDs
-    std::vector<int> counters;              //!< reference counters of handles
+    size_t nextHandle;                         //!< next ID to take if pool is empty
+    std::vector<size_t> pool;                  //!< pool of handle IDs
+    std::vector<size_t> counters;              //!< reference counters of handles
     std::vector<Ref<SwapChain> > buffers;   //!< local framebuffer representation
 
     /*! allocate a new handle ID */
-    int allocHandle();
+    size_t allocHandle();
 
     /*! increment local reference count */
-    void incRef(int id);
+    void incRef(size_t id);
     
     /*! decrement local reference count */
-    bool decRef(int id);
+    bool decRef(size_t id);
 
     /* multi card rendering */
   private:
     int serverID;
     int serverCount;
      
-  private:
+  public:
     std::vector<COIProcess*> devices;
+    Device *hostDevice;
   };  // class COIDevice
 }  // namespace embree
 

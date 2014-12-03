@@ -95,6 +95,8 @@ namespace embree
 
   private:
     MutexSys mutex;
+    int m_serverCount;
+    int m_serverID;
   };
 }
 

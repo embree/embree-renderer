@@ -27,7 +27,9 @@ namespace embree
     {
       const int maxDepth = parms.getInt("maxDepth",1);
       const int spp = parms.getInt("sampler.spp",1);
-      return ispc::DebugRenderer__new(maxDepth,spp);
+      const int serverCount = parms.getInt("serverCount",1);
+      const int serverID = parms.getInt("serverID",0);
+      return ispc::DebugRenderer__new(maxDepth,spp,serverCount, serverID);
     }
   };
 }

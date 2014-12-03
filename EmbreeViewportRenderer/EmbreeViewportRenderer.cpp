@@ -224,24 +224,6 @@ void EmbreeViewportRendererXeonSingle::createRenderDevice()
 }
 
 // ------------------------------------------------------------------
-EmbreeViewportRendererXeonISPC::EmbreeViewportRendererXeonISPC( )
-	: EmbreeViewportRenderer("EmbreeViewportRendererXeonISPC")
-{
-	// Set the ui name
-	fUIName.set( "ISPC Embree Renderer for Intel(R) Xeon(R) host");
-}
-
-void EmbreeViewportRendererXeonISPC::createRenderDevice()
-{
-	if (m_device == NULL) 
-	{
-      m_device = embree::Device::rtCreateDevice("ispc",   // ispc_device
-	          m_numThreads,m_rtcore_cfg.c_str());
-	}
-    m_plugintype = 2;
-}
-
-// ------------------------------------------------------------------
 EmbreeViewportRendererXeonPhiSingle::EmbreeViewportRendererXeonPhiSingle( )
 	: EmbreeViewportRenderer("EmbreeViewportRendererXeonPhiSingle")
 {
@@ -256,7 +238,25 @@ void EmbreeViewportRendererXeonPhiSingle::createRenderDevice()
       m_device = embree::Device::rtCreateDevice("singleray_knc",   // single-ray over COI
 	          m_numThreads,m_rtcore_cfg.c_str());
 	}
-    m_plugintype = 3;
+    m_plugintype = 2;
+}
+
+// ------------------------------------------------------------------
+EmbreeViewportRendererXeonISPC::EmbreeViewportRendererXeonISPC( )
+	: EmbreeViewportRenderer("EmbreeViewportRendererXeonISPC")
+{
+	// Set the ui name
+	fUIName.set( "ISPC Embree Renderer for Intel(R) Xeon(R) host");
+}
+
+void EmbreeViewportRendererXeonISPC::createRenderDevice()
+{
+	if (m_device == NULL) 
+	{
+      m_device = embree::Device::rtCreateDevice("ispc",   // ispc_device
+	          m_numThreads,m_rtcore_cfg.c_str());
+	}
+    m_plugintype = 4;
 }
 
 // ------------------------------------------------------------------
@@ -280,7 +280,25 @@ void EmbreeViewportRendererXeonPhiISPC::createRenderDevice()
       // My understanding is that Xeon automatically switches to a 64-bit
       // Morton builder on need
 	}
-    m_plugintype = 4;
+    m_plugintype = 5;
+}
+
+// ------------------------------------------------------------------
+EmbreeViewportRendererHybridISPC::EmbreeViewportRendererHybridISPC( )
+	: EmbreeViewportRenderer("EmbreeViewportRendererHybridISPC")
+{
+	// Set the ui name
+	fUIName.set( "Hybrid ISPC Embree Renderer");
+}
+
+void EmbreeViewportRendererHybridISPC::createRenderDevice()
+{
+	if (m_device == NULL) 
+	{
+      m_device = embree::Device::rtCreateDevice("hybrid_ispc",   
+	          m_numThreads,m_rtcore_cfg.c_str());
+	}
+    m_plugintype = 6;
 }
 
 // ------------------------------------------------------------------
@@ -430,8 +448,10 @@ EmbreeViewportRenderer::uninitialize()
 	// Necessary to make sure that the Embree core shuts down fully
 	if (m_device != NULL) {
 		delete m_device;  // This will shut down the Embree thread pool
+                          // Which can be problematic if two host plug-ins are loaded
 		m_device = NULL;
 		embree::g_device = NULL;  // WARNING WARNING - anyone still using this is in trouble
+                                  // Such as if you have two host plug-ins loaded
 	}
 
 	for (int i = 0; i < VIEWPORTARRAYSIZE; i++)
@@ -472,18 +492,29 @@ EmbreeViewportRenderer::render(const MRenderingInfo &renderInfo)
             printf("\n*** single-ray host calls/sec ***\n");  fflush(0);
         }
         if (m_plugintype == 2) {
-            printf("\n*** ispc host calls/sec *** \n");  fflush(0);
-        }
-        if (m_plugintype == 3) {
             printf("\n*** single-ray coprocessor calls/sec ***\n");  fflush(0);
         }
         if (m_plugintype == 4) {
+            printf("\n*** ispc host calls/sec *** \n");  fflush(0);
+        }
+        if (m_plugintype == 5) {
             printf("\n*** ispc coprocessor calls/sec ***\n");  fflush(0);
+        }
+        if (m_plugintype == 6) {
+            printf("\n*** hybrid ispc calls/sec ***\n");  fflush(0);
         }
     }
     
     t0 = embree::getSeconds();
     
+    if (NULL == m_device)
+        return MStatus::kFailure;  // Device not created successfully
+    else
+        embree::g_device = m_device;  // Try to minimize problems from this evil
+                                      // global.  Here's hoping Maya doesn't update
+                                      // multiple windows at once, but rather in
+                                      // sequence...
+
     // We don't care what renderInfo.renderingAPI() is used
     // Update the frame
 	renderToTarget( renderInfo );
@@ -1067,7 +1098,10 @@ void EmbreeViewportRenderer::convertSurfaceMaterial(const MDagPath &dagPath,
 	int haveTexture, embree::Handle<embree::Device::RTMaterial> &material)
 {
 	SceneData materialInfo;
-
+    static embree::Handle<embree::Device::RTTexture> texture;
+    static embree::Handle<embree::Device::RTData> data;
+    texture = NULL;
+    data = NULL;
 	getMaterialData(dagPath, haveTexture, materialInfo);
 
     // Create an "Uber" shader with the current values we have pulled from Maya
@@ -1093,14 +1127,14 @@ void EmbreeViewportRenderer::convertSurfaceMaterial(const MDagPath &dagPath,
     // wax
     // works best with transmissionDepth = 25.0, diffusionExponent = 1.0,
     // transmission = 0.9f, 0.9f, 0.9f
-    float dcoeff[] = {1.0f, 1.0f, 1.0f, 1.0f};
-    embree::Handle<embree::Device::RTData> data = loadVec4fArray(&dcoeff[0], 1);
+    static float dcoeff[] = {1.0f, 1.0f, 1.0f, 1.0f};
+    data = loadVec4fArray(&dcoeff[0], 1);
     m_device->rtSetArray(material, "diffusionCoefficients", "float4", data, 1, sizeof(embree::Vec4f), 0);
 
 #else   
     // Carnival glass
     // works best with transmissionDepth = 65.0, diffusionExponent = 60.0
-    float dcoeff[] = {0.133f, 0.155f, 0.149f, 0.0064f,
+    static float dcoeff[] = {0.133f, 0.155f, 0.149f, 0.0064f,
             0.100f, 0.236f, 0.244f, 0.0484f,
             0.118f, 0.198f, 0.000f, 0.1870f,
             0.113f, 0.007f, 0.007f, 0.5670f,
@@ -1115,19 +1149,22 @@ void EmbreeViewportRenderer::convertSurfaceMaterial(const MDagPath &dagPath,
 	// Only ppm, pfm, and jpeg supported unless you build with USE_IMAGEMAGICK
 	if ((1 == haveTexture) && (!materialInfo.diffuseTextureFile.empty())) 
     {
-        embree::Handle<embree::Device::RTTexture> texture = embree::rtLoadTexture(materialInfo.diffuseTextureFile);
+        texture = embree::rtLoadTexture(materialInfo.diffuseTextureFile);
 		m_device->rtSetTexture(material, "diffuseMap", texture);
 	}
 	if ((1 == haveTexture) && (!materialInfo.specularTextureFile.empty())) 
     {
-        embree::Handle<embree::Device::RTTexture> texture = embree::rtLoadTexture(materialInfo.specularTextureFile);
+        texture = embree::rtLoadTexture(materialInfo.specularTextureFile);
 		m_device->rtSetTexture(material, "specularMap", texture);
 	}
 	if ((1 == haveTexture) && (!materialInfo.bumpTextureFile.empty())) 
     {
-        embree::Handle<embree::Device::RTTexture> texture = embree::rtLoadTexture(materialInfo.bumpTextureFile);
+        texture = embree::rtLoadTexture(materialInfo.bumpTextureFile);
 		m_device->rtSetTexture(material, "bumpMap", texture);
 	}
+    
+    // Commit the material to the device
+    m_device->rtCommit(material);
 }
 
 // ------------------------------------------------------------
@@ -1266,6 +1303,11 @@ bool EmbreeViewportRenderer::convertSurface( const MDagPath &dagPath)
                 // If we have geometry, import it
 				if (haveData)
 				{
+                    embree::Handle<embree::Device::RTShape> mesh = NULL;
+                    embree::Handle<embree::Device::RTData> positions = NULL;
+                    embree::Handle<embree::Device::RTData> triangles = NULL;
+                    embree::Handle<embree::Device::RTData> normals = NULL;
+                    embree::Handle<embree::Device::RTData> uvcoords = NULL;
 					drewSurface = true;
 
 					// Get the mesh's transform node
@@ -1284,31 +1326,30 @@ bool EmbreeViewportRenderer::convertSurface( const MDagPath &dagPath)
 					// Create a Embree material for the mesh
 					embree::Handle<embree::Device::RTMaterial> material;
 					convertSurfaceMaterial(dagPath, haveTexture, material);
-					m_device->rtCommit(material);
 
 					// Create a mesh object
-					embree::Handle<embree::Device::RTShape> mesh = m_device->rtNewShape("trianglemesh");
+					mesh = m_device->rtNewShape("trianglemesh");
 
 					// Transfer the position data
 					unsigned int numPos = pos.elementCount();
-					embree::Handle<embree::Device::RTData> positions = loadVec3fArray(posPtr, numPos);
+					positions = loadVec3fArray(posPtr, numPos);
 					m_device->rtSetArray(mesh, "positions", "float3", positions, numPos, sizeof(embree::Vec3f), 0);
 
 					// Triangle indices
-					embree::Handle<embree::Device::RTData> triangles = loadVec3iArray(idx, numElem/3);
+					triangles = loadVec3iArray(idx, numElem/3);
 					m_device->rtSetArray(mesh, "indices", "int3", triangles, numElem/3, sizeof(embree::Vec3i), 0);
 
 					// Normals
 					if (useNormals)
 					{
-						embree::Handle<embree::Device::RTData> normals = loadVec3fArray(normPtr, numNorm);
+						normals = loadVec3fArray(normPtr, numNorm);
 						m_device->rtSetArray(mesh, "normals", "float3", normals, numNorm, sizeof(embree::Vec3f), 0);
 					}
 
 					// UV coordinates
 					if (haveTexture)
 					{
-						embree::Handle<embree::Device::RTData> uvcoords = loadVec2fArray(uvPtr, numPos);
+						uvcoords = loadVec2fArray(uvPtr, numPos);
 						m_device->rtSetArray(mesh, "texcoords", "float2", uvcoords, numPos, sizeof(embree::Vec2f), 0);
 					}
 

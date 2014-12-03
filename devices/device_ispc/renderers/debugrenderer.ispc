@@ -30,6 +30,8 @@ struct DebugRenderer {
   uniform Renderer base;
   uniform int maxDepth;
   uniform int spp;
+  uniform int serverCount;
+  uniform int serverID;
 };
 
 vec3f randomID(const int ID) {
@@ -54,8 +56,8 @@ task void DebugRenderer__renderTile(uniform DebugRenderer* uniform this,
   const uniform int y0 = tile_y * TILE_SIZE;
   const uniform int y1 = min(y0+TILE_SIZE,(int)fb->size.y);
   for (uniform int y=y0;y<y1;y++) {
-    if (!activeLine(y)) continue;
-    size_t _y = raster2buffer(y);
+    if (!activeLine(y, this->serverCount, this->serverID)) continue;
+    size_t _y = raster2buffer(y, this->serverCount);
     for (varying int x=x0+programIndex;x<x1;x+=programCount) {
      
       for (uniform int s=0; s<this->spp; s++) 
@@ -211,17 +213,23 @@ uniform int DebugRenderer_renderFrame(uniform Renderer* uniform _this,
 
 void DebugRenderer__Constructor(uniform DebugRenderer* uniform this,
                                 const uniform int& maxDepth, 
-                                const uniform int& spp)
+                                const uniform int& spp,
+                                const uniform int& serverCount,
+                                const uniform int& serverID)
 {
   Renderer__Constructor(&this->base,Renderer__Destructor,NULL,DebugRenderer_renderFrame);
   this->maxDepth = maxDepth;
   this->spp = spp;
+  this->serverCount = serverCount;
+  this->serverID = serverID;
 }
 
 export void* uniform DebugRenderer__new(const uniform int& maxDepth, 
-                                        const uniform int& spp)
+                                        const uniform int& spp,
+                                        const uniform int& serverCount,
+                                        const uniform int& serverID)
 {
   uniform DebugRenderer *uniform this = uniform new uniform DebugRenderer;
-  DebugRenderer__Constructor(this,maxDepth,spp);
+  DebugRenderer__Constructor(this,maxDepth,spp,serverCount, serverID);
   return this;
 }

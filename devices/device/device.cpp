@@ -43,6 +43,7 @@ namespace embree
     else if (!strcmp(type,"ispc_sse"     )) return rtCreateDeviceHelper("device_ispc_sse","",numThreads,rtcore_cfg);
     else if (!strcmp(type,"ispc_avx"     )) return rtCreateDeviceHelper("device_ispc_avx","",numThreads,rtcore_cfg);
     else if (!strcmp(type,"ispc_knc") || !strcmp(type,"ispc_xeonphi")) return rtCreateDeviceHelper("device_coi","device_ispc_knc",numThreads,rtcore_cfg);
+    else if (!strcmp(type,"hybrid_ispc"  )) return rtCreateDeviceHelper("device_coi","device_ispc_knc,device_ispc",numThreads,rtcore_cfg);
     else if (strstr(type,"network ")==type)  return rtCreateDeviceHelper("device_network",type+8,numThreads,rtcore_cfg);
     else throw std::runtime_error("unknown device: "+std::string(type));
   }

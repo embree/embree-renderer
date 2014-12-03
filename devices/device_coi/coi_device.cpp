@@ -18,7 +18,9 @@
 #include "sys/stl/string.h"
 #include "sys/sysinfo.h"
 #include "sys/filename.h"
+#include "sys/library.h"
 #include "image/image.h"
+#include "omp.h"
 
 #ifdef WIN32
 // VS 2010 doesn't seem to come with strings.h
@@ -860,24 +862,97 @@ namespace embree
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-  COIDevice::COIDevice(const char* executable, size_t numThreads, const char* rtcore_cfg)
-    : nextHandle(1), serverID(0), serverCount(1) 
+  /*! host-side handle management == */
+  std::vector<Device::RTHandle> g_handles;
+  std::vector<Ref<SwapChain> > g_swapChains;
+  std::vector<int> g_numRefs;
+  
+  /*! return the host handle associated with this ID */
+  template<typename T> T get(size_t id) {
+    if (id == 0) return (T) NULL;
+    return((T) g_handles[id]);
+  }
+
+  /*! update ID to host handle mapping */
+  void set(size_t id, Device::RTHandle handle, SwapChain* swapChain = NULL) 
   {
+    if (g_handles.size() <= (size_t) id) { 
+      g_handles.resize(id + 1);  
+      g_swapChains.resize(id + 1);
+      g_numRefs.resize(id + 1); 
+    }
+    g_handles[id] = handle;
+    g_swapChains[id] = swapChain;
+    g_numRefs[id] = 1;
+  }
+  
+  typedef Device* (*create_device_func)(const char* parms, size_t numThreads, const char* rtcore_cfg);
+
+  COIDevice::COIDevice(const char* executables, size_t numThreads, const char* rtcore_cfg)
+    : nextHandle(1), serverID(0), serverCount(1), hostDevice(NULL)
+  {
+      char *executable = NULL;
+      char *executable2 = NULL;
+      char teststr[1024];
+      
+      if (NULL == strstr(executables,","))
+      {
+          executable = (char *)executables;  // Only a coprocessor binary specified
+      }
+      else 
+      {
+          strcpy(teststr, executables);
+          executable = strtok((char *)teststr,","); // Coprocessor binary
+          executable2 = strtok(NULL, ",");  // Host binary
+      }
+          
     uint32_t engines = 0;
     COIEngineGetCount( COI_ISA_MIC, &engines );
-    if (engines == 0) throw std::runtime_error("no Xeon Phi device found");
+    if ((engines == 0) && (NULL == executable2)) throw std::runtime_error("no Xeon Phi device found");
 
-    /* initialize all devices */
+    /* initialize all coprocessor devices */
     for (uint32_t i=0; i<engines; i++) 
       devices.push_back(new COIProcess(i,executable,numThreads,rtcore_cfg));
 
+    /* initialize the host device if specified */
+    if (NULL != executable2)
+    {
+        lib_t lib = openLibrary(executable2);
+        if (lib == NULL) throw std::runtime_error("failed loading library \""+std::string(executable2)+"\"");
+        create_device_func f = (create_device_func) getSymbol(lib, "create");
+        if (f == NULL) throw std::runtime_error("invalid device library");
+        hostDevice = f("",numThreads,rtcore_cfg);
+        if (hostDevice == NULL) throw std::runtime_error("device creation failed");
+        g_handles.clear();
+        g_swapChains.clear();
+        g_numRefs.clear();
+    }
+    
     /* set server ID of devices */
+    int id;
+    int count;
+    
+    if (NULL == hostDevice)
+    {
+        id    = serverID*devices.size();
+        count = serverCount*devices.size();
+    }
+    else
+    {
+        id = serverID*(devices.size() + 1);  // Currently serverID = 0
+        count = serverCount*(devices.size() + 1);
+    }
+ 
     for (size_t i=0; i<devices.size(); i++) 
     {
-      int id    = serverID*devices.size()+i;
-      int count = serverCount*devices.size();
-      devices[i]->rtSetInt1(NULL,"serverID",id);
+      devices[i]->rtSetInt1(NULL,"serverID",id+i);
       devices[i]->rtSetInt1(NULL,"serverCount",count);
+    }
+    
+    if (NULL != hostDevice)
+    {
+        hostDevice->rtSetInt1(NULL,"serverID",id+devices.size());
+        hostDevice->rtSetInt1(NULL,"serverCount",count);
     }
 
     /* dummy 0 handle */
@@ -887,40 +962,49 @@ namespace embree
 
   COIDevice::~COIDevice()
   {
-    for (size_t i=0; i<devices.size(); i++) delete devices[i];
+    for (size_t i=0; i<devices.size(); i++) 
+    {
+        delete devices[i];
+        devices[i] = NULL;
+    }
     devices.clear();
+    if (NULL != hostDevice) 
+    {
+        delete hostDevice;
+        hostDevice = NULL;
+    }
   }
 
   /*******************************************************************
                      handle ID allocations
   *******************************************************************/
 
-  int COIDevice::allocHandle() 
+  size_t COIDevice::allocHandle() 
   {
     if (pool.empty()) {
       pool.push_back(nextHandle++);
       counters.push_back(0);
       buffers.push_back(NULL);
     }
-    int id = pool.back();
+    size_t id = pool.back();
     counters[id] = 1;
     pool.pop_back();
     return id;
   }
   
-  void COIDevice::incRef(int id) {
+  void COIDevice::incRef(size_t id) {
     Lock<MutexSys> lock(handleMutex);
     counters[id]++;
   }
   
-  bool COIDevice::decRef(int id) 
+  bool COIDevice::decRef(size_t id) 
   {
     Lock<MutexSys> lock(handleMutex);
     if (--counters[id] == 0) {
-      pool.push_back((int)id);
+      pool.push_back((size_t)id);
       buffers[id] = null;
       for (size_t i=0; i<devices.size(); i++) 
-        devices[i]->free((int)id);
+        devices[i]->free((int)id);  
       return true;
     }
     return false;
@@ -934,7 +1018,10 @@ namespace embree
   { 
     Device::RTCamera id = (Device::RTCamera) allocHandle();
     for (size_t i=0; i<devices.size(); i++) 
-      devices[i]->rtNewCamera(id,type);
+        devices[i]->rtNewCamera(id,type);
+    
+    if (NULL != hostDevice)
+        set((size_t)id, hostDevice->rtNewCamera(type));
     return id;
   }
 
@@ -943,30 +1030,36 @@ namespace embree
     Device::RTData id = (Device::RTData) allocHandle();
 
     for (size_t i=0; i<devices.size(); i++) 
-      devices[i]->rtNewData(id,type,bytes,data);
-
+        devices[i]->rtNewData(id,type,bytes,data);
+    
+    if (NULL != hostDevice)
+        set((size_t)id, hostDevice->rtNewData(type,bytes,data));
+/// ISPC does not do this, so why should COI?
+#if 0 
     if (!strcasecmp(type,"immutable_managed")) 
       alignedFree((void*)data);
-
+#endif
     return id;
   }
 
   Device::RTData COIDevice::rtNewDataFromFile(const char* type, const char* fileName, size_t offset, size_t bytes)
   { 
-    if (strcasecmp(type,"immutable"))
-      throw std::runtime_error("unknown data type: "+(std::string)type);
-    
-    /*! read data from file */
-    FILE* file = fopen(fileName,"rb");
-    if (!file) throw std::runtime_error("cannot open file "+(std::string)fileName);
-    fseek(file,(long)offset,SEEK_SET);
-    
-    char* data = (char*) alignedMalloc(bytes);
-    if (bytes != fread(data,1,sizeof(bytes),file))
-      throw std::runtime_error("error filling data buffer from file");
-    fclose(file);
-    
-    return rtNewData("immutable_managed", bytes, data);
+    if (!strcasecmp(type,"immutable"))
+    {
+        /*! read data from file */
+        FILE* file = fopen(fileName,"rb");
+        if (!file) throw std::runtime_error("cannot open file "+(std::string)fileName);
+        fseek(file,(long)offset,SEEK_SET);
+
+        char* data = (char*) alignedMalloc(bytes);
+        if (bytes != fread(data,1,sizeof(bytes),file))
+          throw std::runtime_error("error filling data buffer from file");
+        fclose(file);
+
+        return rtNewData("immutable_managed", bytes, data);
+    }
+    else
+        throw std::runtime_error("unknown data type: "+(std::string)type);
   }
 
   Device::RTImage COIDevice::rtNewImage(const char* type, size_t width, size_t height, const void* data, const bool copy)
@@ -974,7 +1067,10 @@ namespace embree
     Device::RTImage id = (Device::RTImage) allocHandle();
 
     for (size_t i=0; i<devices.size(); i++)
-      devices[i]->rtNewImage(id,type,width,height,data);
+        devices[i]->rtNewImage(id,type,width,height,data);
+    
+    if (NULL != hostDevice)
+        set((size_t)id, hostDevice->rtNewImage(type,width,height,data));
 
     if (!copy) free((void*)data);
 
@@ -1003,7 +1099,9 @@ namespace embree
   { 
     Device::RTTexture id = (Device::RTTexture) allocHandle();
     for (size_t i=0; i<devices.size(); i++)
-      devices[i]->rtNewTexture(id,type);
+        devices[i]->rtNewTexture(id,type);
+    if (NULL != hostDevice)
+        set((size_t)id, hostDevice->rtNewTexture(type));
     return id;
   }
 
@@ -1011,7 +1109,9 @@ namespace embree
   { 
     Device::RTMaterial id = (Device::RTMaterial) allocHandle();
     for (size_t i=0; i<devices.size(); i++)
-      devices[i]->rtNewMaterial(id,type);
+        devices[i]->rtNewMaterial(id,type);
+    if (NULL != hostDevice)
+        set((size_t)id, hostDevice->rtNewMaterial(type));
     return id;
   }
 
@@ -1019,7 +1119,9 @@ namespace embree
   { 
     Device::RTShape id = (Device::RTShape) allocHandle();
     for (size_t i=0; i<devices.size(); i++)
-      devices[i]->rtNewShape(id,type);
+        devices[i]->rtNewShape(id,type);
+    if (NULL != hostDevice)
+        set((size_t)id, hostDevice->rtNewShape(type));
     return id;
   }
 
@@ -1027,7 +1129,9 @@ namespace embree
   { 
     Device::RTLight id = (Device::RTLight) allocHandle();
     for (size_t i=0; i<devices.size(); i++)
-      devices[i]->rtNewLight(id,type);
+        devices[i]->rtNewLight(id,type);
+    if (NULL != hostDevice)
+        set((size_t)id, hostDevice->rtNewLight(type));
     return id;
   }
 
@@ -1035,7 +1139,10 @@ namespace embree
   { 
     Device::RTPrimitive id = (Device::RTPrimitive) allocHandle();
     for (size_t i=0; i<devices.size(); i++)
-      devices[i]->rtNewShapePrimitive(id,shape,material,transform);
+        devices[i]->rtNewShapePrimitive(id,shape,material,transform);
+    if (NULL != hostDevice)
+        set((size_t)id, hostDevice->rtNewShapePrimitive(get<Device::RTShape>((size_t)shape),
+            get<Device::RTMaterial>((size_t)material), transform));
     return id;
   }
 
@@ -1043,7 +1150,10 @@ namespace embree
   { 
     Device::RTPrimitive id = (Device::RTPrimitive) allocHandle();
     for (size_t i=0; i<devices.size(); i++)
-      devices[i]->rtNewLightPrimitive(id,light,material,transform);
+        devices[i]->rtNewLightPrimitive(id,light,material,transform);
+    if (NULL != hostDevice)
+        set((size_t)id, hostDevice->rtNewLightPrimitive(get<Device::RTLight>((size_t)light),
+            get<Device::RTMaterial>((size_t)material), transform));
     return id;
   }
 
@@ -1051,7 +1161,10 @@ namespace embree
   { 
     Device::RTPrimitive id = (Device::RTPrimitive) allocHandle();
     for (size_t i=0; i<devices.size(); i++)
-      devices[i]->rtTransformPrimitive(id,primitive,transform);
+        devices[i]->rtTransformPrimitive(id,primitive,transform);
+    if (NULL != hostDevice)
+        set((size_t)id, hostDevice->rtTransformPrimitive(get<Device::RTPrimitive>((size_t)primitive),
+            transform));
     return id;
   }
 
@@ -1059,27 +1172,37 @@ namespace embree
   { 
     Device::RTScene id = (Device::RTScene) allocHandle();
     for (size_t i=0; i<devices.size(); i++)
-      devices[i]->rtNewScene(id,type);
+        devices[i]->rtNewScene(id,type);
+    if (NULL != hostDevice)
+        set((size_t)id, hostDevice->rtNewScene(type));
     return id;
   }
 
   void COIDevice::rtSetPrimitive(RTScene scene, size_t slot, RTPrimitive prim)
   { 
     for (size_t i=0; i<devices.size(); i++)
-      devices[i]->rtSetPrimitive(scene,slot,prim);
+        devices[i]->rtSetPrimitive(scene,slot,prim);
+    if (NULL != hostDevice)
+        hostDevice->rtSetPrimitive(get<Device::RTScene>((size_t)scene), slot,
+            get<Device::RTPrimitive>((size_t)prim));
   }
 
   void COIDevice::rtUpdateObjectMaterial(Device::RTScene scene_i, Device::RTMaterial material_i, size_t slot)
   {
 	for (size_t i=0; i<devices.size(); i++)
-	  devices[i]->rtUpdateObjectMaterial(scene_i, material_i, slot);
+        devices[i]->rtUpdateObjectMaterial(scene_i, material_i, slot);
+    if (NULL != hostDevice)
+        hostDevice->rtUpdateObjectMaterial(get<Device::RTScene>((size_t)scene_i),
+            get<Device::RTMaterial>((size_t)material_i), slot);
   }
 
   Device::RTToneMapper COIDevice::rtNewToneMapper(const char* type)
   { 
     Device::RTToneMapper id = (Device::RTToneMapper) allocHandle();
     for (size_t i=0; i<devices.size(); i++)
-      devices[i]->rtNewToneMapper(id,type);
+        devices[i]->rtNewToneMapper(id,type);
+    if (NULL != hostDevice)
+        set((size_t)id, hostDevice->rtNewToneMapper(type));
     return id;
   }
 
@@ -1087,17 +1210,22 @@ namespace embree
   { 
     Device::RTRenderer id = (Device::RTRenderer) allocHandle();
     for (size_t i=0; i<devices.size(); i++)
-      devices[i]->rtNewRenderer(id,type);
+        devices[i]->rtNewRenderer(id,type);
+    if (NULL != hostDevice)
+        set((size_t)id, hostDevice->rtNewRenderer(type));
     return id;
   }
 
-  Device::RTFrameBuffer COIDevice::rtNewFrameBuffer(const char* type, size_t width, size_t height, size_t numBuffers, void** ptrs)
+  Device::RTFrameBuffer COIDevice::rtNewFrameBuffer(const char* type, size_t width, 
+                                    size_t height, size_t numBuffers, void** ptrs)
   { 
     int id = allocHandle();
     Device::RTFrameBuffer hid = (Device::RTFrameBuffer) id;
 
     for (size_t i=0; i<devices.size(); i++)
-      devices[i]->rtNewFrameBuffer(hid,type,width,height,numBuffers);
+        devices[i]->rtNewFrameBuffer(hid,type,width,height,numBuffers);
+    if (NULL != hostDevice)
+        set((size_t)hid, hostDevice->rtNewFrameBuffer(type,width,height,numBuffers));
 
     if      (!strcasecmp(type,"RGB_FLOAT32")) buffers[id] = new SwapChain(type,width,height,numBuffers,ptrs,FrameBufferRGBFloat32::create);
     else if (!strcasecmp(type,"RGBA8"      )) buffers[id] = new SwapChain(type,width,height,numBuffers,ptrs,FrameBufferRGBA8     ::create);
@@ -1112,13 +1240,21 @@ namespace embree
     Ref<SwapChain>& swapChain = buffers[(size_t)frameBuffer];
     if (bufID < 0) bufID = swapChain->id();
 
-    if (devices.size() == 1) 
+    if ((devices.size() == 1) && (NULL == hostDevice))
       return devices[0]->rtMapFrameBuffer(frameBuffer,bufID);
 
     /* map framebuffers of all devices */
-    std::vector<char*> ptrs(devices.size());
+    int numdevs = devices.size();
+    if (NULL != hostDevice)
+        numdevs++;
+    
+    std::vector<char*> ptrs(numdevs);
+    
     for (size_t i=0; i<devices.size(); i++)
-      ptrs[i] = (char*) devices[i]->rtMapFrameBuffer(frameBuffer,bufID);
+        ptrs[i] = (char*) devices[i]->rtMapFrameBuffer(frameBuffer,bufID);
+    if (NULL != hostDevice)
+        ptrs[numdevs-1] = (char*)hostDevice->rtMapFrameBuffer(
+                    get<Device::RTFrameBuffer>((size_t)frameBuffer),bufID);
     
     /* merge images from different devices */
     Ref<FrameBuffer>& buffer = swapChain->buffer(bufID);
@@ -1126,8 +1262,8 @@ namespace embree
     size_t stride = buffer->getStride();
     for (size_t y=0; y<buffer->getHeight(); y++) {
       size_t row = y/4, subrow = y%4;
-      size_t devRow = row/devices.size();
-      size_t devID  = row%devices.size();
+      size_t devRow = row/numdevs;
+      size_t devID  = row%numdevs;
       char* src = ptrs[devID]+stride*(4*devRow+subrow);
       char* dst = dptr+y*stride;
       memcpy(dst,src,stride);
@@ -1135,7 +1271,10 @@ namespace embree
 
     /* unmap framebuffers of all devices */
     for (size_t i=0; i<devices.size(); i++)
-      devices[i]->rtUnmapFrameBuffer(frameBuffer,bufID);
+        devices[i]->rtUnmapFrameBuffer(frameBuffer,bufID);
+    if (NULL != hostDevice)
+        hostDevice->rtUnmapFrameBuffer(get<Device::RTFrameBuffer>((size_t)frameBuffer), 
+                bufID);
 
     return dptr;
   }
@@ -1145,30 +1284,42 @@ namespace embree
     Ref<SwapChain>& swapChain = buffers[(size_t)frameBuffer];
     if (bufID < 0) bufID = swapChain->id();
     
-    if (devices.size() == 1) 
-      devices[0]->rtUnmapFrameBuffer(frameBuffer,bufID);
+    if ((devices.size() == 1) && (NULL == hostDevice))
+        devices[0]->rtUnmapFrameBuffer(frameBuffer,bufID);
+    if (NULL != hostDevice)
+        hostDevice->rtUnmapFrameBuffer(get<Device::RTFrameBuffer>((size_t)frameBuffer), 
+                bufID);
   }
 
   void COIDevice::rtSwapBuffers(Device::RTFrameBuffer frameBuffer) 
   { 
     for (size_t i=0; i<devices.size(); i++)
-      devices[i]->rtSwapBuffers(frameBuffer);
+        devices[i]->rtSwapBuffers(frameBuffer);
+    if (NULL != hostDevice)
+        hostDevice->rtSwapBuffers(get<Device::RTFrameBuffer>((size_t)frameBuffer));
 
-    Ref<SwapChain>& swapchain = buffers[(int)(long)frameBuffer];
+    Ref<SwapChain>& swapchain = buffers[(size_t)frameBuffer];
     swapchain->swapBuffers();
   }
   
   void COIDevice::rtIncRef(Device::RTHandle handle)
   { 
-    incRef((int)(size_t)handle);
+    // Keep track of references locally by fake handle
+    incRef((size_t)handle);
+    if (NULL != hostDevice)
+        hostDevice->rtIncRef(get<Device::RTHandle>((size_t)handle));
   }
 
   void COIDevice::rtDecRef(Device::RTHandle handle)
   { 
-    if (decRef((int)(size_t)handle)) {
-      for (size_t i=0; i<devices.size(); i++)
-        devices[i]->rtDecRef(handle);
+    if (decRef((size_t)handle)) {
+        // If we freed the last reference to these entries, tell the
+        // render device the object can die
+        for (size_t i=0; i<devices.size(); i++)
+            devices[i]->rtDecRef(handle);
     }
+    if (NULL != hostDevice)
+        hostDevice->rtDecRef(get<Device::RTHandle>((size_t)handle));
   }
 
   /*******************************************************************
@@ -1178,25 +1329,33 @@ namespace embree
   void COIDevice::rtSetBool1(Device::RTHandle handle, const char* property, bool x)
   { 
     for (size_t i=0; i<devices.size(); i++)
-      devices[i]->rtSetBool1(handle,property,x);
+        devices[i]->rtSetBool1(handle,property,x);
+    if (NULL != hostDevice)
+        hostDevice->rtSetBool1(get<Device::RTHandle>((size_t)handle),property,x);
   }
   
   void COIDevice::rtSetBool2(Device::RTHandle handle, const char* property, bool x, bool y)
   { 
     for (size_t i=0; i<devices.size(); i++)
-      devices[i]->rtSetBool2(handle,property,x,y);
+        devices[i]->rtSetBool2(handle,property,x,y);
+    if (NULL != hostDevice)
+        hostDevice->rtSetBool2(get<Device::RTHandle>((size_t)handle),property,x, y);
  }
 
   void COIDevice::rtSetBool3(Device::RTHandle handle, const char* property, bool x, bool y, bool z)
   { 
     for (size_t i=0; i<devices.size(); i++)
-      devices[i]->rtSetBool3(handle,property,x,y,z);
+        devices[i]->rtSetBool3(handle,property,x,y,z);
+    if (NULL != hostDevice)
+        hostDevice->rtSetBool3(get<Device::RTHandle>((size_t)handle),property,x,y,z);
   }
 
   void COIDevice::rtSetBool4(Device::RTHandle handle, const char* property, bool x, bool y, bool z, bool w)
   { 
     for (size_t i=0; i<devices.size(); i++)
-      devices[i]->rtSetBool4(handle,property,x,y,z,w);
+        devices[i]->rtSetBool4(handle,property,x,y,z,w);
+    if (NULL != hostDevice)
+        hostDevice->rtSetBool4(get<Device::RTHandle>((size_t)handle),property,x,y,z,w);
   }
 
   void COIDevice::rtSetInt1(Device::RTHandle handle, const char* property, int x)
@@ -1204,106 +1363,162 @@ namespace embree
     if (!handle) {
       if (!strcmp(property,"serverID"   )) 
         serverID = x;
-      else if (!strcmp(property,"serverCount")) {
+      else if (!strcmp(property,"serverCount")) 
+      {
         serverCount = x;
+        int id;
+        int count;
+        if (NULL == hostDevice)
+        {
+            id    = serverID*devices.size();
+            count = serverCount*devices.size();
+        }
+        else
+        {
+            id = serverID*(devices.size() + 1);  // Currently serverID = 0
+            count = serverCount*(devices.size() + 1);
+        }
         for (size_t i=0; i<devices.size(); i++) {
-          int id    = serverID*devices.size()+i;
-          int count = serverCount*devices.size();
-          devices[i]->rtSetInt1(NULL,"serverID",id);
-          devices[i]->rtSetInt1(NULL,"serverCount",count);
+            devices[i]->rtSetInt1(NULL,"serverID",id+i);
+            devices[i]->rtSetInt1(NULL,"serverCount",count);
+        }
+        if (NULL != hostDevice)
+        {
+            hostDevice->rtSetInt1(NULL,"serverID",id+devices.size());
+            hostDevice->rtSetInt1(NULL,"serverCount",count);
         }
       }
       else
+      {
         for (size_t i=0; i<devices.size(); i++)
-          devices[i]->rtSetInt1(handle,property,x);
+            devices[i]->rtSetInt1(handle,property,x);
+        if (NULL != hostDevice)
+            hostDevice->rtSetInt1(get<Device::RTHandle>((size_t)handle),property,x);
+      }
     }
     else
+    {
       for (size_t i=0; i<devices.size(); i++)
         devices[i]->rtSetInt1(handle,property,x);
+      if (NULL != hostDevice)
+        hostDevice->rtSetInt1(get<Device::RTHandle>((size_t)handle),property,x);
+    }
   }
 
   void COIDevice::rtSetInt2(Device::RTHandle handle, const char* property, int x, int y)
   { 
     for (size_t i=0; i<devices.size(); i++)
-      devices[i]->rtSetInt2(handle,property,x,y);
+        devices[i]->rtSetInt2(handle,property,x,y);
+    if (NULL != hostDevice)
+        hostDevice->rtSetInt2(get<Device::RTHandle>((size_t)handle),property,x,y);
   }
 
   void COIDevice::rtSetInt3(Device::RTHandle handle, const char* property, int x, int y, int z)
   { 
     for (size_t i=0; i<devices.size(); i++)
-      devices[i]->rtSetInt3(handle,property,x,y,z);
+        devices[i]->rtSetInt3(handle,property,x,y,z);
+    if (NULL != hostDevice)
+        hostDevice->rtSetInt3(get<Device::RTHandle>((size_t)handle),property,x,y,z);
   }
 
   void COIDevice::rtSetInt4(Device::RTHandle handle, const char* property, int x, int y, int z, int w)
   { 
     for (size_t i=0; i<devices.size(); i++)
-      devices[i]->rtSetInt4(handle,property,x,y,z,w);
+        devices[i]->rtSetInt4(handle,property,x,y,z,w);
+    if (NULL != hostDevice)
+        hostDevice->rtSetInt4(get<Device::RTHandle>((size_t)handle),property,x,y,z,w);
   }
 
   void COIDevice::rtSetFloat1(Device::RTHandle handle, const char* property, float x)
   { 
     for (size_t i=0; i<devices.size(); i++)
-      devices[i]->rtSetFloat1(handle,property,x);
+        devices[i]->rtSetFloat1(handle,property,x);
+    if (NULL != hostDevice)
+        hostDevice->rtSetFloat1(get<Device::RTHandle>((size_t)handle),property,x);
   }
 
   void COIDevice::rtSetFloat2(Device::RTHandle handle, const char* property, float x, float y)
   { 
     for (size_t i=0; i<devices.size(); i++)
-      devices[i]->rtSetFloat2(handle,property,x,y);
+        devices[i]->rtSetFloat2(handle,property,x,y);
+    if (NULL != hostDevice)
+        hostDevice->rtSetFloat2(get<Device::RTHandle>((size_t)handle),property,x,y);
   }
 
   void COIDevice::rtSetFloat3(Device::RTHandle handle, const char* property, float x, float y, float z)
   { 
     for (size_t i=0; i<devices.size(); i++)
-      devices[i]->rtSetFloat3(handle,property,x,y,z);
+        devices[i]->rtSetFloat3(handle,property,x,y,z);
+    if (NULL != hostDevice)
+        hostDevice->rtSetFloat3(get<Device::RTHandle>((size_t)handle),property,x,y,z);
   }
 
   void COIDevice::rtSetFloat4(Device::RTHandle handle, const char* property, float x, float y, float z, float w)
   { 
     for (size_t i=0; i<devices.size(); i++)
-      devices[i]->rtSetFloat4(handle,property,x,y,z,w);
+        devices[i]->rtSetFloat4(handle,property,x,y,z,w);
+    if (NULL != hostDevice)
+        hostDevice->rtSetFloat4(get<Device::RTHandle>((size_t)handle),property,x,y,z,w);
   }
 
   void COIDevice::rtSetArray(Device::RTHandle handle, const char* property, const char* type, Device::RTData data, size_t size, size_t stride, size_t ofs)
   { 
     for (size_t i=0; i<devices.size(); i++)
-      devices[i]->rtSetArray(handle,property,type,data,size,stride,ofs);
+        devices[i]->rtSetArray(handle,property,type,data,size,stride,ofs);
+    if (NULL != hostDevice)
+        hostDevice->rtSetArray(get<Device::RTHandle>((size_t)handle),property,type,
+                get<Device::RTData>((size_t)data),size,stride,ofs);
   }
 
   void COIDevice::rtSetString(Device::RTHandle handle, const char* property, const char* str)
   { 
     for (size_t i=0; i<devices.size(); i++)
-      devices[i]->rtSetString(handle,property,str);
+        devices[i]->rtSetString(handle,property,str);
+    if (NULL != hostDevice)
+        hostDevice->rtSetString(get<Device::RTHandle>((size_t)handle),property,str);
   }
 
   void COIDevice::rtSetImage(Device::RTHandle handle, const char* property, Device::RTImage img)
   { 
     for (size_t i=0; i<devices.size(); i++)
       devices[i]->rtSetImage(handle,property,img);
+    if (NULL != hostDevice)
+        hostDevice->rtSetImage(get<Device::RTHandle>((size_t)handle),property,
+                get<Device::RTImage>((size_t)img));
   }
 
   void COIDevice::rtSetTexture(Device::RTHandle handle, const char* property, Device::RTTexture tex)
   { 
     for (size_t i=0; i<devices.size(); i++)
-      devices[i]->rtSetTexture(handle,property,tex);
+        devices[i]->rtSetTexture(handle,property,tex);
+    if (NULL != hostDevice)
+        hostDevice->rtSetTexture(get<Device::RTHandle>((size_t)handle),property,
+                get<Device::RTTexture>((size_t)tex));
+
   }
 
   void COIDevice::rtSetTransform(Device::RTHandle handle, const char* property, const float* transform)
   { 
     for (size_t i=0; i<devices.size(); i++)
-      devices[i]->rtSetTransform(handle,property,transform);
+        devices[i]->rtSetTransform(handle,property,transform);
+    if (NULL != hostDevice)
+        hostDevice->rtSetTransform(get<Device::RTHandle>((size_t)handle),property,transform);
   }
 
   void COIDevice::rtClear(Device::RTHandle handle)
   { 
     for (size_t i=0; i<devices.size(); i++)
-      devices[i]->rtClear(handle);
+        devices[i]->rtClear(handle);
+    if (NULL != hostDevice)
+        hostDevice->rtClear(get<Device::RTHandle>((size_t)handle));
   }
 
   void COIDevice::rtCommit(Device::RTHandle handle)
   { 
     for (size_t i=0; i<devices.size(); i++)
-      devices[i]->rtCommit(handle);
+        devices[i]->rtCommit(handle);
+    if (NULL != hostDevice)
+        hostDevice->rtCommit(get<Device::RTHandle>((size_t)handle));
   }
 
   /*******************************************************************
@@ -1312,11 +1527,37 @@ namespace embree
 
   void COIDevice::rtRenderFrame(Device::RTRenderer renderer, Device::RTCamera camera, Device::RTScene scene, 
                                     Device::RTToneMapper toneMapper, Device::RTFrameBuffer frameBuffer, int accumulate)
-  { 
-    for (size_t i=0; i<devices.size(); i++) 
-      devices[i]->rtRenderFrame(renderer,camera,scene,toneMapper,frameBuffer,accumulate);
+  {
+    // Limit the number of threads started by the OpenMP runtime to minimize
+    // interference with the threads running in the host-side Embree renderer
+    omp_set_num_threads(2);   
+#pragma omp parallel sections
+    {
+#pragma omp section
+        {
+            if (NULL != hostDevice) 
+            {
+                // This blocks until it returns
+                hostDevice->rtRenderFrame(get<Device::RTRenderer>((size_t)renderer),
+                                    get<Device::RTCamera>((size_t)camera),
+                                    get<Device::RTScene>((size_t)scene),
+                                    get<Device::RTToneMapper>((size_t)toneMapper),
+                                    get<Device::RTFrameBuffer>((size_t)frameBuffer),
+                                    accumulate);
+            }
+        }
+#pragma omp section
+        {
+            // This can be run profitably in parallel with the host renderer
+            // because we are calling the COIPipelineRunFunction function in 
+            // rtRenderFrame in synchronous mode.   Thus, we block until the 
+            // device being called completes its portion of the frame
+            for (size_t i=0; i<devices.size(); i++) 
+              devices[i]->rtRenderFrame(renderer,camera,scene,toneMapper,frameBuffer,accumulate);
+        }
+    }
   }
-
+  
   bool COIDevice::rtPick(Device::RTCamera camera, float x, float y, Device::RTScene scene, float& px, float& py, float& pz) 
   { 
     return devices[0]->rtPick(camera,x,y,scene,px,py,pz);

@@ -95,11 +95,9 @@ namespace embree
   {
     return new SingleRayDevice(numThreads, rtcore_cfg);
   }
-
-  int g_serverCount = 1;
-  int g_serverID = 0;
+  
   size_t g_time = 0;
-
+  
   /*******************************************************************
                   type definitions
   *******************************************************************/
@@ -153,6 +151,8 @@ namespace embree
 #if !defined (__WINDOWS_MIC__)  
     TaskScheduler::create(numThreads);
 #endif
+    m_serverCount = 1;
+    m_serverID = 0;
   }
 
   SingleRayDevice::~SingleRayDevice() 
@@ -353,14 +353,23 @@ namespace embree
 
   Device::RTRenderer SingleRayDevice::rtNewRenderer(const char* type)
   {
-    RT_COMMAND_HEADER;
-    if (!strcasecmp(type,"debug"     )) return (Device::RTRenderer) new ConstructorHandle<DebugRenderer,Renderer>;
-    if (!strcasecmp(type,"pathtracer")) {
-      ConstructorHandle<IntegratorRenderer,Renderer>* handle = new ConstructorHandle<IntegratorRenderer,Renderer>;
-      handle->set("integrator",Variant("pathtracer"));
-      return (Device::RTRenderer) handle;
+    Device::RTRenderer renderer;
+    {
+        // Scope the lock
+        RT_COMMAND_HEADER;
+        if (!strcasecmp(type,"debug"     )) 
+            renderer = (Device::RTRenderer) new ConstructorHandle<DebugRenderer,Renderer>;
+        else if (!strcasecmp(type,"pathtracer")) {
+          ConstructorHandle<IntegratorRenderer,Renderer>* handle = new ConstructorHandle<IntegratorRenderer,Renderer>;
+          handle->set("integrator",Variant("pathtracer"));
+          renderer = (Device::RTRenderer) handle;
+        }
+        else 
+            throw std::runtime_error("unknown renderer type: " + std::string(type));
     }
-    else throw std::runtime_error("unknown renderer type: " + std::string(type));
+    rtSetInt1(renderer, "serverID", m_serverID);
+    rtSetInt1(renderer, "serverCount", m_serverCount);
+    return renderer;
   }
 
   Device::RTFrameBuffer SingleRayDevice::rtNewFrameBuffer(const char* type, size_t width, size_t height, size_t buffers, void** ptrs) 
@@ -441,8 +450,8 @@ namespace embree
     RT_COMMAND_HEADER;
     if (!property) throw std::runtime_error("invalid property");
     if (!handle  ) {
-      if      (!strcmp(property,"serverID"   )) g_serverID = x;
-      else if (!strcmp(property,"serverCount")) g_serverCount = x;
+      if      (!strcmp(property,"serverID"   )) m_serverID = x;
+      else if (!strcmp(property,"serverCount")) m_serverCount = x;
       return;
     }
     ((_RTHandle*)handle)->set(property,Variant(x));

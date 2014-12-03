@@ -299,13 +299,6 @@ public:
 	void createRenderDevice();
 };
 
-class EmbreeViewportRendererXeonISPC : public EmbreeViewportRenderer
-{
-public:
-	EmbreeViewportRendererXeonISPC();
-	void createRenderDevice();
-};
-
 class EmbreeViewportRendererXeonPhiSingle : public EmbreeViewportRenderer
 {
 public:
@@ -313,10 +306,24 @@ public:
 	void createRenderDevice();
 };
 
+class EmbreeViewportRendererXeonISPC : public EmbreeViewportRenderer
+{
+public:
+	EmbreeViewportRendererXeonISPC();
+	void createRenderDevice();
+};
+
 class EmbreeViewportRendererXeonPhiISPC : public EmbreeViewportRenderer
 {
 public:
         EmbreeViewportRendererXeonPhiISPC();
+        void createRenderDevice();
+};
+
+class EmbreeViewportRendererHybridISPC : public EmbreeViewportRenderer
+{
+public:
+        EmbreeViewportRendererHybridISPC();
         void createRenderDevice();
 };
 

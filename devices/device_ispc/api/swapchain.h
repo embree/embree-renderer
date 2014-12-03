@@ -22,9 +22,6 @@
 
 namespace embree
 {
-  extern "C" int g_serverCount;
-  extern "C" int g_serverID;
-
   /*! A swapchain is a sequence of framebuffers and a state. */
   class SwapChain : public RefCount
   {
@@ -56,19 +53,19 @@ namespace embree
     __forceinline size_t getDepth() const { return depth;  }
 
     /*! determines if a line is active when rendering in network mode */
-    __forceinline bool activeLine(int py) {
+    __forceinline bool activeLine(int py, int serverCount, int serverID) {
       const int row = py>>2;
-      return ((row+g_serverID) % g_serverCount) == 0;
+      return ((row+serverID) % serverCount) == 0;
     }
     
     /*! determines the first active line */
-    __forceinline size_t firstActiveLine() {
-      return g_serverID;
+    __forceinline size_t firstActiveLine(int serverID) {
+      return serverID;
     }
 
     /*! determines the destination line in network mode */
-    __forceinline size_t raster2buffer(size_t py) {
-      return 4*((py>>2)/g_serverCount)+(py&0x3);
+    __forceinline size_t raster2buffer(size_t py, int serverCount) {
+      return 4*((py>>2)/serverCount)+(py&0x3);
     }
     
     /*! goto next buffer */

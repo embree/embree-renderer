@@ -56,6 +56,9 @@ namespace embree
 
     /*! show progress to the user */
     showProgress = parms.getInt("showprogress",0);
+    
+    serverCount = parms.getInt("serverCount",1);
+    serverID = parms.getInt("serverID",0);
   }
 
   void IntegratorRenderer::renderFrame(const Ref<Camera>& camera, const Ref<BackendScene>& scene, const Ref<ToneMapper>& toneMapper, Ref<SwapChain > swapchain, int accumulate) 
@@ -211,15 +214,15 @@ namespace embree
       /*! process all tile samples */
       const int tile_x = (tile%numTilesX)*TILE_SIZE;
       const int tile_y = (tile/numTilesX)*TILE_SIZE;
-      Random randomNumberGenerator(tile_x * 91711 + tile_y * 81551 + 3433*swapchain->firstActiveLine());
+      Random randomNumberGenerator(tile_x * 91711 + tile_y * 81551 + 3433*swapchain->firstActiveLine(renderer->serverID));
       
       for (size_t dy=0; dy<TILE_SIZE; dy++)
       {
         size_t y = tile_y+dy;
         if (y >= swapchain->getHeight()) continue;
 
-        if (!swapchain->activeLine(y)) continue;
-        size_t _y = swapchain->raster2buffer(y);
+        if (!swapchain->activeLine(y, renderer->serverCount, renderer->serverID)) continue;
+        size_t _y = swapchain->raster2buffer(y, renderer->serverCount);
         
         for (size_t dx=0; dx<TILE_SIZE; dx++)
         {

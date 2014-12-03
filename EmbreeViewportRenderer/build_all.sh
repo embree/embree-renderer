@@ -41,16 +41,6 @@ rm -f ../build/EmbreeViewportRendererSX.so
 cc  -o ../build/EmbreeViewportRendererSX.so -DBits64_ -m64 -DUNIX -D_BOOL -DLINUX -DFUNCPROTO -D_GNU_SOURCE -DLINUX_64 -fPIC -fno-strict-aliasing -DREQUIRE_IOSTREAM -O3 -Wall -Wno-multichar -Wno-comment -Wno-sign-compare -funsigned-char -pthread -g   -Wno-deprecated -Wno-reorder -ftemplate-depth-25 -fno-gnu-keywords -Wl,-Bsymbolic -shared -Wl,--version-script=$MAYAPLUGINS/linux_plugin.map -L../build -L$MAYALIBS   ../build/EmbreeViewportRenderer.o ../build/EmbreeViewportRendererPluginSX.o -L$MAYALIBS   -lOpenMayaRender -lOpenMaya -lOpenMayaUI -lFoundation ../build/libsys.a ../build/liblexers.a ../build/libloaders.a ../build/libimage.a ../build/libdevice.a ../build/liblexers.a ../build/libsys.a -lpthread -ldl   $INTELCOMPILERLIBS/libimf.a $INTELCOMPILERLIBS/libirc.a
 
 echo ""
-echo " --------- Build the ISPC viewport renderer for Intel(r) Xeon(r) plugin"
-echo ""
-
-cc -c -I$RENDERROOT -I$RENDERROOT/common -I$EMBREEROOT -I$RENDERROOT/devices -I../EmbreeViewportRenderer -I$MAYAINCLUDE -I/usr/X11R6/include  -DBits64_ -m64 -DUNIX -D_BOOL -DLINUX -DFUNCPROTO -D_GNU_SOURCE -DLINUX_64 -fPIC -fno-strict-aliasing -DREQUIRE_IOSTREAM -O3 -Wall -Wno-multichar -Wno-comment -Wno-sign-compare -funsigned-char -pthread -g  -DISPCXEON ../EmbreeViewportRenderer/EmbreeViewportRendererPlugin.cpp -o ../build/EmbreeViewportRendererPluginIX.o
-
-rm -f ../build/EmbreeViewportRendererIX.so
-
-cc  -o ../build/EmbreeViewportRendererIX.so -DBits64_ -m64 -DUNIX -D_BOOL -DLINUX -DFUNCPROTO -D_GNU_SOURCE -DLINUX_64 -fPIC -fno-strict-aliasing -DREQUIRE_IOSTREAM -O3 -Wall -Wno-multichar -Wno-comment -Wno-sign-compare -funsigned-char -pthread -g   -Wno-deprecated -Wno-reorder -ftemplate-depth-25 -fno-gnu-keywords -Wl,-Bsymbolic -shared -Wl,--version-script=$MAYAPLUGINS/linux_plugin.map -L../build -L$MAYALIBS   ../build/EmbreeViewportRenderer.o ../build/EmbreeViewportRendererPluginIX.o -L$MAYALIBS   -lOpenMayaRender -lOpenMaya -lOpenMayaUI -lFoundation ../build/libsys.a ../build/liblexers.a ../build/libloaders.a ../build/libimage.a ../build/libdevice.a ../build/liblexers.a ../build/libsys.a -lpthread -ldl  $INTELCOMPILERLIBS/libimf.a $INTELCOMPILERLIBS/libirc.a
-
-echo ""
 echo " --------- Build the single-ray viewport renderer for Intel(r) Xeon Phi(tm) plugin"
 echo ""
 
@@ -61,6 +51,16 @@ rm -f ../build/EmbreeViewportRendererSXP.so
 cc  -o ../build/EmbreeViewportRendererSXP.so -DBits64_ -m64 -DUNIX -D_BOOL -DLINUX -DFUNCPROTO -D_GNU_SOURCE -DLINUX_64 -fPIC -fno-strict-aliasing -DREQUIRE_IOSTREAM -O3 -Wall -Wno-multichar -Wno-comment -Wno-sign-compare -funsigned-char -pthread -g   -Wno-deprecated -Wno-reorder -ftemplate-depth-25 -fno-gnu-keywords -Wl,-Bsymbolic -shared -Wl,--version-script=$MAYAPLUGINS/linux_plugin.map -L../build -L$MAYALIBS   ../build/EmbreeViewportRenderer.o ../build/EmbreeViewportRendererPluginSXP.o -L$MAYALIBS   -lOpenMayaRender -lOpenMaya -lOpenMayaUI -lFoundation ../build/libsys.a ../build/liblexers.a ../build/libloaders.a ../build/libimage.a ../build/libdevice.a ../build/liblexers.a ../build/libsys.a -lpthread -ldl  $INTELCOMPILERLIBS/libimf.a $INTELCOMPILERLIBS/libirc.a 
 
 echo ""
+echo " --------- Build the ISPC viewport renderer for Intel(r) Xeon(r) plugin"
+echo ""
+
+cc -c -I$RENDERROOT -I$RENDERROOT/common -I$EMBREEROOT -I$RENDERROOT/devices -I../EmbreeViewportRenderer -I$MAYAINCLUDE -I/usr/X11R6/include  -DBits64_ -m64 -DUNIX -D_BOOL -DLINUX -DFUNCPROTO -D_GNU_SOURCE -DLINUX_64 -fPIC -fno-strict-aliasing -DREQUIRE_IOSTREAM -O3 -Wall -Wno-multichar -Wno-comment -Wno-sign-compare -funsigned-char -pthread -g  -DISPCXEON ../EmbreeViewportRenderer/EmbreeViewportRendererPlugin.cpp -o ../build/EmbreeViewportRendererPluginIX.o
+
+rm -f ../build/EmbreeViewportRendererIX.so
+
+cc  -o ../build/EmbreeViewportRendererIX.so -DBits64_ -m64 -DUNIX -D_BOOL -DLINUX -DFUNCPROTO -D_GNU_SOURCE -DLINUX_64 -fPIC -fno-strict-aliasing -DREQUIRE_IOSTREAM -O3 -Wall -Wno-multichar -Wno-comment -Wno-sign-compare -funsigned-char -pthread -g   -Wno-deprecated -Wno-reorder -ftemplate-depth-25 -fno-gnu-keywords -Wl,-Bsymbolic -shared -Wl,--version-script=$MAYAPLUGINS/linux_plugin.map -L../build -L$MAYALIBS   ../build/EmbreeViewportRenderer.o ../build/EmbreeViewportRendererPluginIX.o -L$MAYALIBS   -lOpenMayaRender -lOpenMaya -lOpenMayaUI -lFoundation ../build/libsys.a ../build/liblexers.a ../build/libloaders.a ../build/libimage.a ../build/libdevice.a ../build/liblexers.a ../build/libsys.a -lpthread -ldl  $INTELCOMPILERLIBS/libimf.a $INTELCOMPILERLIBS/libirc.a
+
+echo ""
 echo " --------- Build the ISPC viewport renderer for Intel(r) Xeon Phi(tm) plugin"
 echo ""
 
@@ -69,6 +69,16 @@ cc -c -I$RENDERROOT -I$RENDERROOT/common -I$EMBREEROOT -I$RENDERROOT/devices -I.
 rm -f ../build/EmbreeViewportRendererIXP.so
 
 cc  -o ../build/EmbreeViewportRendererIXP.so -DBits64_ -m64 -DUNIX -D_BOOL -DLINUX -DFUNCPROTO -D_GNU_SOURCE -DLINUX_64 -fPIC -fno-strict-aliasing -DREQUIRE_IOSTREAM -O3 -Wall -Wno-multichar -Wno-comment -Wno-sign-compare -funsigned-char -pthread -g   -Wno-deprecated -Wno-reorder -ftemplate-depth-25 -fno-gnu-keywords -Wl,-Bsymbolic -shared -Wl,--version-script=$MAYAPLUGINS/linux_plugin.map -L../build -L$MAYALIBS   ../build/EmbreeViewportRenderer.o ../build/EmbreeViewportRendererPluginIXP.o -L$MAYALIBS   -lOpenMayaRender -lOpenMaya -lOpenMayaUI -lFoundation ../build/libsys.a ../build/liblexers.a ../build/libloaders.a ../build/libimage.a ../build/libdevice.a ../build/liblexers.a ../build/libsys.a -lpthread -ldl  $INTELCOMPILERLIBS/libimf.a $INTELCOMPILERLIBS/libirc.a
+
+echo ""
+echo " --------- Build the hybrid ISPC viewport renderer"
+echo ""
+
+cc -c -I$RENDERROOT -I$RENDERROOT/common -I$EMBREEROOT -I$RENDERROOT/devices -I../EmbreeViewportRenderer -I$MAYAINCLUDE -I/usr/X11R6/include  -DBits64_ -m64 -DUNIX -D_BOOL -DLINUX -DFUNCPROTO -D_GNU_SOURCE -DLINUX_64 -fPIC -fno-strict-aliasing -DREQUIRE_IOSTREAM -O3 -Wall -Wno-multichar -Wno-comment -Wno-sign-compare -funsigned-char -pthread -g  -DISPCHYBRID ../EmbreeViewportRenderer/EmbreeViewportRendererPlugin.cpp -o ../build/EmbreeViewportRendererPluginIH.o
+
+rm -f ../build/EmbreeViewportRendererIH.so
+
+cc  -o ../build/EmbreeViewportRendererIH.so -DBits64_ -m64 -DUNIX -D_BOOL -DLINUX -DFUNCPROTO -D_GNU_SOURCE -DLINUX_64 -fPIC -fno-strict-aliasing -DREQUIRE_IOSTREAM -O3 -Wall -Wno-multichar -Wno-comment -Wno-sign-compare -funsigned-char -pthread -g   -Wno-deprecated -Wno-reorder -ftemplate-depth-25 -fno-gnu-keywords -Wl,-Bsymbolic -shared -Wl,--version-script=$MAYAPLUGINS/linux_plugin.map -L../build -L$MAYALIBS   ../build/EmbreeViewportRenderer.o ../build/EmbreeViewportRendererPluginIH.o -L$MAYALIBS   -lOpenMayaRender -lOpenMaya -lOpenMayaUI -lFoundation ../build/libsys.a ../build/liblexers.a ../build/libloaders.a ../build/libimage.a ../build/libdevice.a ../build/liblexers.a ../build/libsys.a -lpthread -ldl  $INTELCOMPILERLIBS/libimf.a $INTELCOMPILERLIBS/libirc.a
 
 echo ""
 echo " --------- Build complete"

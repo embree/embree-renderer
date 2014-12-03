@@ -78,7 +78,7 @@ namespace embree
       Atomic atomicNumRays;          //!< for counting number of shoot rays
       Progress progress;             //!< Progress printer
       TaskScheduler::Task task;
-    };
+    };  // RenderJob
 
     /*! Configuration */
   private:
@@ -94,6 +94,8 @@ namespace embree
   private:
     int iteration;
     bool showProgress;             //!< Set to true if user wants rendering progress shown
+    int serverCount;
+    int serverID;
   };
 }
 

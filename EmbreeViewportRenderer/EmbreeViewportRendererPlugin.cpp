@@ -44,10 +44,11 @@
 //
 ///////////////////////////////////////////////////
 
-static EmbreeViewportRendererXeonSingle		*g_EmbreeViewportRendererXeonSingle = 0;
-static EmbreeViewportRendererXeonISPC		*g_EmbreeViewportRendererXeonISPC = 0;
-static EmbreeViewportRendererXeonPhiSingle	*g_EmbreeViewportRendererXeonPhiSingle = 0;
-static EmbreeViewportRendererXeonPhiISPC	*g_EmbreeViewportRendererXeonPhiISPC = 0;
+static EmbreeViewportRendererXeonSingle     *g_EmbreeViewportRendererXeonSingle = 0;
+static EmbreeViewportRendererXeonPhiSingle  *g_EmbreeViewportRendererXeonPhiSingle = 0;
+static EmbreeViewportRendererXeonISPC       *g_EmbreeViewportRendererXeonISPC = 0;
+static EmbreeViewportRendererXeonPhiISPC    *g_EmbreeViewportRendererXeonPhiISPC = 0;
+static EmbreeViewportRendererHybridISPC     *g_EmbreeViewportRendererHybridISPC = 0;
 
 MStatus initializePlugin( MObject obj )
 {
@@ -70,6 +71,23 @@ MStatus initializePlugin( MObject obj )
 	}
 #endif
 
+#ifdef SINGLEXEONPHI
+	//
+	// Register the Intel(R) Xeon Phi(TM) coprocessor Single-ray renderer
+	//
+	MFnPlugin plugin( obj, "IntelSXP", "2014", "Any");
+	g_EmbreeViewportRendererXeonPhiSingle = new EmbreeViewportRendererXeonPhiSingle();
+	if (g_EmbreeViewportRendererXeonPhiSingle)
+	{
+		g_EmbreeViewportRendererXeonPhiSingle->createRenderDevice();
+		status = g_EmbreeViewportRendererXeonPhiSingle->registerRenderer();
+		if (status != MStatus::kSuccess)
+		{
+			status.perror("Failed to register Single-Ray Embree Renderer for the Intel(R) Xeon Phi(TM) coprocessor properly.");
+		}
+	}
+#endif
+    
 #ifdef ISPCXEON
 	//
 	// Register the Intel(R) Xeon(R) Processor ISPC renderer
@@ -87,23 +105,6 @@ MStatus initializePlugin( MObject obj )
 	}
 #endif
 
-#ifdef SINGLEXEONPHI
-	//
-	// Register the Intel(R) Xeon Phi(TM) coprocessor Single-ray renderer
-	//
-	MFnPlugin plugin( obj, "IntelSXP", "2014", "Any");
-	g_EmbreeViewportRendererXeonPhiSingle = new EmbreeViewportRendererXeonPhiSingle();
-	if (g_EmbreeViewportRendererXeonPhiSingle)
-	{
-		g_EmbreeViewportRendererXeonPhiSingle->createRenderDevice();
-		status = g_EmbreeViewportRendererXeonPhiSingle->registerRenderer();
-		if (status != MStatus::kSuccess)
-		{
-			status.perror("Failed to register Single-Ray Embree Renderer for the Intel(R) Xeon Phi(TM) coprocessor properly.");
-		}
-	}
-#endif
-
 #ifdef ISPCXEONPHI
 	//
 	// Register the Intel(R) Xeon Phi(TM) coprocessor ISPC renderer
@@ -117,6 +118,23 @@ MStatus initializePlugin( MObject obj )
 		if (status != MStatus::kSuccess)
 		{
 			status.perror("Failed to register ISPC Embree Renderer for the Intel(R) Xeon Phi(TM) coprocessor properly.");
+		}
+	}
+#endif
+    
+#ifdef ISPCHYBRID
+	//
+	// Register the Hybrid ISPC renderer
+	//
+	MFnPlugin plugin( obj, "IntelIH", "2014", "Any");
+	g_EmbreeViewportRendererHybridISPC = new EmbreeViewportRendererHybridISPC();
+	if (g_EmbreeViewportRendererHybridISPC)
+	{
+		g_EmbreeViewportRendererHybridISPC->createRenderDevice();
+		status = g_EmbreeViewportRendererHybridISPC->registerRenderer();
+		if (status != MStatus::kSuccess)
+		{
+			status.perror("Failed to register Hybrid ISPC Embree Renderer properly.");
 		}
 	}
 #endif
@@ -143,19 +161,6 @@ MStatus uninitializePlugin( MObject obj )
 	g_EmbreeViewportRendererXeonSingle = 0;
 
 	//
-	// Deregister the Intel(R) Xeon(R) Processor ISPC renderer
-	//
-	if (g_EmbreeViewportRendererXeonISPC)
-	{
-		status = g_EmbreeViewportRendererXeonISPC->deregisterRenderer();
-		if (status != MStatus::kSuccess)
-		{
-			status.perror("Failed to deregister ISPC Embree Renderer for Intel(R) Xeon(R) processors properly.");
-		}
-	}
-	g_EmbreeViewportRendererXeonISPC = 0;
-
-	//
 	// Deregister the Intel(R) Xeon Phi(TM) coprocessor Single-ray renderer
 	//
 	if (g_EmbreeViewportRendererXeonPhiSingle)
@@ -167,7 +172,20 @@ MStatus uninitializePlugin( MObject obj )
 		}
 	}
 	g_EmbreeViewportRendererXeonPhiSingle = 0;
-
+    
+	//
+	// Deregister the Intel(R) Xeon(R) Processor ISPC renderer
+	//
+	if (g_EmbreeViewportRendererXeonISPC)
+	{
+		status = g_EmbreeViewportRendererXeonISPC->deregisterRenderer();
+		if (status != MStatus::kSuccess)
+		{
+			status.perror("Failed to deregister ISPC Embree Renderer for Intel(R) Xeon(R) processors properly.");
+		}
+	}
+	g_EmbreeViewportRendererXeonISPC = 0;
+    
 	//
 	// Deregister the Intel(R) Xeon Phi(TM) coprocessor ISPC renderer
 	//
@@ -180,7 +198,20 @@ MStatus uninitializePlugin( MObject obj )
 		}
 	}
 	g_EmbreeViewportRendererXeonPhiISPC = 0;
-
+    
+	//
+	// Deregister the Hybrid ISPC renderer
+	//
+	if (g_EmbreeViewportRendererHybridISPC)
+	{
+		status = g_EmbreeViewportRendererHybridISPC->deregisterRenderer();
+		if (status != MStatus::kSuccess)
+		{
+			status.perror("Failed to deregister Hybrid ISPC Embree Renderer properly.");
+		}
+	}
+	g_EmbreeViewportRendererHybridISPC = 0;
+    
 	return status;
 }
 

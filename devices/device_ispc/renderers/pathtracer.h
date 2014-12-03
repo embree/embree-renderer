@@ -33,8 +33,11 @@ namespace embree
       const bool filterCaustics = parms.getBool("filterCaustics"  , false);
       const bool disableCausticReflection = parms.getBool("disableCausticReflection", false);
       const bool disableCausticTransmission = parms.getBool("disableCausticTransmission", false);
+      const int serverCount = parms.getInt("serverCount",1);
+      const int serverID = parms.getInt("serverID",0);
       return ispc::PathTracer__new(maxDepth,minContribution,epsilon,spp,backplate.ptr, 
-              filterCaustics, disableCausticReflection, disableCausticTransmission);
+              filterCaustics, disableCausticReflection, disableCausticTransmission,
+              serverCount, serverID);
     }
   };
 }

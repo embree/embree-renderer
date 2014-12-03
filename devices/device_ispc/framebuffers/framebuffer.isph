@@ -34,17 +34,14 @@ struct FrameBuffer
   FrameBuffer__map map;
 };
 
-extern uniform int g_serverCount;
-extern uniform int g_serverID;
-
 /*! determines if a line is active when rendering in network mode */
-inline bool activeLine(int py) {
+inline bool activeLine(int py, int serverCount, int serverID) {
   const int row = py>>2;
-  return ((row-g_serverID) % g_serverCount) == 0;
+  return ((row-serverID) % serverCount) == 0;
 }
 
-inline uint raster2buffer(uint py) {
-  return 4*((py>>2)/g_serverCount)+(py&0x3);
+inline uint raster2buffer(uint py, int serverCount) {
+  return 4*((py>>2)/serverCount)+(py&0x3);
 }
 
 void FrameBuffer__Destructor(uniform FrameBuffer* uniform _this);

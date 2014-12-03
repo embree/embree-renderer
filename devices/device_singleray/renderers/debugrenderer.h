@@ -73,12 +73,14 @@ namespace embree
       Atomic tileID;                 //!< ID of current tile
       Atomic atomicNumRays;          //!< for counting number of shoot rays
       TaskScheduler::Task task;
-    };
+    };  // RenderJob
 
     /*! Configuration */
   private:
     size_t maxDepth;                  //!< Maximal recursion depth
     size_t spp;
+    int serverCount;
+    int serverID;
   };
 }
 

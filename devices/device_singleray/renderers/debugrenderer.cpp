@@ -23,6 +23,8 @@ namespace embree
   {
     maxDepth = parms.getInt("maxDepth",1);
     spp      = parms.getInt("sampler.spp",1);
+    serverCount = parms.getInt("serverCount",1);
+    serverID = parms.getInt("serverID",0);
   }
 
   void DebugRenderer::renderFrame(const Ref<Camera>& camera, const Ref<BackendScene>& scene, const Ref<ToneMapper>& toneMapper, Ref<SwapChain > swapchain, int accumulate) 
@@ -88,8 +90,8 @@ namespace embree
       {
         size_t iy = y0+dy; float fy = iy*rcpHeight;
         if (iy >= framebuffer->getHeight()) continue;
-        if (!swapchain->activeLine(iy)) continue;
-        iy = swapchain->raster2buffer(iy);
+        if (!swapchain->activeLine(iy, renderer->serverCount, renderer->serverID)) continue;
+        iy = swapchain->raster2buffer(iy, renderer->serverCount);
 
         for (size_t dx=0; dx<TILE_SIZE; dx++)
         {

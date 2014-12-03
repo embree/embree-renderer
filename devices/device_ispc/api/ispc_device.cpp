@@ -91,11 +91,6 @@ double __get_seconds() {
   return embree::getSeconds();
 }
 
-extern "C" {
-  int g_serverCount = 1;
-  int g_serverID = 0;
-}
-
 namespace embree
 {
   /*******************************************************************
@@ -114,6 +109,8 @@ namespace embree
   ISPCDevice::ISPCDevice(size_t numThreads, const char* cfg)
   {
     rtcInit(cfg);
+    m_serverCount = 1;
+    m_serverID = 0;
   }
 
   ISPCDevice::~ISPCDevice() {
@@ -401,9 +398,13 @@ namespace embree
 
   Device::RTRenderer ISPCDevice::rtNewRenderer(const char* type) 
   {
-    if      (!strcasecmp(type,"debug"     )) return (Device::RTRenderer) new ISPCCreateHandle<DebugRenderer>;
-    else if (!strcasecmp(type,"pathtracer")) return (Device::RTRenderer) new ISPCCreateHandle<PathTracer>;
+    Device::RTRenderer renderer;
+    if      (!strcasecmp(type,"debug"     )) renderer = (Device::RTRenderer) new ISPCCreateHandle<DebugRenderer>;
+    else if (!strcasecmp(type,"pathtracer")) renderer = (Device::RTRenderer) new ISPCCreateHandle<PathTracer>;
     else throw std::runtime_error("unknown renderer type: " + std::string(type));
+    rtSetInt1(renderer, "serverID", m_serverID);
+    rtSetInt1(renderer, "serverCount", m_serverCount);
+    return renderer;
   }
 
   Device::RTFrameBuffer ISPCDevice::rtNewFrameBuffer(const char* type, size_t width, size_t height, size_t buffers, void** ptrs) 
@@ -478,8 +479,8 @@ namespace embree
     Lock<MutexSys> lock(mutex);
     if (!property) throw std::runtime_error("invalid property");
     if (!handle  ) {
-      if      (!strcmp(property,"serverID"   )) g_serverID = x;
-      else if (!strcmp(property,"serverCount")) g_serverCount = x;
+      if      (!strcmp(property,"serverID"   )) m_serverID = x;
+      else if (!strcmp(property,"serverCount")) m_serverCount = x;
       return;
     }
     ((_RTHandle*)handle)->set(property,Variant(x));
