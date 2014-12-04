@@ -203,6 +203,7 @@
       </PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
+      <OpenMP>GenerateParallelCode</OpenMP>
     </ClCompile>
     <Link>
       <AdditionalDependencies>C:\Program Files\Intel\MPSS\sdk\lib\coi_host.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -250,6 +251,7 @@
       </PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <OpenMP>GenerateParallelCode</OpenMP>
     </ClCompile>
     <Link>
       <AdditionalDependencies>C:\Program Files\Intel\MPSS\sdk\lib\coi_host.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -299,6 +301,7 @@
       </PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <OpenMP>GenerateParallelCode</OpenMP>
     </ClCompile>
     <Link>
       <AdditionalDependencies>C:\Program Files\Intel\MPSS\sdk\lib\coi_host.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -348,6 +351,7 @@
       </PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <OpenMP>GenerateParallelCode</OpenMP>
     </ClCompile>
     <Link>
       <AdditionalDependencies>C:\Program Files\Intel\MPSS\sdk\lib\coi_host.lib;%(AdditionalDependencies)</AdditionalDependencies>
