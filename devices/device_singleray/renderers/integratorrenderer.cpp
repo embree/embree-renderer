@@ -131,6 +131,10 @@ namespace embree
       const int tile_y = (tile/numTilesX)*TILE_SIZE;
       Random randomNumberGenerator(tile_x * 91711 + tile_y * 81551 + 3433*swapchain->firstActiveLine());
       
+      //#define PRE_INIT_SETS
+#if defined(PRE_INIT_SETS)
+      int sets[TILE_SIZE][TILE_SIZE];
+
       for (size_t dy=0; dy<TILE_SIZE; dy++)
       {
         size_t y = tile_y+dy;
@@ -144,8 +148,29 @@ namespace embree
           size_t x = tile_x+dx;
           if (x >= swapchain->getWidth()) continue;
 
-          const int set = randomNumberGenerator.getInt(renderer->samplers->sampleSets);
+          sets[dy][dx] = randomNumberGenerator.getInt(renderer->samplers->sampleSets);
+        }
+      }
+#endif
 
+      for (size_t dy=0; dy<TILE_SIZE; dy++)
+      {
+        size_t y = tile_y+dy;
+        if (y >= swapchain->getHeight()) continue;
+
+        if (!swapchain->activeLine(y)) continue;
+        size_t _y = swapchain->raster2buffer(y);
+        
+        for (size_t dx=0; dx<TILE_SIZE; dx++)
+        {
+          size_t x = tile_x+dx;
+          if (x >= swapchain->getWidth()) continue;
+
+#if !defined(PRE_INIT_SETS)
+          const int set = randomNumberGenerator.getInt(renderer->samplers->sampleSets);          
+#else
+          const int set = sets[dy][dx];
+#endif
           Color L = zero;
           size_t spp = renderer->samplers->samplesPerPixel;
           for (size_t s=0; s<spp; s++)
