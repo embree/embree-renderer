@@ -200,7 +200,7 @@ namespace embree
 			parmsUpdateObjectMaterial* parms, uint16_t parmBytes, void* ret, uint16_t retBytes)
   {
     if (coi_verbose) {
-      printf("rtUpdateObjectMaterial(%06d, %06d, %06d)\n", parms->scene, parms->material, parms->slot);
+      printf("rtUpdateObjectMaterial(%06d, %06d, %06ld)\n", parms->scene, parms->material, parms->slot);
       fflush(stdout);
     }
     g_device->rtUpdateObjectMaterial(get<Device::RTScene>(parms->scene),get<Device::RTMaterial>(parms->material), parms->slot);

@@ -163,7 +163,9 @@ namespace embree
                             render calls
       *******************************************************************/
       
-      void rtRenderFrame(RTRenderer renderer, RTCamera camera, RTScene scene, RTToneMapper toneMapper, RTFrameBuffer frameBuffer, int accumulate);
+      void rtRenderFrame(RTRenderer renderer, RTCamera camera, RTScene scene, 
+              RTToneMapper toneMapper, RTFrameBuffer frameBuffer, int accumulate,
+              COIEVENT *completionEvent);
       bool rtPick(RTCamera camera, float x, float y, RTScene scene, float& px, float& py, float& pz);
     
       void free(int id);

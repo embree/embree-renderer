@@ -1,5 +1,5 @@
 // ======================================================================== //
-// Copyright 2009-2014 Intel Corporation                                    //
+// Copyright 2009-2015 Intel Corporation                                    //
 //                                                                          //
 // Licensed under the Apache License, Version 2.0 (the "License");          //
 // you may not use this file except in compliance with the License.         //
@@ -192,11 +192,9 @@ public:
 
     // Scene-conversion code and variables
 protected:
-	bool    convertLight(const MDagPath &dagPath);
-	bool    convertSurface( const MDagPath &dagPath);
-	bool    drawBounds( const MDagPath &dagPath,
-                    const MBoundingBox &box);
-	void    convertSurfaceMaterial(const MDagPath &dagPath, 
+	void    convertLight(const MDagPath &dagPath);
+	void    convertObject( const MDagPath &dagPath);
+	void    convertObjectMaterial(const MDagPath &dagPath, 
                     int haveTexture, 
                     embree::Handle<embree::Device::RTMaterial> &material);
 	bool    collectSceneObjects (const MRenderingInfo &renderInfo, 
@@ -207,11 +205,11 @@ protected:
                     int *materialUpdated);
 	int		convertMayaLightsToEmbree(std::vector<MDagPath> &currentLights, 
                     int lightReplacementNeeded);
-	bool    renderToTarget( const MRenderingInfo &renderInfo );
+	bool    renderInEmbreeSampleRenderer( const MRenderingInfo &renderInfo );
 
 	void    updateSceneLightsOnly(embree::Handle<embree::Device::RTScene> scene);
 
-	MObject     findShader( MObject& setNode );
+	MObject findObjectMaterialShader( MObject& setNode );
 	int     checkMaterialProperties(const MDagPath &currObject, int haveTexture, SceneData &oldSceneInfo);
 	void    getMaterialData(const MDagPath &currObject, int haveTexture, SceneData &materialInfo);
 
@@ -285,8 +283,7 @@ protected:
     // Misc
     int             m_plugintype;
 
-	RenderingAPI	m_API;		// Rendering API
-	float			m_Version;	// Embree version number as float.
+	RenderingAPI	m_API;		// Rendering API - software obviously
 };
 
 //

@@ -88,7 +88,7 @@ namespace embree
     
     if (result != COI_SUCCESS) {
         fprintf(stderr, "Failed to create process: %s - error code \"%s\" - did you set SINK_LD_LIBRARY_PATH?\n", executable, COIResultGetName(result));
-#if !defined(__WIN32__)
+#ifdef __LINUX__
         fprintf(stderr, "   SINK_LD_LIBRARY_PATH has the following value:  %s\n", getenv("SINK_LD_LIBRARY_PATH"));
 #endif
         fflush(stderr);
@@ -818,7 +818,8 @@ namespace embree
   *******************************************************************/
 
   void COIDevice::COIProcess::rtRenderFrame(Device::RTRenderer renderer, Device::RTCamera camera, Device::RTScene scene, 
-                                            Device::RTToneMapper toneMapper, Device::RTFrameBuffer frameBuffer, int accumulate)
+                                            Device::RTToneMapper toneMapper, Device::RTFrameBuffer frameBuffer, 
+                                            int accumulate, COIEVENT *completionEvent)
   {
     parmsRenderFrame parms;
     parms.renderer = (int) (long) renderer;
@@ -832,7 +833,7 @@ namespace embree
 
     COIRESULT result = COIPipelineRunFunction (pipeline, runRenderFrame, 
                                                1, &swapchain->buffer[swapchain->curBuffer], &swapchain->flag[swapchain->curBuffer], 
-                                               0, NULL, &parms, sizeof(parms), NULL, 0, NULL);
+                                               0, NULL, &parms, sizeof(parms), NULL, 0, completionEvent);
 
     if (result != COI_SUCCESS) 
       throw std::runtime_error("COIPipelineRunFunction failed: "+std::string(COIResultGetName(result)));
@@ -910,6 +911,14 @@ namespace embree
     COIEngineGetCount( COI_ISA_MIC, &engines );
     if ((engines == 0) && (NULL == executable2)) throw std::runtime_error("no Xeon Phi device found");
 
+#ifdef __LINUX__
+    if (getenv("EMBREE_NUM_COPROCESSORS")) {
+        fprintf(stderr, "   Saw %d Intel(R) Xeon Phi(TM) coprocessors, ", engines);
+        engines = atoi(getenv("EMBREE_NUM_COPROCESSORS"));
+        fprintf(stderr, "overridden by EMBREE_NUM_COPROCESSORS to %d.\n", engines);
+    }
+#endif
+    
     /* initialize all coprocessor devices */
     for (uint32_t i=0; i<engines; i++) 
       devices.push_back(new COIProcess(i,executable,numThreads,rtcore_cfg));
@@ -945,14 +954,14 @@ namespace embree
  
     for (size_t i=0; i<devices.size(); i++) 
     {
-      devices[i]->rtSetInt1(NULL,"serverID",id+i);
       devices[i]->rtSetInt1(NULL,"serverCount",count);
+      devices[i]->rtSetInt1(NULL,"serverID",id+i);
     }
     
     if (NULL != hostDevice)
     {
-        hostDevice->rtSetInt1(NULL,"serverID",id+devices.size());
         hostDevice->rtSetInt1(NULL,"serverCount",count);
+        hostDevice->rtSetInt1(NULL,"serverID",id+devices.size());
     }
 
     /* dummy 0 handle */
@@ -1528,6 +1537,7 @@ namespace embree
   void COIDevice::rtRenderFrame(Device::RTRenderer renderer, Device::RTCamera camera, Device::RTScene scene, 
                                     Device::RTToneMapper toneMapper, Device::RTFrameBuffer frameBuffer, int accumulate)
   {
+      COIEVENT completationEvents[10];
     // Limit the number of threads started by the OpenMP runtime to minimize
     // interference with the threads running in the host-side Embree renderer
     omp_set_num_threads(2);   
@@ -1545,16 +1555,24 @@ namespace embree
                                     get<Device::RTFrameBuffer>((size_t)frameBuffer),
                                     accumulate);
             }
+            
         }
 #pragma omp section
         {
-            // This can be run profitably in parallel with the host renderer
-            // because we are calling the COIPipelineRunFunction function in 
-            // rtRenderFrame in synchronous mode.   Thus, we block until the 
-            // device being called completes its portion of the frame
+            // Here we call rtRenderFrame in async mode so that we can queue
+            // up requests to all available cards, then wait for them to all
+            // complete before exiting this parallel section.
+            // Without the event, the RunFunction in rtRenderFrame would block
+            // until the called function completed on the coprocessor
             for (size_t i=0; i<devices.size(); i++) 
-              devices[i]->rtRenderFrame(renderer,camera,scene,toneMapper,frameBuffer,accumulate);
+            {
+              devices[i]->rtRenderFrame(renderer,camera,scene,toneMapper,
+                      frameBuffer,accumulate, &completationEvents[i]);
+            }
+            // Now wait for all device renders to complete
+            COIEventWait(devices.size(),&completationEvents[0],-1,true,NULL,NULL);
         }
+    // Implicit blocking join here
     }
   }
   

@@ -1,5 +1,5 @@
 // ======================================================================== //
-// Copyright 2009-2014 Intel Corporation                                    //
+// Copyright 2009-2015 Intel Corporation                                    //
 //                                                                          //
 // Licensed under the Apache License, Version 2.0 (the "License");          //
 // you may not use this file except in compliance with the License.         //
@@ -311,9 +311,8 @@ EmbreeViewportRenderer::EmbreeViewportRenderer( const MString & name )
 	fRenderingOverride = MViewportRenderer::kOverrideThenUI;
 //	fRenderingOverride = MViewportRenderer::kOverrideAllDrawing;
 
-	// Set API and version number
+	// We only support the software API
 	m_API = MViewportRenderer::kSoftware;
-	m_Version = 2.3f;
 
     // Misc
     m_plugintype = 0;
@@ -396,8 +395,7 @@ EmbreeViewportRenderer::EmbreeViewportRenderer( const MString & name )
 EmbreeViewportRenderer::~EmbreeViewportRenderer()
 {
    // uninitialize() gets called automatically when the plugin is *unloaded*
-   // by the plugin manager window
-	// uninitialize();
+   // by the plugin manager window, so no need to call it here
 }
 
 /* virtual */
@@ -517,7 +515,7 @@ EmbreeViewportRenderer::render(const MRenderingInfo &renderInfo)
 
     // We don't care what renderInfo.renderingAPI() is used
     // Update the frame
-	renderToTarget( renderInfo );
+	renderInEmbreeSampleRenderer( renderInfo );
     
     dt = embree::getSeconds() - t0;
     accum += dt;
@@ -631,7 +629,7 @@ embree::Handle<embree::Device::RTData>
 // Scene conversion methods
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-bool
+void
 EmbreeViewportRenderer::convertLight(const MDagPath &dagPath)
 {
 	//char buffer[1024];
@@ -762,31 +760,33 @@ EmbreeViewportRenderer::convertLight(const MDagPath &dagPath)
         m_device->rtCommit(light);
         m_lights.push_back(m_device->rtNewLightPrimitive(light, NULL, NULL));
     }
-
-
-	return true;
 }
 
 // ------------------------------------------------------------
 
-MObject EmbreeViewportRenderer::findShader( MObject& setNode )
-//
-//  Description:
-//      Find the shading node for the given shading group set node.
-//
+// Try to find the material shader associated with a given node
+MObject EmbreeViewportRenderer::findObjectMaterialShader( MObject& setNode )
 {
-	MFnDependencyNode fnNode(setNode);
-	MPlug shaderPlug = fnNode.findPlug("surfaceShader");
+    // Interpret the set as a generic dependency node
+	MFnDependencyNode graphNode(setNode);
+    
+    // Try to find a shader plug associated with this node
+	MPlug shaderPlug = graphNode.findPlug("surfaceShader");
 			
-	if (!shaderPlug.isNull()) {			
+    // If there is one, get the shader from it
+	if (!shaderPlug.isNull()) 
+    {			
 		MPlugArray connectedPlugs;
 		bool asSrc = false;
 		bool asDst = true;
+        // And then the shader(s) connected to the plug
 		shaderPlug.connectedTo( connectedPlugs, asDst, asSrc );
 
+        // We don't support more than one connected shader, or none
 		if (connectedPlugs.length() != 1)
 			MGlobal::displayError("Error getting shader");
 		else 
+            // Return the attached shader
 			return connectedPlugs[0].node();
 	}			
 	
@@ -809,33 +809,34 @@ void EmbreeViewportRenderer::getMaterialData(const MDagPath &currObject,
 	float refractIndex = 1.5f;
     float diffusionExponent = 100.0f;
     float transmissionDepth = 9999999.9f;
+    MStatus status;
     
     diffuseTextureFile.clear();
     specularTextureFile.clear();
     bumpTextureFile.clear();
     
-	MFnMesh fnMesh(currObject);
+	MFnMesh mesh(currObject);
 	MObjectArray sets;
 	MObjectArray comps;
 	unsigned int instanceNum = currObject.instanceNumber();
-	if (!fnMesh.getConnectedSetsAndMembers(instanceNum, sets, comps, true))
+    
+    // Try to get at shaders associated with this node
+    status = mesh.getConnectedSetsAndMembers(instanceNum, sets, comps, true);
+    
+    // Somehow this mesh object was improperly set up
+    if (status == MS::kFailure) 
+    {
 		MGlobal::displayError("ERROR : MFnMesh::getConnectedSetsAndMembers");
+        return;
+    }
 	
 	for ( unsigned i=0; i<sets.length(); i++ ) 
 	{
-		MObject set = sets[i];  // all sets
-		MObject comp = comps[i];  // components in the corresponding set
-
-		MStatus status;
-		MFnSet fnSet( set, &status );
-		if (status == MS::kFailure) {
-			MGlobal::displayError("ERROR: MFnSet::MFnSet");
-			continue;
-		}
+		MObject set = sets[i];  // get one of the set members
 
 		// Scrape material properties from the first material node associated with the
 		// surface
-		MObject shaderNode = findShader(set);
+		MObject shaderNode = findObjectMaterialShader(set);
 		if (shaderNode != MObject::kNullObj)
 		{
 			// Diffuse color
@@ -1094,7 +1095,7 @@ int EmbreeViewportRenderer::checkMaterialProperties(const MDagPath &currObject,
 
 // ------------------------------------------------------------
 
-void EmbreeViewportRenderer::convertSurfaceMaterial(const MDagPath &dagPath, 
+void EmbreeViewportRenderer::convertObjectMaterial(const MDagPath &dagPath, 
 	int haveTexture, embree::Handle<embree::Device::RTMaterial> &material)
 {
 	SceneData materialInfo;
@@ -1169,9 +1170,8 @@ void EmbreeViewportRenderer::convertSurfaceMaterial(const MDagPath &dagPath,
 
 // ------------------------------------------------------------
 
-bool EmbreeViewportRenderer::convertSurface( const MDagPath &dagPath)
+void EmbreeViewportRenderer::convertObject( const MDagPath &dagPath)
 {
-	bool drewSurface = false;
 	char buffer[1024];
 
 	if ( dagPath.hasFn( MFn::kMesh ))
@@ -1179,43 +1179,32 @@ bool EmbreeViewportRenderer::convertSurface( const MDagPath &dagPath)
 		MObject object = dagPath.node();
 		MFnMesh mesh(object);
 
-		// Figure out texturing
-		//
+		// Does this surface have texture coordinates?
 		bool haveTexture = false;
 		int	numUVsets = mesh.numUVSets();
 		MString uvSetName;
-		MObjectArray textures;
+		MObjectArray textureInstances;
 		if (numUVsets > 0)
 		{
 			mesh.getCurrentUVSetName( uvSetName );
-			MStatus status = mesh.getAssociatedUVSetTextures(uvSetName, textures);
-			if (status == MS::kSuccess && textures.length())
+			MStatus status = mesh.getAssociatedUVSetTextures(uvSetName, textureInstances);
+			if (status == MS::kSuccess && textureInstances.length())
 			{
 				haveTexture = true;
 			}
 		}
 
-		bool haveColors = false;
-		int	numColors = mesh.numColorSets();
-		MString colorSetName;
-		if (numColors > 0)
-		{
-			haveColors = true;
-			mesh.getCurrentColorSetName(colorSetName);
-		}
-
 		bool useNormals = true;
 
-		// Setup our requirements needs.
+		// Add the requirements to what we will query from the mesh.
 		MGeometryRequirements requirements;
 		requirements.addPosition();
 		if (useNormals)
 			requirements.addNormal();
 		if (haveTexture)
 			requirements.addTexCoord( uvSetName );
-		if (haveColors)
-			requirements.addColor( colorSetName );
-        // We are ignoring tangents and binormals for now
+
+        // We are ignoring colors, tangents and binormals for now
 
         // Now get the object information we requested
 		MGeometry geom = MGeometryManager::getGeometry( dagPath, requirements, NULL );
@@ -1224,15 +1213,10 @@ bool EmbreeViewportRenderer::convertSurface( const MDagPath &dagPath)
 
 		MString ccname = dagPath.fullPathName() ;
 
+        // If there are any triangles in the mesh, extract and use what we need
 		if (numPrims)
 		{
-			/*  "MGeometryPrimitive is a class describes the topology used for
-				accessing MGeometryData.
-				Topology is specified as a set of index values which references into
-				data elements in an MGeometryData. Index values can be assumed to be
-				stored in contiguous memory." 
-             
-                NOTE:  We are ignoring all but the first element in the primitive Array*/
+			// Load the first element in the primitive array
 			const MGeometryPrimitive prim = geom.primitiveArray(0);
 			unsigned int numElem = prim.elementCount();
 
@@ -1290,17 +1274,10 @@ bool EmbreeViewportRenderer::convertSurface( const MDagPath &dagPath)
 					const MGeometryData uvs = geom.texCoord( uvSetName );
 					uvPtr = (float *)uvs.data();
 				}
-
-				float *clrPtr = NULL;
-				if (haveColors)
-				{
-					const MGeometryData clrs = geom.color( colorSetName );
-					clrPtr = (float *)clrs.data();
-				}
                 
-                // For now, we will ignore binormals and tangents
+                // For now, we will ignore colors, binormals and tangents
                 
-                // If we have geometry, import it
+                // If we have geometry, import it into the Embree sample renderer
 				if (haveData)
 				{
                     embree::Handle<embree::Device::RTShape> mesh = NULL;
@@ -1308,7 +1285,6 @@ bool EmbreeViewportRenderer::convertSurface( const MDagPath &dagPath)
                     embree::Handle<embree::Device::RTData> triangles = NULL;
                     embree::Handle<embree::Device::RTData> normals = NULL;
                     embree::Handle<embree::Device::RTData> uvcoords = NULL;
-					drewSurface = true;
 
 					// Get the mesh's transform node
 					MMatrix  matrix = dagPath.inclusiveMatrix();
@@ -1325,7 +1301,7 @@ bool EmbreeViewportRenderer::convertSurface( const MDagPath &dagPath)
 					//  ------ Now load mesh data
 					// Create a Embree material for the mesh
 					embree::Handle<embree::Device::RTMaterial> material;
-					convertSurfaceMaterial(dagPath, haveTexture, material);
+					convertObjectMaterial(dagPath, haveTexture, material);
 
 					// Create a mesh object
 					mesh = m_device->rtNewShape("trianglemesh");
@@ -1368,8 +1344,6 @@ bool EmbreeViewportRenderer::convertSurface( const MDagPath &dagPath)
 			}  // There are triangles in this primitive
 		}  // There are primitives
 	} // If this is a mesh node
-
-	return drewSurface;
 }
 
 // ------------------------------
@@ -1503,7 +1477,7 @@ int EmbreeViewportRenderer::checkObjectProperities(MDagPath &currObject, SceneDa
 		{
 			// Grab the changed material and import into the Embree sample renderer
 			embree::Handle<embree::Device::RTMaterial> material;
-			convertSurfaceMaterial(currObject, currObjectData.haveTexture, material);
+			convertObjectMaterial(currObject, currObjectData.haveTexture, material);
 			m_device->rtCommit(material);
 
 			// Update the recorded material data for change detection next time
@@ -1540,12 +1514,12 @@ void EmbreeViewportRenderer::recordObjectProperties(MDagPath &currObject, int i,
 	bool haveTexture = false;
 	int	numUVsets = mesh.numUVSets();
 	MString uvSetName;
-	MObjectArray textures;
+	MObjectArray textureInstances;
 	if (numUVsets > 0)
 	{
 		mesh.getCurrentUVSetName( uvSetName );
-		MStatus status = mesh.getAssociatedUVSetTextures(uvSetName, textures);
-		if (status == MS::kSuccess && textures.length())
+		MStatus status = mesh.getAssociatedUVSetTextures(uvSetName, textureInstances);
+		if (status == MS::kSuccess && textureInstances.length())
 		{
 			haveTexture = true;
 		}
@@ -1670,7 +1644,7 @@ int	 EmbreeViewportRenderer::convertMayaObjectsToEmbree(std::vector<MDagPath> &c
 		MDagPath currObject = currentObjects[i];
 
 		// Build the Embree version of the object
-		convertSurface(currObject);
+		convertObject(currObject);
 
 		// Record the object's properties for change detection
 		// Objects are loaded before lights, so that an object's list 
@@ -2031,7 +2005,7 @@ MStatus	EmbreeViewportRenderer::GetViewportHandles(const MRenderingInfo &renderI
 // Description:
 //		Render directly to current Embree target.
 //
-bool EmbreeViewportRenderer::renderToTarget( const MRenderingInfo &renderInfo )
+bool EmbreeViewportRenderer::renderInEmbreeSampleRenderer( const MRenderingInfo &renderInfo )
 {
 	MStatus status;
 	const MRenderTarget &renderTarget = renderInfo.renderTarget();
