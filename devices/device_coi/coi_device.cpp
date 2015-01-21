@@ -1538,6 +1538,7 @@ namespace embree
                                     Device::RTToneMapper toneMapper, Device::RTFrameBuffer frameBuffer, int accumulate)
   {
       COIEVENT completationEvents[10];
+      
     // Limit the number of threads started by the OpenMP runtime to minimize
     // interference with the threads running in the host-side Embree renderer
     omp_set_num_threads(2);   
