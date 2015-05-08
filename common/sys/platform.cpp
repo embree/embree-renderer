@@ -67,6 +67,7 @@ namespace embree
 
 #include <sys/time.h>
 #include <sys/mman.h>
+#include <unistd.h>
 
 #if defined(__MIC__)
 
