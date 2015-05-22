@@ -20,7 +20,7 @@ SET(__SSE__ 0)
 SET(__AVX__ 0)
 
 SET (CMAKE_CXX_COMPILER icpc)
-SET (CMAKE_CXX_FLAGS "-mmic -restrict -Wall -fasm-blocks -fPIC")
+SET (CMAKE_CXX_FLAGS "-mmic -restrict -Wall -wd177 -fasm-blocks -fPIC")
 SET (CMAKE_CXX_FLAGS_NOOPT "-O0 -DDEBUG")
 SET (CMAKE_CXX_FLAGS_DEBUG "-g -w1 -O2 -DDEBUG ")
 
