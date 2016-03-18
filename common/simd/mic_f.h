@@ -396,7 +396,7 @@ namespace embree
     return _mm512_rcp23_ps(x);
   };
   
-  __forceinline mic_f maxabs(const mic_f &a,const  mic_f &b) { return _mm512_maxabs_ps(a,b); }
+  __forceinline mic_f maxabs(const mic_f &a,const  mic_f &b) { return _mm512_gmaxabs_ps(a,b); }
   __forceinline mic_f abs(const mic_f &a) { 
     return _mm512_gmaxabs_ps(a,a); 
   }
