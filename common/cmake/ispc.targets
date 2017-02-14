@@ -40,7 +40,7 @@
       Text="%(ISPC.ExecutionDescription)" />
     <WriteLinesToFile
       Condition="'@(ISPC_tlog)' != '' and '%(ISPC_tlog.ExcludedFromBuild)' != 'true'"
-      File="$(IntDir)$(ProjectName).tlog\ISPC.write.1.tlog"
+      File="$(TLogLocation)ISPC.write.1.tlog"
       Lines="^%(ISPC_tlog.Source);@(ISPC_tlog-&gt;'%(Fullpath)')" />
     <ISPC
       Condition="'@(ISPC)' != '' and '%(ISPC.ExcludedFromBuild)' != 'true'"
