@@ -32,7 +32,7 @@
       <ISPC_tlog
         Include="%(ISPC.Outputs)"
         Condition="'%(ISPC.Outputs)' != '' and '%(ISPC.ExcludedFromBuild)' != 'true'">
-        <Source>@(ISPC, '|')</Source>
+        <Source>@(ISPC-&gt;'%(Fullpath)', '|')</Source>
       </ISPC_tlog>
     </ItemGroup>
     <Message
@@ -40,7 +40,7 @@
       Text="%(ISPC.ExecutionDescription)" />
     <WriteLinesToFile
       Condition="'@(ISPC_tlog)' != '' and '%(ISPC_tlog.ExcludedFromBuild)' != 'true'"
-      File="$(IntDir)$(ProjectName).write.1.tlog"
+      File="$(IntDir)$(ProjectName).tlog\ISPC.write.1.tlog"
       Lines="^%(ISPC_tlog.Source);@(ISPC_tlog-&gt;'%(Fullpath)')" />
     <ISPC
       Condition="'@(ISPC)' != '' and '%(ISPC.ExcludedFromBuild)' != 'true'"
